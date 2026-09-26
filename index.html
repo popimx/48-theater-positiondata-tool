@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -182,8 +182,8 @@
 
           <div>
             <h3 class="text-xs font-bold text-pink-600 mb-2 border-b pb-1 flex justify-between items-center">
-              <span>ポジション対比表 ＆ 予想スターティング8名</span>
-              <span id="subCountText" class="text-xs text-slate-500 font-normal">アンダー補添: 0名</span>
+              <span>ポジション対比表 ＆ 予想スターティングメンバー</span>
+              <span id="subCountText" class="text-xs text-slate-500 font-normal">アンダー補填: 0名</span>
             </h3>
             <div id="predictedLineup" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
           </div>
@@ -300,7 +300,56 @@
     let currentStageKey = "夢のポップスター";
     let currentScheduleFilter = "ALL";
     let absentMembersMap = {};
-    let selectedMemberName = null; // 選択中メンバー
+    let selectedMemberName = null;
+
+    // --- サンプル・フォールバック用スケジュールデータ (JSON未取得時のバックアップ) ---
+    const FALLBACK_SCHEDULE_2026 = [
+      {
+        id: "20260927_1",
+        date: "2026/09/27",
+        time: "18:30",
+        theater: "AKB48劇場",
+        stage: "夢のポップスター",
+        performersText: "新井彩永・久保姫菜乃・倉野尾成美・坂川陽香・髙橋彩音・山内瑞葵・山口結愛・山﨑空",
+        positions: [
+          { performer: "新井彩永", posName: "新井彩永ポジ" },
+          { performer: "久保姫菜乃", posName: "久保姫菜乃ポジ" },
+          { performer: "倉野尾成美", posName: "倉野尾成美ポジ" },
+          { performer: "坂川陽香", posName: "坂川陽香ポジ" },
+          { performer: "髙橋彩音", posName: "髙橋彩音ポジ" },
+          { performer: "山内瑞葵", posName: "山内瑞葵ポジ" },
+          { performer: "山口結愛", posName: "山口結愛ポジ" },
+          { performer: "山﨑空", posName: "山﨑空ポジ" }
+        ]
+      },
+      {
+        id: "20260925_1",
+        date: "2026/09/25",
+        time: "18:30",
+        theater: "AKB48劇場",
+        stage: "夢のポップスター",
+        performersText: "新井彩永・秋山由奈・成田香姫奈・奥本カイリ・田中沙友利・正鋳真優・下尾みう・工藤華純",
+        positions: [
+          { performer: "新井彩永", posName: "新井彩永ポジ" },
+          { performer: "秋山由奈", posName: "久保姫菜乃ポジ" },
+          { performer: "成田香姫奈", posName: "倉野尾成美ポジ" },
+          { performer: "奥本カイリ", posName: "坂川陽香ポジ" },
+          { performer: "田中沙友利", posName: "髙橋彩音ポジ" },
+          { performer: "正鋳真優", posName: "山内瑞葵ポジ" },
+          { performer: "下尾みう", posName: "山口結愛ポジ" },
+          { performer: "工藤華純", posName: "山﨑空ポジ" }
+        ]
+      },
+      {
+        id: "20260920_1",
+        date: "2026/09/20",
+        time: "14:00",
+        theater: "AKB48劇場",
+        stage: "RESET",
+        performersText: "倉野尾成美・下尾みう・福岡聖菜・山内瑞葵・正鋳真優・秋山由奈・新井彩永・工藤華純",
+        positions: []
+      }
+    ];
 
     // --- マスターデータ ---
     const STAGE_DATABASE = {
@@ -322,6 +371,21 @@
           "山口結愛": ["下尾みう"],
           "山﨑空": ["近藤沙樹", "工藤華純"]
         }
+      },
+      "RESET": {
+        id: "RESET",
+        name: "「RESET」公演",
+        group: "AKB48",
+        isReady: true,
+        posNames: ["Pos 1", "Pos 2", "Pos 3", "Pos 4", "Pos 5", "Pos 6", "Pos 7", "Pos 8"],
+        fixed: ["倉野尾成美", "下尾みう", "福岡聖菜", "山内瑞葵", "正鋳真優", "秋山由奈", "新井彩永", "工藤華純"],
+        allMembers: ["倉野尾成美", "下尾みう", "福岡聖菜", "山内瑞葵", "正鋳真優", "秋山由奈", "新井彩永", "工藤華純", "久保姫菜乃", "坂川陽香", "山口結愛", "山﨑空"],
+        underChain: {
+          "倉野尾成美": ["久保姫菜乃"],
+          "下尾みう": ["山口結愛"],
+          "福岡聖菜": ["坂川陽香"],
+          "山内瑞葵": ["山﨑空"]
+        }
       }
     };
 
@@ -331,6 +395,15 @@
       onDateChange();
       renderPositions();
       initPredictTab();
+
+      // サジェストボックス外クリックで閉じる処理
+      document.addEventListener('click', (e) => {
+        const suggestBox = document.getElementById('searchSuggest');
+        const searchInput = document.getElementById('searchInput');
+        if (!suggestBox.contains(e.target) && e.target !== searchInput) {
+          suggestBox.classList.add('hidden');
+        }
+      });
     });
 
     function initYearMonthDropdowns() {
@@ -360,7 +433,7 @@
       }
     }
 
-    // --- 今日の公演を最優先ソート ---
+    // --- 今日の公演を最優先 ＆ 日時昇順ソート ---
     function getSortedSchedule(schedules) {
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -370,6 +443,11 @@
 
       const todayEvents = schedules.filter(item => item.date === todayStr);
       const otherEvents = schedules.filter(item => item.date !== todayStr);
+
+      otherEvents.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.time.localeCompare(b.time);
+      });
 
       return [...todayEvents, ...otherEvents];
     }
@@ -414,7 +492,7 @@
       const fileName = `schedule_akb48_${year}.json`;
       
       fetch(fileName)
-        .then(res => res.ok ? res.json() : [])
+        .then(res => res.ok ? res.json() : Promise.reject('Not found'))
         .then(data => {
           const rawList = Array.isArray(data) ? data : (data.events || []);
           SCHEDULE_DATA = normalizeScheduleData(rawList);
@@ -422,8 +500,10 @@
           if (selectedMemberName) renderMemberDetailView();
         })
         .catch(() => {
-          SCHEDULE_DATA = [];
+          // JSONファイルが存在しない場合はフォールバック用サンプルデータを使用
+          SCHEDULE_DATA = normalizeScheduleData(FALLBACK_SCHEDULE_2026);
           renderCalendar();
+          if (selectedMemberName) renderMemberDetailView();
         });
     }
 
@@ -437,8 +517,10 @@
         btn.classList.add('text-slate-400');
       });
       const activeBtn = document.getElementById(`nav-${tabName}`);
-      activeBtn.classList.add('active', 'text-pink-600');
-      activeBtn.classList.remove('text-slate-400');
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'text-pink-600');
+        activeBtn.classList.remove('text-slate-400');
+      }
     }
 
     function filterSchedule(filter, btnElement) {
@@ -579,7 +661,6 @@
       selectedMemberName = memberName;
       document.getElementById('detailMemberName').innerText = memberName;
 
-      // メインコンテンツとボトムナビの表示切替
       document.getElementById('mainTabsContainer').classList.add('hidden');
       document.getElementById('memberDetailContainer').classList.remove('hidden');
       document.getElementById('navNormal').classList.add('hidden');
@@ -628,7 +709,7 @@
       const showsBreakdownList = document.getElementById('showsBreakdownList');
       showsBreakdownList.innerHTML = '';
       if (Object.keys(showCountsMap).length === 0) {
-        showsBreakdownList.innerHTML = `<li class="text-slate-400">該当期間の出演はありません。</li>`;
+        showsBreakdownList.innerHTML = `<li class="text-slate-400 text-center py-2">該当期間の出演はありません。</li>`;
       } else {
         Object.entries(showCountsMap).forEach(([title, count]) => {
           const li = document.createElement('li');
@@ -641,24 +722,28 @@
       // 2. 出演公演履歴（ポジション付記）
       const memberShowsHistoryList = document.getElementById('memberShowsHistoryList');
       memberShowsHistoryList.innerHTML = '';
-      memberShows.forEach(item => {
-        let positionName = '';
-        if (item.positions) {
-          const posObj = item.positions.find(p => p.performer === selectedMemberName);
-          if (posObj) positionName = posObj.posName;
-        }
+      if (memberShows.length === 0) {
+        memberShowsHistoryList.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">履歴がありません。</p>`;
+      } else {
+        memberShows.forEach(item => {
+          let positionName = '';
+          if (item.positions) {
+            const posObj = item.positions.find(p => p.performer === selectedMemberName);
+            if (posObj) positionName = posObj.posName;
+          }
 
-        const div = document.createElement('div');
-        div.className = "p-2 bg-slate-50 border border-slate-200 rounded text-xs flex justify-between items-center";
-        div.innerHTML = `
-          <div>
-            <span class="font-bold text-pink-600">${item.date}</span>
-            <span class="font-bold text-slate-800 ml-1">「${item.stage}」公演</span>
-          </div>
-          ${positionName ? `<span class="bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded text-[10px]">${positionName}</span>` : ''}
-        `;
-        memberShowsHistoryList.appendChild(div);
-      });
+          const div = document.createElement('div');
+          div.className = "p-2 bg-slate-50 border border-slate-200 rounded text-xs flex justify-between items-center";
+          div.innerHTML = `
+            <div>
+              <span class="font-bold text-pink-600">${item.date}</span>
+              <span class="font-bold text-slate-800 ml-1">「${item.stage}」公演</span>
+            </div>
+            ${positionName ? `<span class="bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded text-[10px]">${positionName}</span>` : ''}
+          `;
+          memberShowsHistoryList.appendChild(div);
+        });
+      }
 
       // 3. 共演回数ランキング集計（今年 & 通算）
       const currentYearStr = new Date().getFullYear().toString();
@@ -700,13 +785,14 @@
       container.innerHTML = '';
 
       if (list.length === 0) {
-        container.innerHTML = `<span class="text-xs text-slate-400 py-2">共演データがありません。</span>`;
+        container.innerHTML = `<span class="text-xs text-slate-400 py-2 block">共演データがありません。</span>`;
         return;
       }
 
       list.forEach((item, index) => {
         const card = document.createElement('div');
-        card.className = "co-star-card bg-slate-50 border border-slate-200 rounded-lg p-2 text-center flex flex-col items-center justify-between shadow-sm hover:border-pink-300 transition";
+        card.className = "co-star-card bg-slate-50 border border-slate-200 rounded-lg p-2 text-center flex flex-col items-center justify-between shadow-sm hover:border-pink-300 transition cursor-pointer";
+        card.onclick = () => openMemberDetail(item.name);
         card.innerHTML = `
           <span class="text-[10px] font-bold ${index < 3 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-600'} px-2 py-0.5 rounded-full mb-1">
             ${index + 1}位
@@ -763,7 +849,7 @@
         let underHTML = '<span class="text-slate-400 text-xs">なし</span>';
         if (unders.length > 0) {
           underHTML = `<div class="flex flex-wrap items-center gap-4 py-1">` + unders.map(uName => `
-            <div class="inline-flex flex-col items-center gap-0.5 text-center">
+            <div class="inline-flex flex-col items-center gap-0.5 text-center cursor-pointer" onclick="openMemberDetail('${uName}')">
               <div class="avatar-box bg-purple-100 text-purple-700 border border-purple-300 shadow-sm">
                 <i class="fa-solid fa-user text-xs"></i>
               </div>
@@ -777,7 +863,7 @@
             <span class="avatar-box bg-pink-100 text-pink-700 border border-pink-300 mx-auto font-bold text-xs">${pos}</span>
           </td>
           <td class="p-3 align-middle">
-            <div class="inline-flex flex-col items-center gap-0.5 text-center">
+            <div class="inline-flex flex-col items-center gap-0.5 text-center cursor-pointer" onclick="openMemberDetail('${fixedName}')">
               <div class="avatar-box bg-pink-600 text-white border border-pink-500 shadow-sm">
                 <i class="fa-solid fa-user text-xs"></i>
               </div>
