@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -237,7 +237,7 @@
         isReady: true,
         posNames: ["新井彩永ポジ", "久保姫菜乃ポジ", "倉野尾成美ポジ", "坂川陽香ポジ", "髙橋彩音ポジ", "山内瑞葵ポジ", "山口結愛ポジ", "山﨑空ポジ"],
         fixed: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空"],
-        allMembers: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空", "秋山由奈", "奥本カイリ", "下尾みう", "成田香姫奈", "福岡聖菜", "正鋳真優", "近藤沙樹", "田中沙友利"],
+        allMembers: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空", "秋山由奈", "奥本カイリ", "下尾みう", "成田香姫奈", "福岡聖菜", "正鋳真優", "近藤沙樹", "田中沙友利", "工藤華純"],
         underChain: {
           "新井彩永": ["福岡聖菜"],
           "久保姫菜乃": ["秋山由奈"],
@@ -246,7 +246,7 @@
           "髙橋彩音": ["田中沙友利"],
           "山内瑞葵": ["正鋳真優"],
           "山口結愛": ["下尾みう"],
-          "山﨑空": ["近藤沙樹"]
+          "山﨑空": ["近藤沙樹", "工藤華純"]
         }
       },
       "RESET_K_2010": {
@@ -266,7 +266,7 @@
     // --- 初期化処理 ---
     document.addEventListener("DOMContentLoaded", () => {
       initYearMonthDropdowns();
-      onDateChange(); // ← 起動時にschedule_akb48_2026.jsonを取得・描画
+      onDateChange();
       renderPositions();
       initPredictTab();
     });
@@ -288,9 +288,49 @@
         const opt = document.createElement("option");
         opt.value = m < 10 ? `0${m}` : `${m}`;
         opt.textContent = `${m}月`;
-        if (m === 10) opt.selected = true;
+        if (m === 8) opt.selected = true; // 今回のデータ（8月・9月）に合わせて初期値を8月に設定
         monthSelect.appendChild(opt);
       }
+    }
+
+    // --- JSONデータ自動変換（フォーマット吸収）処理 ---
+    function normalizeScheduleData(rawData) {
+      if (!Array.isArray(rawData)) return [];
+
+      return rawData.map(item => {
+        // 1. 日付と時間の正規化 ("2026-08-26 18:30" などを分解・スラッシュ変換)
+        let rawDateStr = item.date || "";
+        let datePart = "";
+        let timePart = item.time || "";
+
+        if (rawDateStr.includes(" ")) {
+          const parts = rawDateStr.split(" ");
+          datePart = parts[0].replace(/-/g, "/"); // "2026-08-26" -> "2026/08/26"
+          timePart = timePart || parts[1];        // "18:30"
+        } else {
+          datePart = rawDateStr.replace(/-/g, "/");
+        }
+
+        // 2. 公演タイトルの正規化 ("「夢のポップスター」公演" -> "夢のポップスター")
+        let stageName = item.stage || item.title || "";
+        stageName = stageName.replace(/^[「『]/, '').replace(/[」』]$/, '').replace(/公演$/, '').trim();
+
+        // 3. メンバー一覧の正規化 (配列 ["A", "B"] を "A・B" に変換)
+        let performersText = item.performersText || "";
+        if (!performersText && Array.isArray(item.members)) {
+          performersText = item.members.join("・");
+        }
+
+        return {
+          id: item.id || "",
+          date: datePart,              // 例: "2026/08/26"
+          time: timePart,              // 例: "18:30"
+          theater: item.theater || "AKB48劇場",
+          stage: stageName,            // 例: "夢のポップスター"
+          performersText: performersText, // 例: "秋山由奈・奥本カイリ..."
+          positions: item.positions || []
+        };
+      });
     }
 
     // --- 年月変更時のファイル読み込み ---
@@ -304,7 +344,9 @@
           return response.json();
         })
         .then(data => {
-          SCHEDULE_DATA = Array.isArray(data) ? data : (data.events || []);
+          const rawList = Array.isArray(data) ? data : (data.events || []);
+          // どんなフォーマットのJSONが来てもプログラム用データに変換
+          SCHEDULE_DATA = normalizeScheduleData(rawList);
           renderCalendar();
         })
         .catch(err => {
@@ -368,11 +410,14 @@
           posText = item.positions.map(p => `${p.posName}: ${p.performer}`).join('・');
         }
 
+        const dateParts = item.date.split('/');
+        const monthDay = dateParts.length >= 3 ? `${dateParts[1]}/${dateParts[2]}` : item.date;
+
         card.innerHTML = `
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="text-center bg-white border border-slate-200 px-2.5 py-1 rounded w-16">
-                <span class="block text-xs text-slate-500 font-bold">${item.date.split('/')[1]}/${item.date.split('/')[2]}</span>
+                <span class="block text-xs text-slate-500 font-bold">${monthDay}</span>
                 <span class="block text-xs font-bold text-pink-600">${item.time}</span>
               </div>
               <div>
@@ -526,7 +571,7 @@
       document.getElementById('memberModal').classList.add('hidden');
     }
 
-    // --- Tab 2: ポジション描画（初日メンバー ＆ 1行複数アンダー対応） ---
+    // --- Tab 2: ポジション描画 ---
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
 
@@ -557,14 +602,11 @@
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 border-b border-slate-100";
 
-        // アンダーメンバーの表示生成（横1行に複数人並べ、各メンバーは画像アイコン＋名前の縦並び）
         let underHTML = '<span class="text-slate-400 text-xs">なし</span>';
         if (unders.length > 0) {
           underHTML = `<div class="flex flex-wrap items-center gap-4 py-1">` + unders.map(uName => `
             <div class="inline-flex flex-col items-center gap-0.5 text-center">
               <div class="avatar-box bg-purple-100 text-purple-700 border border-purple-300 shadow-sm">
-                <!-- 将来的に画像にする場合は下記のように入れ替え: -->
-                <!-- <img src="path/to/${uName}.jpg" alt="${uName}" class="w-full h-full object-cover"> -->
                 <i class="fa-solid fa-user text-xs"></i>
               </div>
               <span class="font-bold text-slate-800 text-xs leading-tight">${uName}</span>
@@ -578,18 +620,14 @@
               ${pos}
             </span>
           </td>
-          <!-- 初日メンバー（画像アイコン＋名前の縦並び） -->
           <td class="p-3 align-middle">
             <div class="inline-flex flex-col items-center gap-0.5 text-center">
               <div class="avatar-box bg-pink-600 text-white border border-pink-500 shadow-sm">
-                <!-- 将来的に画像にする場合は下記のように入れ替え: -->
-                <!-- <img src="path/to/${fixedName}.jpg" alt="${fixedName}" class="w-full h-full object-cover"> -->
                 <i class="fa-solid fa-user text-xs"></i>
               </div>
               <span class="font-bold text-slate-800 text-xs leading-tight">${fixedName}</span>
             </div>
           </td>
-          <!-- アンダーメンバー（1行に複数人並べる） -->
           <td class="p-3 align-middle">
             ${underHTML}
           </td>
@@ -667,7 +705,6 @@
       initPredictTab();
     }
 
-    // ポジション予想ラインナップ描画（「本ポジ」→「初日」に変更）
     function renderPredictedLineup() {
       const stage = STAGE_DATABASE[currentStageKey];
       const lineupContainer = document.getElementById('predictedLineup');
