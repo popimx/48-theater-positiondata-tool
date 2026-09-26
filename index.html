@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -8,15 +8,15 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { padding-bottom: 75px; }
-    .avatar-circle {
-      width: 28px;
-      height: 28px;
+    /* アバター枠（壁写画像にも対応できるサイズと真円指定） */
+    .avatar-box {
+      width: 38px;
+      height: 38px;
       border-radius: 9999px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      font-size: 11px;
+      overflow: hidden;
       flex-shrink: 0;
     }
   </style>
@@ -103,14 +103,14 @@
           <span id="fixedCountBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-2.5 py-1 rounded-full">8名枠</span>
         </div>
 
-        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ポジション一覧（固定メンバー ＆ アンダー）</h3>
+        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ポジション一覧（初日メンバー ＆ アンダー）</h3>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm border-collapse">
             <thead>
               <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs">
-                <th class="p-2 w-16 text-center">Pos</th>
-                <th class="p-2">固定メンバー</th>
-                <th class="p-2">アンダーメンバー</th>
+                <th class="p-2.5 w-14 text-center">Pos</th>
+                <th class="p-2.5 w-32">初日メンバー</th>
+                <th class="p-2.5">アンダーメンバー</th>
               </tr>
             </thead>
             <tbody id="positionTableBody" class="divide-y divide-slate-100"></tbody>
@@ -181,7 +181,7 @@
       <!-- モーダルヘッダー -->
       <div class="bg-pink-600 text-white p-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
-          <div class="avatar-circle bg-white text-pink-600 border border-pink-200">
+          <div class="avatar-box bg-white text-pink-600 border border-pink-200 text-sm font-bold">
             <i class="fa-solid fa-user"></i>
           </div>
           <div>
@@ -222,7 +222,7 @@
 
   <!-- JavaScript Logic -->
   <script>
-    // --- グローバル変数宣言 ---
+    // --- グローバル変数 ---
     let SCHEDULE_DATA = [];
     let currentStageKey = "夢のポップスター";
     let currentScheduleFilter = "ALL";
@@ -266,7 +266,7 @@
     // --- 初期化処理 ---
     document.addEventListener("DOMContentLoaded", () => {
       initYearMonthDropdowns();
-      renderCalendar();
+      onDateChange(); // ← 起動時にschedule_akb48_2026.jsonを取得・描画
       renderPositions();
       initPredictTab();
     });
@@ -293,7 +293,7 @@
       }
     }
 
-    // --- 年月変更時のデータ読み込み ---
+    // --- 年月変更時のファイル読み込み ---
     function onDateChange() {
       const year = document.getElementById("yearSelect").value;
       const fileName = `schedule_akb48_${year}.json`;
@@ -526,7 +526,7 @@
       document.getElementById('memberModal').classList.add('hidden');
     }
 
-    // --- Tab 2: ポジション描画 (8名対応) ---
+    // --- Tab 2: ポジション描画（初日メンバー ＆ 1行複数アンダー対応） ---
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
 
@@ -550,7 +550,6 @@
       const tbody = document.getElementById('positionTableBody');
       tbody.innerHTML = '';
 
-      // 固定メンバーの人数（8名）に合わせてループ
       for (let pos = 1; pos <= stage.fixed.length; pos++) {
         const fixedName = stage.fixed[pos - 1] || "未定";
         const unders = (stage.underChain && stage.underChain[fixedName]) ? stage.underChain[fixedName] : [];
@@ -558,29 +557,40 @@
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 border-b border-slate-100";
 
+        // アンダーメンバーの表示生成（横1行に複数人並べ、各メンバーは画像アイコン＋名前の縦並び）
         let underHTML = '<span class="text-slate-400 text-xs">なし</span>';
         if (unders.length > 0) {
-          underHTML = unders.map(uName => `
-            <div class="inline-flex items-center gap-2 mr-3 my-1">
-              <span class="avatar-circle bg-purple-100 text-purple-700 border border-purple-300">○</span>
-              <span class="font-bold text-slate-800 text-sm">${uName}</span>
+          underHTML = `<div class="flex flex-wrap items-center gap-4 py-1">` + unders.map(uName => `
+            <div class="inline-flex flex-col items-center gap-0.5 text-center">
+              <div class="avatar-box bg-purple-100 text-purple-700 border border-purple-300 shadow-sm">
+                <!-- 将来的に画像にする場合は下記のように入れ替え: -->
+                <!-- <img src="path/to/${uName}.jpg" alt="${uName}" class="w-full h-full object-cover"> -->
+                <i class="fa-solid fa-user text-xs"></i>
+              </div>
+              <span class="font-bold text-slate-800 text-xs leading-tight">${uName}</span>
             </div>
-          `).join('');
+          `).join('') + `</div>`;
         }
 
         tr.innerHTML = `
-          <td class="p-2 text-center">
-            <span class="avatar-circle bg-pink-100 text-pink-700 border border-pink-300 mx-auto">
+          <td class="p-3 text-center align-middle">
+            <span class="avatar-box bg-pink-100 text-pink-700 border border-pink-300 mx-auto font-bold text-xs">
               ${pos}
             </span>
           </td>
-          <td class="p-2">
-            <div class="flex items-center gap-2">
-              <span class="avatar-circle bg-pink-600 text-white">●</span>
-              <span class="font-bold text-slate-800 text-sm">${fixedName}</span>
+          <!-- 初日メンバー（画像アイコン＋名前の縦並び） -->
+          <td class="p-3 align-middle">
+            <div class="inline-flex flex-col items-center gap-0.5 text-center">
+              <div class="avatar-box bg-pink-600 text-white border border-pink-500 shadow-sm">
+                <!-- 将来的に画像にする場合は下記のように入れ替え: -->
+                <!-- <img src="path/to/${fixedName}.jpg" alt="${fixedName}" class="w-full h-full object-cover"> -->
+                <i class="fa-solid fa-user text-xs"></i>
+              </div>
+              <span class="font-bold text-slate-800 text-xs leading-tight">${fixedName}</span>
             </div>
           </td>
-          <td class="p-2">
+          <!-- アンダーメンバー（1行に複数人並べる） -->
+          <td class="p-3 align-middle">
             ${underHTML}
           </td>
         `;
@@ -588,7 +598,7 @@
       }
     }
 
-    // --- Tab 3: 出演・休演予想 (8名対応) ---
+    // --- Tab 3: 出演・休演予想 ---
     function initPredictTab() {
       const stage = STAGE_DATABASE[currentStageKey];
 
@@ -619,7 +629,7 @@
         }`;
 
         card.innerHTML = `
-          <div class="avatar-circle ${isAbsent ? 'bg-red-100 text-red-600' : 'bg-pink-100 text-pink-600'} mx-auto mb-1">
+          <div class="avatar-box ${isAbsent ? 'bg-red-100 text-red-600' : 'bg-pink-100 text-pink-600'} mx-auto mb-1 text-xs font-bold">
             ${isAbsent ? '休' : '出'}
           </div>
           <span class="text-xs leading-tight block">${name}</span>
@@ -657,7 +667,7 @@
       initPredictTab();
     }
 
-    // ポジション予想ラインナップ描画 (8名分)
+    // ポジション予想ラインナップ描画（「本ポジ」→「初日」に変更）
     function renderPredictedLineup() {
       const stage = STAGE_DATABASE[currentStageKey];
       const lineupContainer = document.getElementById('predictedLineup');
@@ -666,7 +676,6 @@
       const usedMembers = new Set();
       let subCount = 0;
 
-      // 8ポジション分をループ処理
       for (let pos = 1; pos <= stage.fixed.length; pos++) {
         const fixedName = stage.fixed[pos - 1];
         const isFixedAbsent = !!absentMembersMap[fixedName];
@@ -702,12 +711,12 @@
         div.innerHTML = `
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="avatar-circle ${isUnder ? 'bg-amber-200 text-amber-800' : 'bg-pink-100 text-pink-700'}">
+              <span class="avatar-box ${isUnder ? 'bg-amber-200 text-amber-800' : 'bg-pink-100 text-pink-700'} font-bold text-xs">
                 ${pos}
               </span>
               <div>
                 <span class="font-bold text-xs ${isUnder ? 'text-amber-900' : 'text-slate-800'}">${assignedMember}</span>
-                <span class="text-[10px] block text-slate-400">本ポジ: ${fixedName}</span>
+                <span class="text-[10px] block text-slate-400">初日: ${fixedName}</span>
               </div>
             </div>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isUnder ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-600'}">
