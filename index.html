@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>劇場公演 データサイト</title>
+  <!-- Tailwind CSS & Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -18,6 +19,15 @@
       justify-content: center;
       overflow: hidden;
       flex-shrink: 0;
+    }
+    /* スクロールバーの細め調整 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
     }
   </style>
 </head>
@@ -288,7 +298,7 @@
         const opt = document.createElement("option");
         opt.value = m < 10 ? `0${m}` : `${m}`;
         opt.textContent = `${m}月`;
-        if (m === 8) opt.selected = true; // 今回のデータ（8月・9月）に合わせて初期値を8月に設定
+        if (m === 8) opt.selected = true; // デフォルト表示月を設定
         monthSelect.appendChild(opt);
       }
     }
@@ -298,24 +308,21 @@
       if (!Array.isArray(rawData)) return [];
 
       return rawData.map(item => {
-        // 1. 日付と時間の正規化 ("2026-08-26 18:30" などを分解・スラッシュ変換)
         let rawDateStr = item.date || "";
         let datePart = "";
         let timePart = item.time || "";
 
         if (rawDateStr.includes(" ")) {
           const parts = rawDateStr.split(" ");
-          datePart = parts[0].replace(/-/g, "/"); // "2026-08-26" -> "2026/08/26"
-          timePart = timePart || parts[1];        // "18:30"
+          datePart = parts[0].replace(/-/g, "/");
+          timePart = timePart || parts[1];
         } else {
           datePart = rawDateStr.replace(/-/g, "/");
         }
 
-        // 2. 公演タイトルの正規化 ("「夢のポップスター」公演" -> "夢のポップスター")
         let stageName = item.stage || item.title || "";
         stageName = stageName.replace(/^[「『]/, '').replace(/[」』]$/, '').replace(/公演$/, '').trim();
 
-        // 3. メンバー一覧の正規化 (配列 ["A", "B"] を "A・B" に変換)
         let performersText = item.performersText || "";
         if (!performersText && Array.isArray(item.members)) {
           performersText = item.members.join("・");
@@ -323,11 +330,11 @@
 
         return {
           id: item.id || "",
-          date: datePart,              // 例: "2026/08/26"
-          time: timePart,              // 例: "18:30"
+          date: datePart,
+          time: timePart,
           theater: item.theater || "AKB48劇場",
-          stage: stageName,            // 例: "夢のポップスター"
-          performersText: performersText, // 例: "秋山由奈・奥本カイリ..."
+          stage: stageName,
+          performersText: performersText,
           positions: item.positions || []
         };
       });
@@ -345,7 +352,6 @@
         })
         .then(data => {
           const rawList = Array.isArray(data) ? data : (data.events || []);
-          // どんなフォーマットのJSONが来てもプログラム用データに変換
           SCHEDULE_DATA = normalizeScheduleData(rawList);
           renderCalendar();
         })
