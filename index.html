@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -60,10 +60,10 @@
           <!-- 年月選択プルダウン -->
           <div class="flex items-center gap-2 w-full sm:w-auto">
             <select id="yearSelect" onchange="onDateChange()" class="bg-slate-50 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
-              <!-- JavaScriptで2005年〜2026年を動的生成 -->
+              <!-- JavaScriptで動的生成 -->
             </select>
             <select id="monthSelect" onchange="onDateChange()" class="bg-slate-50 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
-              <!-- JavaScriptで1月〜12月を動的生成 -->
+              <!-- JavaScriptで動的生成 -->
             </select>
           </div>
         </div>
@@ -100,7 +100,7 @@
             <h2 id="posStageTitle" class="text-lg font-bold text-slate-800">「夢のポップスター」公演</h2>
             <p id="posGroupTitle" class="text-xs text-pink-600 font-semibold">AKB48</p>
           </div>
-          <span id="fixedCountBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-2.5 py-1 rounded-full">16名枠</span>
+          <span id="fixedCountBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-2.5 py-1 rounded-full">8名枠</span>
         </div>
 
         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ポジション一覧（固定メンバー ＆ アンダー）</h3>
@@ -165,7 +165,7 @@
         <!-- 予想対比表 -->
         <div>
           <h3 class="text-xs font-bold text-pink-600 mb-2 border-b pb-1 flex justify-between items-center">
-            <span>ポジション対比表 ＆ 予想スターティング16名</span>
+            <span>ポジション対比表 ＆ 予想スターティング8名</span>
             <span id="subCountText" class="text-xs text-slate-500 font-normal">アンダー補填: 0名</span>
           </h3>
           <div id="predictedLineup" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
@@ -222,6 +222,12 @@
 
   <!-- JavaScript Logic -->
   <script>
+    // --- グローバル変数宣言 ---
+    let SCHEDULE_DATA = [];
+    let currentStageKey = "夢のポップスター";
+    let currentScheduleFilter = "ALL";
+    let absentMembersMap = {};
+
     // --- マスターデータ（公演・ポジション定義） ---
     const STAGE_DATABASE = {
       "夢のポップスター": {
@@ -230,7 +236,7 @@
         group: "AKB48",
         isReady: true,
         posNames: ["新井彩永ポジ", "久保姫菜乃ポジ", "倉野尾成美ポジ", "坂川陽香ポジ", "髙橋彩音ポジ", "山内瑞葵ポジ", "山口結愛ポジ", "山﨑空ポジ"],
-        fixed: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空", "秋山由奈", "奥本カイリ", "下尾みう", "成田香姫奈", "福岡聖菜", "正鋳真優", "近藤沙樹", "田中沙友利"],
+        fixed: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空"],
         allMembers: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空", "秋山由奈", "奥本カイリ", "下尾みう", "成田香姫奈", "福岡聖菜", "正鋳真優", "近藤沙樹", "田中沙友利"],
         underChain: {
           "新井彩永": ["福岡聖菜"],
@@ -257,10 +263,6 @@
       }
     };
 
-    let currentStageKey = "夢のポップスター";
-    let currentScheduleFilter = "ALL";
-    let absentMembersMap = {};
-
     // --- 初期化処理 ---
     document.addEventListener("DOMContentLoaded", () => {
       initYearMonthDropdowns();
@@ -274,7 +276,6 @@
       const yearSelect = document.getElementById("yearSelect");
       const monthSelect = document.getElementById("monthSelect");
 
-      // 2005年〜2026年を生成
       for (let y = 2026; y >= 2005; y--) {
         const opt = document.createElement("option");
         opt.value = y;
@@ -283,7 +284,6 @@
         yearSelect.appendChild(opt);
       }
 
-      // 1月〜12月を生成
       for (let m = 1; m <= 12; m++) {
         const opt = document.createElement("option");
         opt.value = m < 10 ? `0${m}` : `${m}`;
@@ -293,12 +293,9 @@
       }
     }
 
-    // --- 年月変更時のファイル読み込みロジック ---
+    // --- 年月変更時のデータ読み込み ---
     function onDateChange() {
       const year = document.getElementById("yearSelect").value;
-      const month = document.getElementById("monthSelect").value;
-      
-      // schedule_{group}_{year}.json の形式でフェッチ対応 (例: schedule_akb48_2026.json)
       const fileName = `schedule_akb48_${year}.json`;
       
       fetch(fileName)
@@ -307,15 +304,11 @@
           return response.json();
         })
         .then(data => {
-          if (Array.isArray(data)) {
-            SCHEDULE_DATA = data;
-          } else if (data.events) {
-            SCHEDULE_DATA = data.events;
-          }
+          SCHEDULE_DATA = Array.isArray(data) ? data : (data.events || []);
           renderCalendar();
         })
         .catch(err => {
-          // 該当ファイルが無い場合はそのまま現在のスケジュールを描画
+          SCHEDULE_DATA = [];
           renderCalendar();
         });
     }
@@ -387,7 +380,7 @@
                 <h4 class="font-bold text-slate-800 text-xs mt-0.5">「${item.stage}」公演</h4>
               </div>
             </div>
-            <span class="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full font-semibold">16名</span>
+            <span class="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full font-semibold">8名</span>
           </div>
           ${item.performersText ? `
           <div class="mt-2 pt-2 border-t border-slate-200 text-xs bg-pink-50/40 p-2 rounded">
@@ -399,7 +392,7 @@
       });
     }
 
-    // --- 検索 ＆ 候補サジェスト機能 ---
+    // --- 検索 ＆ サジェスト ---
     function onSearchInput(val) {
       const suggestBox = document.getElementById('searchSuggest');
       if (!val.trim()) {
@@ -409,7 +402,6 @@
       const query = val.trim().toLowerCase();
       let matches = [];
 
-      // 1. 公演名の検索 (夢のポップスター、RESET等の複数候補対応)
       Object.keys(STAGE_DATABASE).forEach(key => {
         const stage = STAGE_DATABASE[key];
         if (stage.name.toLowerCase().includes(query) || stage.id.toLowerCase().includes(query)) {
@@ -417,12 +409,11 @@
             type: 'stage',
             label: stage.name,
             subText: stage.group,
-            stageKey: key
+            key: key
           });
         }
       });
 
-      // 2. メンバー名の検索
       const allKnownMembers = new Set();
       Object.values(STAGE_DATABASE).forEach(s => {
         if (s.allMembers) s.allMembers.forEach(m => allKnownMembers.add(m));
@@ -439,7 +430,7 @@
             type: 'member',
             label: name,
             subText: 'メンバー詳細ページを表示',
-            memberName: name
+            name: name
           });
         }
       });
@@ -449,9 +440,11 @@
         return;
       }
 
-      suggestBox.innerHTML = matches.map(m => `
-        <div onclick="selectSuggestItem(${JSON.stringify(m).replace(/"/g, '&quot;')})" 
-             class="p-3 hover:bg-pink-50 cursor-pointer flex justify-between items-center transition">
+      suggestBox.innerHTML = '';
+      matches.forEach(m => {
+        const div = document.createElement('div');
+        div.className = "p-3 hover:bg-pink-50 cursor-pointer flex justify-between items-center transition";
+        div.innerHTML = `
           <div>
             <span class="font-bold text-slate-800 block">${m.label}</span>
             <span class="text-xs text-slate-400">${m.subText}</span>
@@ -459,23 +452,18 @@
           <span class="text-xs font-bold px-2 py-1 rounded ${m.type === 'stage' ? 'bg-pink-100 text-pink-700' : 'bg-slate-100 text-slate-600'}">
             ${m.type === 'stage' ? '公演' : 'メンバー'}
           </span>
-        </div>
-      `).join('');
+        `;
+        div.onclick = () => {
+          suggestBox.classList.add('hidden');
+          document.getElementById('searchInput').value = '';
+          if (m.type === 'member') openMemberModal(m.name);
+          else if (m.type === 'stage') selectStage(m.key);
+        };
+        suggestBox.appendChild(div);
+      });
       suggestBox.classList.remove('hidden');
     }
 
-    function selectSuggestItem(item) {
-      document.getElementById('searchSuggest').classList.add('hidden');
-      document.getElementById('searchInput').value = '';
-
-      if (item.type === 'member') {
-        openMemberModal(item.memberName);
-      } else if (item.type === 'stage') {
-        selectStage(item.stageKey);
-      }
-    }
-
-    // 公演選択時の処理
     function selectStage(stageKey) {
       currentStageKey = stageKey;
       const stage = STAGE_DATABASE[stageKey];
@@ -487,13 +475,12 @@
       switchTab('positions');
     }
 
-    // --- メンバーページ（モーダル）表示 ---
+    // --- メンバーモーダル表示 ---
     function openMemberModal(memberName) {
       document.getElementById('modalMemberName').innerText = memberName;
       const listContainer = document.getElementById('modalPerformanceList');
       listContainer.innerHTML = '';
 
-      // 出演公演を検索
       let totalAppearances = 0;
 
       SCHEDULE_DATA.forEach(item => {
@@ -501,7 +488,6 @@
         if (isPerformer) {
           totalAppearances++;
 
-          // ポジション情報の特定 (例: 倉野尾ポジで出た日は「倉野尾」と明記)
           let positionName = '指定なし';
           if (item.positions) {
             const matchedPos = item.positions.find(p => p.performer === memberName);
@@ -540,7 +526,7 @@
       document.getElementById('memberModal').classList.add('hidden');
     }
 
-    // --- Tab 2: ポジション描画 ---
+    // --- Tab 2: ポジション描画 (8名対応) ---
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
 
@@ -559,23 +545,24 @@
 
       document.getElementById('posStageTitle').innerText = stage.name;
       document.getElementById('posGroupTitle').innerText = stage.group;
+      document.getElementById('fixedCountBadge').innerText = `${stage.fixed.length}名枠`;
 
       const tbody = document.getElementById('positionTableBody');
       tbody.innerHTML = '';
 
-      for (let pos = 1; pos <= 16; pos++) {
+      // 固定メンバーの人数（8名）に合わせてループ
+      for (let pos = 1; pos <= stage.fixed.length; pos++) {
         const fixedName = stage.fixed[pos - 1] || "未定";
         const unders = (stage.underChain && stage.underChain[fixedName]) ? stage.underChain[fixedName] : [];
 
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 border-b border-slate-100";
 
-        // アンダーの表示生成（正丸アイコン＋固定メンバーと同じ大きさの文字で明記）
         let underHTML = '<span class="text-slate-400 text-xs">なし</span>';
         if (unders.length > 0) {
           underHTML = unders.map(uName => `
             <div class="inline-flex items-center gap-2 mr-3 my-1">
-              <span class="avatar-circle bg-purple-100 text-purple-700 border border-purple-300">⚪</span>
+              <span class="avatar-circle bg-purple-100 text-purple-700 border border-purple-300">○</span>
               <span class="font-bold text-slate-800 text-sm">${uName}</span>
             </div>
           `).join('');
@@ -601,7 +588,7 @@
       }
     }
 
-    // --- Tab 3: 出演・休演予想シミュレーター ---
+    // --- Tab 3: 出演・休演予想 (8名対応) ---
     function initPredictTab() {
       const stage = STAGE_DATABASE[currentStageKey];
 
@@ -653,7 +640,6 @@
       initPredictTab();
     }
 
-    // メンバー一括貼り付けでの即時反映ロジック
     function applyPastedMembers() {
       const text = document.getElementById('pasteInput').value;
       if (!text.trim()) return;
@@ -661,19 +647,17 @@
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage || !stage.allMembers) return;
 
-      // 中黒（・）、改行、カンマでパース
       const pastedNames = text.split(/[\n・,、\s]+/).map(s => s.trim()).filter(Boolean);
 
       absentMembersMap = {};
       stage.allMembers.forEach(name => {
-        // 貼り付けられたリストに含まれていれば「出演(false)」、含まれていなければ「休演(true)」
         absentMembersMap[name] = !pastedNames.includes(name);
       });
 
       initPredictTab();
     }
 
-    // ポジション予想ラインナップ＆理由生成
+    // ポジション予想ラインナップ描画 (8名分)
     function renderPredictedLineup() {
       const stage = STAGE_DATABASE[currentStageKey];
       const lineupContainer = document.getElementById('predictedLineup');
@@ -682,7 +666,8 @@
       const usedMembers = new Set();
       let subCount = 0;
 
-      for (let pos = 1; pos <= 16; pos++) {
+      // 8ポジション分をループ処理
+      for (let pos = 1; pos <= stage.fixed.length; pos++) {
         const fixedName = stage.fixed[pos - 1];
         const isFixedAbsent = !!absentMembersMap[fixedName];
 
@@ -693,14 +678,12 @@
           assignedMember = fixedName;
         } else {
           isUnder = true;
-          // アンダー候補から選定
           const unders = (stage.underChain && stage.underChain[fixedName]) ? stage.underChain[fixedName] : [];
           const availUnder = unders.find(u => !absentMembersMap[u] && !usedMembers.has(u));
 
           if (availUnder) {
             assignedMember = availUnder;
           } else {
-            // その他のあきメンバーから補填
             assignedMember = stage.allMembers.find(m => !absentMembersMap[m] && !usedMembers.has(m)) || "未定";
           }
         }
@@ -711,7 +694,6 @@
 
         if (isUnder) subCount++;
 
-        // 予想カード作成
         const div = document.createElement('div');
         div.className = `p-2.5 rounded-lg border flex flex-col justify-between ${
           isUnder ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'
