@@ -781,21 +781,21 @@
             } else if (availableUnders.length === 0) {
               const u1 = unders[0] || "アンダー候補";
               const u2 = unders[1] || "";
-              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日は同じポジションの${u1}${u2 ? 'や' + u2 : ''}も出演予定ではないため、そのままこのポジションに入ると予想。`;
+              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日は同じポジションの${u1}${u2 ? 'や' + u2 : ''}も出演予定ではないため、そのまま${assignedName}が入ると予想。`;
             } else {
               const u1 = availableUnders[0];
               const u1PosIdx = memberToPosMap[u1];
               const u1PosName = u1PosIdx !== undefined ? stage.fixed[u1PosIdx] : "別";
-              reasonHtml = `この日は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosName}ポジに入る可能性が高いと予想されるため、${assignedName}がこのポジションに入ると予想。`;
+              reasonHtml = `この日は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosName}ポジに入る可能性が高いと予想されるため、そのまま${assignedName}が入ると予想。`;
             }
           } else {
             if (unders.length <= 1) {
-              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないため、そのまま${assignedName}がこのポジションに入ると予想。`;
+              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないため、そのまま${assignedName}が入ると予想。`;
             } else if (availableUnders.length <= 1) {
               const otherUnders = unders.filter(u => u !== assignedName);
               const u2 = otherUnders[0] || "別アンダー";
               const u3 = otherUnders[1] || "";
-              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないのに加え、同じポジションの${u2}${u3 ? 'や' + u3 : ''}の出演予定もないため、${assignedName}がこのポジションに入ると予想。`;
+              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないのに加え、同じポジションの${u2}${u3 ? 'や' + u3 : ''}の出演予定もないため、そのまま${assignedName}が入ると予想。`;
             } else {
               const u2 = availableUnders.find(u => u !== assignedName) || "別アンダー";
               const u2PosIdx = memberToPosMap[u2];
@@ -803,7 +803,7 @@
               
               const p1Prob = 65;
               const p2Prob = 35;
-              reasonHtml = `この日は${u2}も出演予定だが、${u2}は${u2PosName}ポジションに出演する確率が高いと予想し、${assignedName}がこのポジションに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${p1Prob}%、${u2} ${p2Prob}%</span>`;
+              reasonHtml = `この日は${u2}も出演予定だが、${u2}は${u2PosName}ポジションに出演する確率が高いと予想し、そのまま${assignedName}が入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${p1Prob}%、${u2} ${p2Prob}%</span>`;
             }
           }
         } else {
@@ -812,20 +812,20 @@
 
           if (isStageFirstTimer) {
             if (firstTimers.length <= 1) {
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${fixedMember}ポジでの出演がほぼ確実と予想できるため、このポジションに入ると予想。`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${fixedMember}ポジでの出演がほぼ確実と予想できるため、${assignedName}が${fixedMember}ポジに入ると予想。`;
             } else {
               // 初日メンバーが複数名いる場合
               const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
               const m2PosIdx = memberToPosMap[m2];
               const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "他";
 
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから${fixedMember}ポジか${m2PosName}ポジのどちらかで出演になると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから${fixedMember}ポジか${m2PosName}ポジでの出演になると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
             }
           } else {
             const u2 = availableUnders.find(u => u !== assignedName) || "別メンバー";
             const u2Stats = getMemberStats(u2);
             const lastDate = u2Stats.lastDateMap[fixedMember] || "過去";
-            reasonHtml = `この日は${u2}も出演予定だが、${u2}は${lastDate}以来${fixedMember}ポジションでの出演がないため、${assignedName}がこのポジションに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
+            reasonHtml = `この日は${u2}も出演予定だが、${u2}は${lastDate}以来${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
           }
         }
 
