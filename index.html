@@ -344,8 +344,19 @@
         }
 
         let rawTitle = item.title || item.stage || "";
-        let displayTitle = rawTitle;
-        let baseStage = rawTitle.replace(/「|」|『|』/g, '').replace(/公演.*$/, '').trim();
+        let mainTitle = rawTitle;
+        let subTitle = item.event || item.subTitle || "";
+
+        // タイトルから「〜公演」と「イベント名/副題（生誕祭など）」を分離
+        if (!subTitle) {
+          const match = rawTitle.match(/^(「.*?」公演)(?:\s+(.*))?$/);
+          if (match) {
+            mainTitle = match[1];
+            subTitle = match[2] || "";
+          }
+        }
+
+        let baseStage = mainTitle.replace(/「|」|『|』/g, '').replace(/公演.*$/, '').trim();
 
         let membersArr = [];
         let performersStr = "";
@@ -361,7 +372,8 @@
           date: datePart,
           time: timePart,
           theater: item.theater || "AKB48劇場",
-          displayTitle: displayTitle,
+          displayTitle: mainTitle,
+          subTitle: subTitle,
           baseStageName: baseStage,
           performersText: performersStr,
           membersArray: membersArr,
@@ -551,7 +563,8 @@
                 <div>
                   ${isToday ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-500 text-white mr-1 inline-block">本日</span>' : ''}
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${item.theater}</span>
-                  <h4 class="font-bold text-slate-800 text-xs mt-0.5">${item.displayTitle}</h4>
+                  <h4 class="font-bold text-slate-800 text-xs mt-0.5">${escapeHtml(item.displayTitle)}</h4>
+                  ${item.subTitle ? `<div class="text-xs text-pink-600 font-bold mt-0.5">${escapeHtml(item.subTitle)}</div>` : ''}
                 </div>
               </div>
             </div>
@@ -996,10 +1009,12 @@
           }
         }
 
+        const stageLabel = item.subTitle ? `「${item.baseStageName}」 ${item.subTitle}` : `「${item.baseStageName}」`;
+
         div.innerHTML = `
           <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
           <span class="text-slate-600">${item.date}</span>
-          <span class="font-bold text-slate-800 flex-1 truncate">「${item.baseStageName}」</span>
+          <span class="font-bold text-slate-800 flex-1 truncate">${escapeHtml(stageLabel)}</span>
           <span class="text-pink-600 font-bold whitespace-nowrap">${escapeHtml(targetPositionName)}</span>
         `;
         historyList.appendChild(div);
