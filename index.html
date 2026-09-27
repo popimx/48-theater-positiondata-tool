@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -81,7 +81,7 @@
             </div>
           </div>
 
-          <!-- 劇場選択タブ -->
+          <!-- 劇場選択タブ（① どの劇場を選択しても黒背景・白字に統一） -->
           <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
             <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
             <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
@@ -96,7 +96,7 @@
         </div>
       </section>
 
-      <!-- Tab 2: 一覧表（③ ポジション別・重複なしメンバー表示 & 「初日」＋空白ヘッダー） -->
+      <!-- Tab 2: 一覧表（③ 空白行を自動カット） -->
       <section id="tab-positions" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
@@ -310,7 +310,6 @@
 
         let rawTitle = item.title || item.stage || "";
         let displayTitle = rawTitle;
-        // ② 公演名から後ろをカットして「夢のポップスター」形式にする処理
         let baseStage = rawTitle.replace(/「|」|『|』/g, '').replace(/公演.*$/, '').trim();
 
         let membersArr = [];
@@ -440,7 +439,6 @@
       }
     }
 
-    // ① カレンダーの各公演カードに出演メンバーを表示させる
     function renderCalendar() {
       const listContainer = document.getElementById('calendarList');
       listContainer.innerHTML = '';
@@ -520,7 +518,7 @@
       }, 100);
     }
 
-    // ③ ポジションの一覧表：そのポジションの経験者を重複なしで横に並べ、ヘッダーは1番左に「初日」それ以外は空白にする
+    // ③ ポジション一覧表：完全に有効な（メンバーが存在する）行だけを生成し、空白行をカット
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -532,7 +530,6 @@
 
       if (stage.fixed.length === 0) return;
 
-      // データの全公演から最大ポジション数を算出
       let maxCols = 0;
       stage.schedules.forEach(s => {
         if (s.positionsArray && s.positionsArray.length > maxCols) {
@@ -540,7 +537,6 @@
         }
       });
 
-      // ヘッダー作成：1番左に「初日」、他は空白
       for (let c = 0; c < maxCols; c++) {
         const th = document.createElement('th');
         th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
@@ -548,13 +544,7 @@
         headerTr.appendChild(th);
       }
 
-      // 各ポジション（列ごとの初日メンバーを基準に、全公演から重複なしで抽出）
-      // ※ ポジション数分ループを回す（各列ごとの変遷）
       for (let colIdx = 0; colIdx < maxCols; colIdx++) {
-        const tr = document.createElement('tr');
-        tr.className = "border-b border-slate-100 hover:bg-slate-50";
-
-        // このポジション（列）で登場したメンバーを重複なしで収集する
         const seenMembers = new Set();
         const orderedMembers = [];
         
@@ -568,7 +558,12 @@
           }
         });
 
-        // 収集したメンバーを横方向に並べるセルを作成
+        // ポジションに所属するメンバーが1人もいない場合は行自体を描画しない（空白行カット）
+        if (orderedMembers.length === 0) continue;
+
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-100 hover:bg-slate-50";
+
         for (let i = 0; i < maxCols; i++) {
           const td = document.createElement('td');
           td.className = "p-2.5 text-center border-r border-slate-100 whitespace-nowrap";
@@ -709,17 +704,27 @@
         div.className = "p-2 bg-slate-50 border border-slate-200 rounded text-xs flex gap-3 items-center cursor-pointer hover:bg-pink-50 transition";
         div.onclick = () => jumpToSchedule(item.date, item.id);
         
-        // ② 履歴表示の演目名もベース公演名（「夢のポップスター」）に統一
+        // ② 出演履歴のポジション名（その公演でどの初日メンバーのポジションに入ったか）を算出・表示
+        let positionName = selectedMemberName;
+        const stageInfo = STAGE_DATABASE[item.baseStageName];
+        if (stageInfo && stageInfo.fixed && item.positionsArray && item.positionsArray.length > 0) {
+          const memberIndexInShow = item.positionsArray.indexOf(selectedMemberName);
+          if (memberIndexInShow !== -1 && stageInfo.fixed[memberIndexInShow]) {
+            positionName = stageInfo.fixed[memberIndexInShow];
+          }
+        }
+
         div.innerHTML = `
           <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
           <span class="text-slate-600">${item.date}</span>
           <span class="font-bold text-slate-800 flex-1 truncate">「${item.baseStageName}」</span>
-          <span class="text-pink-600 font-bold whitespace-nowrap">${selectedMemberName}</span>
+          <span class="text-pink-600 font-bold whitespace-nowrap">（${positionName}）</span>
         `;
         historyList.appendChild(div);
       });
     }
 
+    // ① どの劇場ボタンを選択しても黒背景（bg-slate-800）・白字（text-white）に切り替わるように改善
     function filterSchedule(filter, btn) {
       currentScheduleFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(b => {
