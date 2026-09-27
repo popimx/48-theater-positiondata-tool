@@ -36,17 +36,6 @@
       <h1 class="text-xl font-bold flex items-center gap-2 cursor-pointer" onclick="goHome()">
         <i class="fa-solid fa-masks-theater"></i> 劇場公演 データサイト
       </h1>
-      
-      <!-- 公演切り替えドロップダウンUI -->
-      <div class="relative inline-block text-left">
-        <button id="activeStageBadge" onclick="toggleStageDropdown(event)" class="text-xs bg-pink-700 hover:bg-pink-800 transition text-pink-100 font-semibold px-3 py-1.5 rounded-full border border-pink-500 flex items-center gap-1.5 shadow-sm">
-          <span id="activeStageText">公演を選択</span>
-          <i class="fa-solid fa-chevron-down text-[10px]"></i>
-        </button>
-        <div id="stageDropdown" class="hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-          <div class="py-1 max-h-60 overflow-y-auto" id="stageDropdownList"></div>
-        </div>
-      </div>
     </div>
 
     <!-- 検索バー ＆ サジェスト -->
@@ -229,10 +218,11 @@
       "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海", 
       "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜", "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優", 
       "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた", 
-      "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"
+      "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明", "大盛真歩"
     ];
 
     let SCHEDULE_DATA = [];
+    let ALL_SCHEDULE_DATA = []; // 全年度の統合データ（②網羅的表示用）
     let STAGE_DATABASE = {};
     let currentStageKey = null;
     let currentScheduleFilter = "ALL";
@@ -266,20 +256,15 @@
       }
     ];
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       initYearMonthDropdowns();
-      onDateChange();
+      await loadAllYearsScheduleData(); // 全年度データを事前読み込み
+      await onDateChange();
 
       document.addEventListener('click', (e) => {
         const suggestBox = document.getElementById('searchSuggest');
         const searchInput = document.getElementById('searchInput');
-        if (!suggestBox.contains(e.target) && e.target !== searchInput) suggestBox.classList.add('hidden');
-
-        const stageDropdown = document.getElementById('stageDropdown');
-        const stageBadge = document.getElementById('activeStageBadge');
-        if (stageDropdown && !stageDropdown.classList.contains('hidden') && !stageBadge.contains(e.target)) {
-          stageDropdown.classList.add('hidden');
-        }
+        if (suggestBox && !suggestBox.contains(e.target) && e.target !== searchInput) suggestBox.classList.add('hidden');
       });
     });
 
@@ -320,8 +305,28 @@
         if (!response.ok) throw new Error("JSON not found");
         return await response.json();
       } catch (err) {
-        return FALLBACK_SCHEDULE_2026;
+        return year == 2026 ? FALLBACK_SCHEDULE_2026 : [];
       }
+    }
+
+    // ② 全年度の schedule.(グループ名)_(年度).json を統合してロード
+    async function loadAllYearsScheduleData() {
+      let allList = [];
+      const currentYear = new Date().getFullYear();
+      const promises = [];
+      
+      // 2020年〜現在の全データを非同期ロード
+      for (let y = 2020; y <= currentYear; y++) {
+        promises.push(fetchScheduleJson("akb48", y));
+      }
+      
+      const results = await Promise.all(promises);
+      results.forEach(rawData => {
+        if (Array.isArray(rawData)) {
+          allList = allList.concat(normalizeScheduleData(rawData));
+        }
+      });
+      ALL_SCHEDULE_DATA = allList;
     }
 
     function normalizeScheduleData(rawData) {
@@ -344,12 +349,16 @@
         let membersArr = [];
         let performersStr = "";
         if (Array.isArray(item.members)) {
-          membersArr = item.members;
-          performersStr = item.members.join("・");
+          // ⑤ メンバー配列から "-" や "－" を除外
+          membersArr = item.members.filter(m => m && m !== "-" && m !== "－");
+          performersStr = membersArr.join("・");
         }
 
+        // ⑤ ポジション配列の正規化（"-" は除外しないが文字調整）
+        let posArr = Array.isArray(item.positions) ? item.positions : [];
+
         return {
-          id: item.id || `evt_${Math.random()}`,
+          id: item.id || `evt_${Math.random().toString(36).substring(2, 9)}`,
           date: datePart,
           time: timePart,
           theater: item.theater || "AKB48劇場",
@@ -357,7 +366,7 @@
           baseStageName: baseStage,
           performersText: performersStr,
           membersArray: membersArr,
-          positionsArray: item.positions || []
+          positionsArray: posArr
         };
       });
     }
@@ -379,14 +388,19 @@
           };
         }
         STAGE_DATABASE[base].schedules.push(item);
-        item.membersArray.forEach(m => { if(m) STAGE_DATABASE[base].allMembers.add(m.trim()); });
+        item.membersArray.forEach(m => { 
+          if(m && m !== "-" && m !== "－") STAGE_DATABASE[base].allMembers.add(m.trim()); 
+        });
       });
 
       Object.keys(STAGE_DATABASE).forEach(key => {
         const stage = STAGE_DATABASE[key];
         stage.schedules.sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
         const firstShow = stage.schedules.find(s => s.positionsArray && s.positionsArray.length > 0);
-        if (firstShow) stage.fixed = [...firstShow.positionsArray];
+        if (firstShow) {
+          // ⑤ "-" などを除外
+          stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
+        }
         
         const rawMembersSet = stage.allMembers;
         stage.allMembers = MASTER_MEMBER_ORDER.filter(m => rawMembersSet.has(m) || MASTER_MEMBER_ORDER.includes(m));
@@ -416,7 +430,6 @@
     function selectStage(stageKey) {
       currentStageKey = stageKey;
       const stage = STAGE_DATABASE[stageKey];
-      document.getElementById('activeStageText').innerText = stage ? stage.name : stageKey;
       
       document.getElementById('mainTabsContainer').classList.remove('hidden');
       document.getElementById('memberDetailContainer').classList.add('hidden');
@@ -429,27 +442,6 @@
       renderPositions();
       renderDailyTable();
       switchTab('positions');
-    }
-
-    function toggleStageDropdown(e) {
-      if (e) e.stopPropagation();
-      const dropdown = document.getElementById('stageDropdown');
-      dropdown.classList.toggle('hidden');
-      
-      if (!dropdown.classList.contains('hidden')) {
-        const list = document.getElementById('stageDropdownList');
-        list.innerHTML = '';
-        Object.keys(STAGE_DATABASE).forEach(key => {
-          const li = document.createElement('li');
-          li.className = "px-4 py-2.5 hover:bg-pink-50 cursor-pointer flex items-center justify-between border-b border-slate-100 last:border-0";
-          li.innerHTML = `<span class="font-bold text-slate-700">${STAGE_DATABASE[key].name}</span>`;
-          li.onclick = () => {
-            selectStage(key);
-            dropdown.classList.add('hidden');
-          };
-          list.appendChild(li);
-        });
-      }
     }
 
     function switchTab(tabName) {
@@ -502,7 +494,7 @@
         const isToday = item.date === todayString;
         const card = document.createElement('div');
         card.id = `sched-${item.id}`;
-        card.className = `p-3 rounded-lg border shadow-sm transition cursor-pointer ${isToday ? 'bg-pink-50 border-pink-300' : 'bg-white border-slate-200 hover:border-pink-300'}`;
+        card.className = `sched-card p-3 rounded-lg border shadow-sm transition cursor-pointer ${isToday ? 'bg-pink-50 border-pink-300' : 'bg-white border-slate-200 hover:border-pink-300'}`;
         card.onclick = () => selectStage(item.baseStageName);
         
         const dateParts = item.date.split('/');
@@ -535,6 +527,7 @@
       });
     }
 
+    // ③ ボタンを押したら対象スケジュールの背景色を薄いピンクに変化させてスクロール
     function jumpToSchedule(dateStr, elementId) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
@@ -544,9 +537,18 @@
       }
       goHome();
       setTimeout(() => {
+        // 全カードの強調状態を解除
+        document.querySelectorAll('.sched-card').forEach(el => {
+          el.classList.remove('bg-pink-100', 'border-pink-400');
+        });
+
         const target = document.getElementById(`sched-${elementId}`);
-        if(target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
+        if(target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // 対象カードの背景色を薄いピンク（bg-pink-100）に変化させる
+          target.classList.add('bg-pink-100', 'border-pink-400');
+        }
+      }, 150);
     }
 
     function renderPositions() {
@@ -571,12 +573,13 @@
         validShows.forEach(show => {
           if (show.positionsArray && show.positionsArray[colIdx]) {
             const m = show.positionsArray[colIdx].trim();
-            if (m) experiencedSet.add(m);
+            // ⑤ "-" や "－" を除外
+            if (m && m !== "-" && m !== "－") experiencedSet.add(m);
           }
         });
 
         const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
-        const orderedMembers = [fixedMember, ...undersOrdered];
+        const orderedMembers = [fixedMember, ...undersOrdered].filter(m => m && m !== "-" && m !== "－");
 
         if (orderedMembers.length > 0) {
           rowDataList.push({ fixedMember, orderedMembers });
@@ -602,7 +605,7 @@
           td.className = "p-2.5 text-center border-r border-slate-100 whitespace-nowrap";
           
           const member = orderedMembers[i];
-          if (member) {
+          if (member && member !== "-" && member !== "－") {
             const isOriginal = (member === fixedMember);
             const className = isOriginal ? 'member-first' : 'member-under';
             td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
@@ -651,7 +654,7 @@
       });
     }
 
-    // ④ ⑤ ⑥ ⑦ 予想機能と完全一致マッチング、詳細予想文言の自動生成
+    // ④ 経験者優先割り当てアルゴリズム ＆ ⑤ "-" の文言除外処理
     function runForecast() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) {
@@ -660,7 +663,11 @@
       }
 
       const rawInput = document.getElementById('forecastInputText').value;
-      const inputNames = rawInput.split(/[\s・,\n/]+/).map(s => s.trim()).filter(s => s.length > 0);
+      // ⑤ 入力文字列から "-" や "－" を除外
+      const inputNames = rawInput.split(/[\s・,\n/]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0 && s !== "-" && s !== "－");
+
       const inputSet = new Set(inputNames);
       const inputMemberList = Array.from(inputSet);
 
@@ -675,6 +682,7 @@
 
       // 全メンバー一覧表示
       MASTER_MEMBER_ORDER.forEach(name => {
+        if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
         const div = document.createElement('div');
         div.className = `p-2 rounded border flex items-center justify-between ${isAttending ? 'bg-pink-50 border-pink-300 font-bold text-pink-700' : 'bg-white border-slate-200 text-slate-600'}`;
@@ -687,18 +695,23 @@
 
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
 
-      // 過去データ統計取得関数
+      // 過去データ統計取得関数（⑤ "-" や "－" を完全に集計除外）
       function getMemberStats(memberName) {
         let totalCount = 0;
         let posCountMap = {};
         let lastDateMap = {};
+        if (!memberName || memberName === "-" || memberName === "－") {
+          return { totalCount: 0, posCountMap: {}, lastDateMap: {}, uniquePositionsCount: 0 };
+        }
         validShows.forEach(show => {
           show.positionsArray.forEach((m, pIdx) => {
             if (m === memberName) {
               totalCount++;
               const orig = stage.fixed[pIdx];
-              posCountMap[orig] = (posCountMap[orig] || 0) + 1;
-              lastDateMap[orig] = show.date;
+              if (orig && orig !== "-" && orig !== "－") {
+                posCountMap[orig] = (posCountMap[orig] || 0) + 1;
+                lastDateMap[orig] = show.date;
+              }
             }
           });
         });
@@ -713,60 +726,73 @@
         return { pIdx, fixedMember };
       });
 
-      // 1. 初日メンバーで出演するメンバーを優先的に本人のポジションに割り当て
+      // 【ステップ1】初日メンバー本人が本日出演する場合は優先してそのポジションへ固定割り当て
       positionCandidates.forEach(({ pIdx, fixedMember }) => {
-        if (inputSet.has(fixedMember)) {
+        if (fixedMember && inputSet.has(fixedMember)) {
           assignedMapping[pIdx] = fixedMember;
           memberToPosMap[fixedMember] = pIdx;
           usedMembers.add(fixedMember);
         }
       });
 
-      // 2. 残りのメンバーと空きポジションの割り当て（適性スコア優先）
-      let remainingMembers = inputMemberList.filter(m => !usedMembers.has(m));
-      let remainingPositions = positionCandidates.filter(({ pIdx }) => assignedMapping[pIdx] === undefined);
+      // ④ 【ステップ2】経験者優先割り当て（1人でも経験ありがいればそのポジションに優先配置）
+      let unassignedPositions = positionCandidates.filter(({ pIdx }) => assignedMapping[pIdx] === undefined);
+      let unassignedMembers = inputMemberList.filter(m => !usedMembers.has(m));
 
-      remainingMembers.forEach(member => {
-        const stats = getMemberStats(member);
-        let bestPosIdx = -1;
-        let maxScore = -1;
+      // 空きポジションごとに「経験あり」のメンバーを探索して最適なマッチングを行う
+      let changed = true;
+      while (changed && unassignedPositions.length > 0 && unassignedMembers.length > 0) {
+        changed = false;
+        
+        // 各ポジションで経験のある未割り当てメンバーを探索
+        let bestPair = null;
+        let maxExpCount = -1;
 
-        remainingPositions.forEach(({ pIdx, fixedMember }) => {
-          if (assignedMapping[pIdx] !== undefined) return;
-          const posFreq = stats.posCountMap[fixedMember] || 0;
-          let score = posFreq * 100 + stats.totalCount;
-          if (score > maxScore) {
-            maxScore = score;
-            bestPosIdx = pIdx;
+        for (let posObj of unassignedPositions) {
+          const { pIdx, fixedMember } = posObj;
+          for (let m of unassignedMembers) {
+            const stats = getMemberStats(m);
+            const expCount = stats.posCountMap[fixedMember] || 0;
+            if (expCount > 0 && expCount > maxExpCount) {
+              maxExpCount = expCount;
+              bestPair = { pIdx, member: m };
+            }
           }
-        });
+        }
 
-        if (bestPosIdx !== -1) {
-          assignedMapping[bestPosIdx] = member;
-          memberToPosMap[member] = bestPosIdx;
-          usedMembers.add(member);
-        } else if (remainingPositions.length > 0) {
-          const target = remainingPositions.find(({ pIdx }) => assignedMapping[pIdx] === undefined);
-          if (target) {
-            assignedMapping[target.pIdx] = member;
-            memberToPosMap[member] = target.pIdx;
-            usedMembers.add(member);
-          }
+        if (bestPair) {
+          assignedMapping[bestPair.pIdx] = bestPair.member;
+          memberToPosMap[bestPair.member] = bestPair.pIdx;
+          usedMembers.add(bestPair.member);
+          
+          unassignedPositions = unassignedPositions.filter(p => p.pIdx !== bestPair.pIdx);
+          unassignedMembers = unassignedMembers.filter(m => m !== bestPair.member);
+          changed = true;
+        }
+      }
+
+      // ④ 【ステップ3】残り（未経験者・初挑戦者）を未割り当てのポジションへ配置
+      unassignedMembers.forEach(m => {
+        if (unassignedPositions.length > 0) {
+          const targetPos = unassignedPositions.shift();
+          assignedMapping[targetPos.pIdx] = m;
+          memberToPosMap[m] = targetPos.pIdx;
+          usedMembers.add(m);
         }
       });
 
-      // 各ポジションの予想結果と文章生成
+      // 各ポジションの予想結果と文章生成（⑤ "-" の除外対応）
       stage.fixed.forEach((fixedMember, pIdx) => {
         const assignedName = assignedMapping[pIdx] || "未定";
         const stats = getMemberStats(assignedName);
         const posFreq = stats.posCountMap[fixedMember] || 0;
         const isExperienced = posFreq > 0 || assignedName === fixedMember;
 
-        // 各ポジションのアンダーリスト（過去経験者）
+        // ⑤ 過去アンダー候補者から "-" や "－" を徹底除外
         const underMembersSet = new Set();
         validShows.forEach(show => {
           const m = show.positionsArray[pIdx];
-          if (m && m !== fixedMember) underMembersSet.add(m);
+          if (m && m !== fixedMember && m !== "-" && m !== "－") underMembersSet.add(m);
         });
         const unders = Array.from(underMembersSet);
         const availableUnders = unders.filter(u => inputSet.has(u));
@@ -792,12 +818,12 @@
             if (unders.length <= 1) {
               reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、そのまま${assignedName}が入ると予想。`;
             } else if (availableUnders.length <= 1) {
-              const otherUnders = unders.filter(u => u !== assignedName);
-              const u2 = otherUnders[0] || "別アンダー";
+              const otherUnders = unders.filter(u => u !== assignedName && u !== "-" && u !== "－");
+              const u2 = otherUnders[0] || "";
               const u3 = otherUnders[1] || "";
-              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、同じポジションの${u2}${u3 ? 'や' + u3 : ''}の出演予定もないため、そのまま${assignedName}が入ると予想。`;
+              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${u2 ? '同じポジションの' + u2 + (u3 ? 'や' + u3 : '') + 'の出演予定もないため、' : ''}そのまま${assignedName}が入ると予想。`;
             } else {
-              const u2 = availableUnders.find(u => u !== assignedName) || "別アンダー";
+              const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別アンダー";
               const u2PosIdx = memberToPosMap[u2];
               const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "別";
               
@@ -814,7 +840,6 @@
             if (firstTimers.length <= 1) {
               reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${fixedMember}ポジでの出演がほぼ確実と予想できるため、${assignedName}が${fixedMember}ポジに入ると予想。`;
             } else {
-              // 初日メンバーが複数名いる場合
               const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
               const m2PosIdx = memberToPosMap[m2];
               const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "他";
@@ -822,7 +847,7 @@
               reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジか${m2PosName}ポジでの出演になると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
             }
           } else {
-            const u2 = availableUnders.find(u => u !== assignedName) || "別メンバー";
+            const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別メンバー";
             const u2Stats = getMemberStats(u2);
             const lastDate = u2Stats.lastDateMap[fixedMember] || "過去";
             reasonHtml = `この日の公演は${u2}も出演予定だが、${u2}は${lastDate}以来${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
@@ -860,7 +885,7 @@
       });
 
       MASTER_MEMBER_ORDER.forEach(name => {
-        if (name.toLowerCase().includes(query)) {
+        if (name !== "-" && name !== "－" && name.toLowerCase().includes(query)) {
           matches.push({ type: 'member', label: name, name: name });
         }
       });
@@ -888,6 +913,7 @@
     }
 
     function openMemberDetail(memberName) {
+      if (!memberName || memberName === "-" || memberName === "－") return;
       selectedMemberName = memberName;
       document.getElementById('detailMemberName').innerText = memberName;
 
@@ -901,8 +927,10 @@
       renderMemberDetailView();
     }
 
+    // ② 全年度データ（ALL_SCHEDULE_DATA）を使用して網羅的な出演統計と出演履歴を表示
     function renderMemberDetailView() {
-      const memberShows = SCHEDULE_DATA.filter(item => item.membersArray.includes(selectedMemberName));
+      const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
+      const memberShows = dataSource.filter(item => item.membersArray.includes(selectedMemberName));
       document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberShows.length}回`;
 
       const showCountsMap = {};
