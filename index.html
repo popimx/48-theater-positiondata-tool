@@ -777,25 +777,25 @@
         if (isExperienced) {
           if (assignedName === fixedMember) {
             if (unders.length === 0) {
-              reasonHtml = `この日出演予定の${assignedName}は${stageName}の初日メンバーであり、${assignedName}ポジションに入れるメンバーもいないため、そのままこのポジションに入ると予想。`;
+              reasonHtml = `${assignedName}は${stageName}の初日メンバーであり、${assignedName}ポジに入れるメンバーもいないため、そのままこのポジションに入ると予想。`;
             } else if (availableUnders.length === 0) {
               const u1 = unders[0] || "アンダー候補";
               const u2 = unders[1] || "";
-              reasonHtml = `この日出演予定の${assignedName}は${stageName}の初日メンバーであり、${assignedName}ポジションに入れる${u1}${u2 ? ' も ' + u2 : ''}もこの日の出演予定ではないため、そのままこのポジションに入ると予想。`;
+              reasonHtml = `${assignedName}は${stageName}の初日メンバーであり、同じポジションの${u1}${u2 ? ' も ' + u2 : ''}もこの日の出演予定ではないため、そのままこのポジションに入ると予想。`;
             } else {
               const u1 = availableUnders[0];
               const u1PosIdx = memberToPosMap[u1];
               const u1PosName = u1PosIdx !== undefined ? stage.fixed[u1PosIdx] : "別";
-              reasonHtml = `この日は${u1}も出演予定だが、${assignedName}は${stageName}の初日メンバーであり、${u1}は${u1PosName}ポジションに入る可能性が高いと予想されるため、${assignedName}がこのポジションに入ると予想。`;
+              reasonHtml = `この日は${u1}も出演予定だが、${assignedName}は${stageName}の初日メンバーであり、${u1}は${u1PosName}ポジに入る可能性が高いと予想されるため、${assignedName}がこのポジションに入ると予想。`;
             }
           } else {
             if (unders.length <= 1) {
-              reasonHtml = `この日は${fixedMember}の出演予定がないため、そのまま${assignedName}がこのポジションに入ると予想。`;
+              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないため、そのまま${assignedName}がこのポジションに入ると予想。`;
             } else if (availableUnders.length <= 1) {
               const otherUnders = unders.filter(u => u !== assignedName);
               const u2 = otherUnders[0] || "別アンダー";
               const u3 = otherUnders[1] || "";
-              reasonHtml = `この日は${fixedMember}の出演予定がないのに加え、${u2}${u3 ? ' や ' + u3 : ''}の出演予定もないため、${assignedName}がこのポジションに入ると予想。`;
+              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないのに加え、同ポジの${u2}${u3 ? ' や ' + u3 : ''}の出演予定もないため、${assignedName}がこのポジションに入ると予想。`;
             } else {
               const u2 = availableUnders.find(u => u !== assignedName) || "別アンダー";
               const u2PosIdx = memberToPosMap[u2];
