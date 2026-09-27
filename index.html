@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -22,10 +22,10 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-    /* ③ 名前枠をなくし、初日メンバーをピンク色、アンダー等を従来通りの色に設定 */
-    .member-first { color: #db2777; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; } /* ピンク色 */
+    /* 名前枠なし、初日メンバーはピンク、アンダー等は茶系 */
+    .member-first { color: #db2777; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
     .member-first:hover { opacity: 0.7; }
-    .member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; } /* 黄色・茶系 */
+    .member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
     .member-under:hover { opacity: 0.7; }
   </style>
 </head>
@@ -96,7 +96,7 @@
         </div>
       </section>
 
-      <!-- Tab 2: 一覧表（② ポジション一覧を日別表と同じ形に） -->
+      <!-- Tab 2: 一覧表（③ ポジション別・重複なしメンバー表示 & 「初日」＋空白ヘッダー） -->
       <section id="tab-positions" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
@@ -210,7 +210,6 @@
     let selectedMemberName = null;
     let todayString = "";
 
-    // ① schedule_(グループ名)_(年度).json の形式のみを想定したフォールバックデータ
     const FALLBACK_SCHEDULE_2026 = [
       {
         "id": "akb_260807",
@@ -285,16 +284,13 @@
       onDateChange();
     }
 
-    // ① schedule_(グループ名)_(年度).json のファイル名からデータをロードする想定の関数
     async function fetchScheduleJson(groupName, year) {
-      // 実際にご自身のサーバーやディレクトリにファイルを配置する際は、下記パスから取得されます
       const fileName = `schedule_${groupName.toLowerCase()}_${year}.json`;
       try {
         const response = await fetch(fileName);
         if (!response.ok) throw new Error("JSON not found");
         return await response.json();
       } catch (err) {
-        // ファイルが見つからない等のフォールバックとして固定データを返す
         return FALLBACK_SCHEDULE_2026;
       }
     }
@@ -314,6 +310,7 @@
 
         let rawTitle = item.title || item.stage || "";
         let displayTitle = rawTitle;
+        // ② 公演名から後ろをカットして「夢のポップスター」形式にする処理
         let baseStage = rawTitle.replace(/「|」|『|』/g, '').replace(/公演.*$/, '').trim();
 
         let membersArr = [];
@@ -368,7 +365,6 @@
 
     async function onDateChange() {
       const year = document.getElementById("yearSelect").value;
-      // グループ名に応じた schedule_(グループ名)_(年度).json をロード
       const rawData = await fetchScheduleJson("akb48", year);
       SCHEDULE_DATA = normalizeScheduleData(rawData);
       generateStageDatabase();
@@ -444,6 +440,7 @@
       }
     }
 
+    // ① カレンダーの各公演カードに出演メンバーを表示させる
     function renderCalendar() {
       const listContainer = document.getElementById('calendarList');
       listContainer.innerHTML = '';
@@ -483,18 +480,26 @@
         const monthDay = dateParts.length >= 3 ? `${dateParts[1]}/${dateParts[2]}` : item.date;
 
         card.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="text-center bg-white border border-slate-200 px-2.5 py-1 rounded w-16">
-                <span class="block text-xs text-slate-500 font-bold">${monthDay}</span>
-                <span class="block text-xs font-bold text-pink-600">${item.time}</span>
-              </div>
-              <div>
-                ${isToday ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-500 text-white mr-1 inline-block">本日</span>' : ''}
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${item.theater}</span>
-                <h4 class="font-bold text-slate-800 text-xs mt-0.5">${item.displayTitle}</h4>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="text-center bg-white border border-slate-200 px-2.5 py-1 rounded w-16">
+                  <span class="block text-xs text-slate-500 font-bold">${monthDay}</span>
+                  <span class="block text-xs font-bold text-pink-600">${item.time}</span>
+                </div>
+                <div>
+                  ${isToday ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-500 text-white mr-1 inline-block">本日</span>' : ''}
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${item.theater}</span>
+                  <h4 class="font-bold text-slate-800 text-xs mt-0.5">${item.displayTitle}</h4>
+                </div>
               </div>
             </div>
+            ${item.performersText ? `
+              <div class="bg-slate-50 border border-slate-100 rounded p-2 text-xs text-slate-600">
+                <span class="font-bold text-slate-700 block mb-0.5">【出演メンバー】</span>
+                <span>${escapeHtml(item.performersText)}</span>
+              </div>
+            ` : ''}
           </div>
         `;
         listContainer.appendChild(card);
@@ -515,7 +520,7 @@
       }, 100);
     }
 
-    // ② ポジション一覧表を日別表と同じ形（縦横反転）に変更 ＆ ③ 枠をなくし初日メンバーをピンク色に
+    // ③ ポジションの一覧表：そのポジションの経験者を重複なしで横に並べ、ヘッダーは1番左に「初日」それ以外は空白にする
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -527,39 +532,59 @@
 
       if (stage.fixed.length === 0) return;
 
-      const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
-
-      // 日別表と同様に公演日（または回数）をヘッダーにする
-      validShows.forEach((show, index) => {
-        const dateStr = show.date.split('/').slice(1).join('/');
-        const th = document.createElement('th');
-        th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${index === 0 ? '初日' : dateStr}</span>`;
-        headerTr.appendChild(th);
+      // データの全公演から最大ポジション数を算出
+      let maxCols = 0;
+      stage.schedules.forEach(s => {
+        if (s.positionsArray && s.positionsArray.length > maxCols) {
+          maxCols = s.positionsArray.length;
+        }
       });
 
-      // 各ポジション行（初日メンバーが縦に並び、横にその変遷・出演メンバーが並ぶ）
-      stage.fixed.forEach((fixedMember, idx) => {
+      // ヘッダー作成：1番左に「初日」、他は空白
+      for (let c = 0; c < maxCols; c++) {
+        const th = document.createElement('th');
+        th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${c === 0 ? '初日' : ''}</span>`;
+        headerTr.appendChild(th);
+      }
+
+      // 各ポジション（列ごとの初日メンバーを基準に、全公演から重複なしで抽出）
+      // ※ ポジション数分ループを回す（各列ごとの変遷）
+      for (let colIdx = 0; colIdx < maxCols; colIdx++) {
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-100 hover:bg-slate-50";
 
-        validShows.forEach(show => {
-          const member = show.positionsArray[idx] || "";
+        // このポジション（列）で登場したメンバーを重複なしで収集する
+        const seenMembers = new Set();
+        const orderedMembers = [];
+        
+        stage.schedules.forEach(show => {
+          if (show.positionsArray && show.positionsArray[colIdx]) {
+            const m = show.positionsArray[colIdx];
+            if (!seenMembers.has(m)) {
+              seenMembers.add(m);
+              orderedMembers.push(m);
+            }
+          }
+        });
+
+        // 収集したメンバーを横方向に並べるセルを作成
+        for (let i = 0; i < maxCols; i++) {
           const td = document.createElement('td');
-          td.className = "p-2.5 text-center border-r border-slate-100";
+          td.className = "p-2.5 text-center border-r border-slate-100 whitespace-nowrap";
           
+          const member = orderedMembers[i];
           if (member) {
-            const isOriginal = member === fixedMember;
+            const isOriginal = (member === stage.fixed[colIdx]);
             const className = isOriginal ? 'member-first' : 'member-under';
             td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
           }
           tr.appendChild(td);
-        });
+        }
         tbody.appendChild(tr);
-      });
+      }
     }
 
-    // ③ 日別表も同様に枠をなくし、初日メンバーをピンク色、アンダー等を従来通りの色に
     function renderDailyTable() {
       const stage = STAGE_DATABASE[currentStageKey];
       const headerTr = document.getElementById('dailyTableHeader');
@@ -684,10 +709,11 @@
         div.className = "p-2 bg-slate-50 border border-slate-200 rounded text-xs flex gap-3 items-center cursor-pointer hover:bg-pink-50 transition";
         div.onclick = () => jumpToSchedule(item.date, item.id);
         
+        // ② 履歴表示の演目名もベース公演名（「夢のポップスター」）に統一
         div.innerHTML = `
           <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
           <span class="text-slate-600">${item.date}</span>
-          <span class="font-bold text-slate-800 flex-1 truncate">${item.displayTitle}</span>
+          <span class="font-bold text-slate-800 flex-1 truncate">「${item.baseStageName}」</span>
           <span class="text-pink-600 font-bold whitespace-nowrap">${selectedMemberName}</span>
         `;
         historyList.appendChild(div);
