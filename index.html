@@ -81,7 +81,7 @@
             </div>
           </div>
 
-          <!-- 劇場選択タブ（① 各劇場選択時も確実に黒背景・白字になるよう修正） -->
+          <!-- 劇場選択タブ -->
           <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
             <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
             <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
@@ -96,7 +96,7 @@
         </div>
       </section>
 
-      <!-- Tab 2: 一覧表（③ 空白行が完全に出ないよう修正） -->
+      <!-- Tab 2: 一覧表 -->
       <section id="tab-positions" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
@@ -518,7 +518,7 @@
       }, 100);
     }
 
-    // ③ ポジション一覧表：完全にメンバーが1人も入っていない列（行）自体を完全にカットして生成
+    // ① ポジション一覧表：各ポジション（行）に誰も入っていない場合はその行をカットする
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -530,64 +530,50 @@
 
       if (stage.fixed.length === 0) return;
 
-      // テーブルの列ヘッダー（一番上の「初日」などの見出し用）を作成
-      const th = document.createElement('th');
-      th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
-      th.innerHTML = `<span class="text-xs font-bold text-slate-600">初日</span>`;
-      headerTr.appendChild(th);
-
-      // 有効な出演回数ぶんの列ヘッダーを追加
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
-      validShows.forEach((_, idx) => {
-        const thSub = document.createElement('th');
-        thSub.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
-        thSub.innerHTML = `<span class="text-xs font-bold text-slate-600">${idx === 0 ? '' : ''}</span>`;
-        headerTr.appendChild(thSub);
+
+      // 一覧表のヘッダー（公演日順）を作成
+      validShows.forEach(show => {
+        const dateStr = show.date.split('/').slice(1).join('/');
+        const th = document.createElement('th');
+        th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${escapeHtml(dateStr)}</span>`;
+        headerTr.appendChild(th);
       });
 
-      // 各ポジション（固定メンバーのインデックスごと）に、誰か1人でも出演しているかチェックして行を組み立てる
+      // 各ポジション（固定メンバーのインデックスごと）の行を作成。誰も出演していない行はカット
       stage.fixed.forEach((fixedMember, colIdx) => {
-        const seenMembers = new Set();
-        const orderedMembers = [];
+        const rowMembers = [];
+        let hasAnyMember = false;
 
         validShows.forEach(show => {
-          if (show.positionsArray && show.positionsArray[colIdx]) {
-            const m = show.positionsArray[colIdx];
-            if (!seenMembers.has(m)) {
-              seenMembers.add(m);
-              orderedMembers.push(m);
-            }
-          }
+          const m = (show.positionsArray && show.positionsArray[colIdx]) ? show.positionsArray[colIdx] : "";
+          rowMembers.push(m);
+          if (m) hasAnyMember = true;
         });
 
-        // 該当ポジション（列）に誰も入っていない（＝完全な空白行になる）場合は描画をスキップ（カット）する
-        if (orderedMembers.length === 0) return;
+        // このポジション（行）に誰も1人も出演していない場合はスキップ（カット）
+        if (!hasAnyMember) return;
 
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-100 hover:bg-slate-50";
 
-        // 最大列数を求めてセルを展開
-        let maxCols = 0;
-        validShows.forEach(s => {
-          if (s.positionsArray && s.positionsArray.length > maxCols) maxCols = s.positionsArray.length;
-        });
-
-        for (let i = 0; i < maxCols; i++) {
+        rowMembers.forEach(member => {
           const td = document.createElement('td');
           td.className = "p-2.5 text-center border-r border-slate-100 whitespace-nowrap";
           
-          const member = orderedMembers[i];
           if (member) {
             const isOriginal = (member === fixedMember);
             const className = isOriginal ? 'member-first' : 'member-under';
             td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
           }
           tr.appendChild(td);
-        }
+        });
         tbody.appendChild(tr);
       });
     }
 
+    // ② 日別表：各公演日（列）に誰も入っていない、あるいは各ポジション（行）に誰も入っていない場合のクリア処理
     function renderDailyTable() {
       const stage = STAGE_DATABASE[currentStageKey];
       const headerTr = document.getElementById('dailyTableHeader');
@@ -606,7 +592,15 @@
         headerTr.appendChild(th);
       });
 
+      // 日別表の各行（ポジションごと）も、誰も入っていない空白行があればカットする
       stage.fixed.forEach((fixedMember, idx) => {
+        let hasAnyMember = false;
+        validShows.forEach(show => {
+          if (show.positionsArray && show.positionsArray[idx]) hasAnyMember = true;
+        });
+
+        if (!hasAnyMember) return;
+
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-100 hover:bg-slate-50";
 
@@ -731,7 +725,6 @@
       });
     }
 
-    // ① 劇場フィルターボタン押下時、全劇場ボタンと同様に確実な黒背景・白字（bg-slate-800 text-white）にする
     function filterSchedule(filter, btn) {
       currentScheduleFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(b => {
