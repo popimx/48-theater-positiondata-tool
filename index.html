@@ -81,7 +81,7 @@
             </div>
           </div>
 
-          <!-- 劇場選択タブ（① どの劇場を選択しても黒背景・白字に統一） -->
+          <!-- 劇場選択タブ（① 全劇場および各劇場選択時ともに黒背景・白字に統一） -->
           <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
             <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
             <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
@@ -96,7 +96,7 @@
         </div>
       </section>
 
-      <!-- Tab 2: 一覧表（③ 空白行を自動カット） -->
+      <!-- Tab 2: 一覧表（③ 空白行をカットして表示） -->
       <section id="tab-positions" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
@@ -518,7 +518,7 @@
       }, 100);
     }
 
-    // ③ ポジション一覧表：完全に有効な（メンバーが存在する）行だけを生成し、空白行をカット
+    // ③ ポジション一覧表：ポジション（列）に1人もメンバーがいない空白行をカットして表示
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -558,7 +558,7 @@
           }
         });
 
-        // ポジションに所属するメンバーが1人もいない場合は行自体を描画しない（空白行カット）
+        // メンバーが1人も入っていない列（空白行）の場合はスキップしてカットする
         if (orderedMembers.length === 0) continue;
 
         const tr = document.createElement('tr');
@@ -704,13 +704,13 @@
         div.className = "p-2 bg-slate-50 border border-slate-200 rounded text-xs flex gap-3 items-center cursor-pointer hover:bg-pink-50 transition";
         div.onclick = () => jumpToSchedule(item.date, item.id);
         
-        // ② 出演履歴のポジション名（その公演でどの初日メンバーのポジションに入ったか）を算出・表示
-        let positionName = selectedMemberName;
-        const stageInfo = STAGE_DATABASE[item.baseStageName];
-        if (stageInfo && stageInfo.fixed && item.positionsArray && item.positionsArray.length > 0) {
-          const memberIndexInShow = item.positionsArray.indexOf(selectedMemberName);
-          if (memberIndexInShow !== -1 && stageInfo.fixed[memberIndexInShow]) {
-            positionName = stageInfo.fixed[memberIndexInShow];
+        // ② 指定されたメンバーが、その公演のどのポジション（初日メンバー基準）で出演していたかを特定して表示
+        let targetPositionName = selectedMemberName;
+        const stageObj = STAGE_DATABASE[item.baseStageName];
+        if (stageObj && stageObj.fixed && item.positionsArray && item.positionsArray.length > 0) {
+          const posIndex = item.positionsArray.indexOf(selectedMemberName);
+          if (posIndex !== -1 && stageObj.fixed[posIndex]) {
+            targetPositionName = stageObj.fixed[posIndex];
           }
         }
 
@@ -718,13 +718,13 @@
           <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
           <span class="text-slate-600">${item.date}</span>
           <span class="font-bold text-slate-800 flex-1 truncate">「${item.baseStageName}」</span>
-          <span class="text-pink-600 font-bold whitespace-nowrap">（${positionName}）</span>
+          <span class="text-pink-600 font-bold whitespace-nowrap">${escapeHtml(targetPositionName)}</span>
         `;
         historyList.appendChild(div);
       });
     }
 
-    // ① どの劇場ボタンを選択しても黒背景（bg-slate-800）・白字（text-white）に切り替わるように改善
+    // ① 劇場フィルターボタン押下時、全劇場ボタンと同様に黒背景・白字（bg-slate-800 text-white）にする
     function filterSchedule(filter, btn) {
       currentScheduleFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(b => {
