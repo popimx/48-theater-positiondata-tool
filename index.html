@@ -844,7 +844,7 @@
             } else if (availableUnders.length === 0) {
               const u1 = unders[0] || "アンダー候補";
               const u2 = unders[1] || "";
-              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は同じく${fixedMember}を務める${u1}${u2 ? 'や' + u2 : ''}の出演予定もないため、そのまま${assignedName}が入ると予想。`;
+              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は同じく${fixedMember}ポジを務める${u1}${u2 ? 'や' + u2 : ''}の出演予定もないため、そのまま${assignedName}が入ると予想。`;
             } else {
               const u1 = availableUnders[0];
               const u1PosIdx = memberToPosMap[u1];
