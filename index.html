@@ -19,25 +19,14 @@
       overflow: hidden;
       flex-shrink: 0;
     }
-    .horizontal-scroll-list {
-      display: flex;
-      gap: 0.75rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
-    .horizontal-scroll-list::-webkit-scrollbar { height: 4px; }
-    .horizontal-scroll-list::-webkit-scrollbar-thumb { background: #f472b6; border-radius: 2px; }
-    .co-star-card { scroll-snap-align: start; flex: 0 0 100px; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-    /* メンバースタイルの定義 (⑤, ⑥, ⑨) */
-    .member-first { background-color: #fee2e2; border-color: #fca5a5; color: #991b1b; } /* 赤枠・黒(濃い赤)文字 */
-    .member-under { background-color: #fef3c7; border-color: #fde68a; color: #92400e; } /* 黄枠・黒(濃い茶)文字 */
-    .member-badge { padding: 0.375rem 0.625rem; border-radius: 0.375rem; border-width: 1px; font-weight: 700; white-space: nowrap; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); display: inline-block; }
-    .member-badge:hover { filter: brightness(0.95); }
+    /* ③ 名前枠をなくし、初日メンバーをピンク色、アンダー等を従来通りの色に設定 */
+    .member-first { color: #db2777; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; } /* ピンク色 */
+    .member-first:hover { opacity: 0.7; }
+    .member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; } /* 黄色・茶系 */
+    .member-under:hover { opacity: 0.7; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans">
@@ -92,7 +81,7 @@
             </div>
           </div>
 
-          <!-- ② 劇場選択タブの拡充 -->
+          <!-- 劇場選択タブ -->
           <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
             <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
             <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
@@ -107,25 +96,20 @@
         </div>
       </section>
 
-      <!-- Tab 2: 一覧表（ポジション一覧） (⑤, ⑨) -->
+      <!-- Tab 2: 一覧表（② ポジション一覧を日別表と同じ形に） -->
       <section id="tab-positions" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
-          <div class="overflow-x-auto rounded-lg border border-slate-200">
-            <table class="w-full text-left text-sm border-collapse min-w-[300px]">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs">
-                  <th class="p-3 w-1/2 border-r border-slate-200">初日メンバー</th>
-                  <th class="p-3 w-1/2">アンダーメンバー</th>
-                </tr>
-              </thead>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+            <table class="w-full text-left text-sm border-collapse min-w-max">
+              <thead><tr id="positionTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
               <tbody id="positionTableBody" class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- Tab 3: 日別表 (⑥, ⑦, ⑧, ⑨) -->
+      <!-- Tab 3: 日別表 -->
       <section id="tab-stage-daily" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -140,7 +124,7 @@
         </div>
       </section>
 
-      <!-- Tab 4: 予想 (④) -->
+      <!-- Tab 4: 予想 -->
       <section id="tab-forecast" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 text-center">
           <h2 class="text-base font-bold text-slate-800 mb-2">出演メンバー予想</h2>
@@ -179,9 +163,8 @@
 
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
         <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴 (③)
+          <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴
         </h3>
-        <!-- ③ 履歴フォーマット & ジャンプ対応 -->
         <div id="memberShowsHistoryList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
       </div>
     </section>
@@ -190,15 +173,12 @@
 
   <!-- Bottom Navigation -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
-    
-    <!-- カレンダー（ホーム）表示時のナビ -->
     <div id="navNormal" class="max-w-4xl mx-auto flex justify-around">
       <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn active flex-1 py-3 text-center text-xs font-semibold text-pink-600">
         <i class="fa-regular fa-calendar-days text-base block mb-0.5"></i> カレンダー
       </button>
     </div>
 
-    <!-- ④ 演目検索時・公演選択時の下部4タブ -->
     <div id="navStageDetail" class="hidden max-w-4xl mx-auto flex justify-around">
       <button onclick="switchTab('positions')" id="nav-positions" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
         <i class="fa-solid fa-users-rectangle text-base block mb-0.5"></i> 一覧表
@@ -214,7 +194,6 @@
       </button>
     </div>
 
-    <!-- メンバー詳細選択時のナビ -->
     <div id="navMemberSearching" class="hidden max-w-4xl mx-auto flex justify-center py-3 bg-pink-50 text-pink-600 font-bold text-sm items-center gap-2 border-t-2 border-pink-500">
       <i class="fa-solid fa-user-gear"></i>
       <span>メンバー詳細表示中</span>
@@ -231,6 +210,7 @@
     let selectedMemberName = null;
     let todayString = "";
 
+    // ① schedule_(グループ名)_(年度).json の形式のみを想定したフォールバックデータ
     const FALLBACK_SCHEDULE_2026 = [
       {
         "id": "akb_260807",
@@ -255,22 +235,6 @@
         "title": "「夢のポップスター」公演",
         "members": ["太田有紀", "工藤華純", "黒須遥香", "迫由芽実", "佐藤綺星", "成田香姫奈", "福岡聖菜", "山内瑞葵"],
         "positions": ["福岡聖菜", "佐藤綺星", "成田香姫奈", "迫由芽実", "太田有紀", "山内瑞葵", "黒須遥香", "工藤華純"]
-      },
-      {
-        "id": "akb_260910",
-        "date": "2026-09-10 18:30",
-        "theater": "AKB48劇場",
-        "title": "「夢のポップスター」公演",
-        "members": ["新井彩永", "久保姫菜乃", "工藤華純", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛"],
-        "positions": ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "工藤華純"]
-      },
-      {
-        "id": "akb_260927",
-        "date": "2026-09-27 18:30",
-        "theater": "AKB48劇場",
-        "title": "「夢のポップスター」公演",
-        "members": ["新井彩永", "久保姫菜乃", "倉野尾成美"],
-        "positions": ["新井彩永", "久保姫菜乃", "倉野尾成美"]
       }
     ];
 
@@ -291,7 +255,6 @@
       });
     });
 
-    // ① 今日が含まれている年度と月に初期設定
     function initYearMonthDropdowns() {
       const yearSelect = document.getElementById("yearSelect");
       const monthSelect = document.getElementById("monthSelect");
@@ -320,6 +283,20 @@
       yearSelect.value = y.toString();
       monthSelect.value = (m < 10 ? "0" : "") + m;
       onDateChange();
+    }
+
+    // ① schedule_(グループ名)_(年度).json のファイル名からデータをロードする想定の関数
+    async function fetchScheduleJson(groupName, year) {
+      // 実際にご自身のサーバーやディレクトリにファイルを配置する際は、下記パスから取得されます
+      const fileName = `schedule_${groupName.toLowerCase()}_${year}.json`;
+      try {
+        const response = await fetch(fileName);
+        if (!response.ok) throw new Error("JSON not found");
+        return await response.json();
+      } catch (err) {
+        // ファイルが見つからない等のフォールバックとして固定データを返す
+        return FALLBACK_SCHEDULE_2026;
+      }
     }
 
     function normalizeScheduleData(rawData) {
@@ -389,8 +366,11 @@
       });
     }
 
-    function onDateChange() {
-      SCHEDULE_DATA = normalizeScheduleData(FALLBACK_SCHEDULE_2026);
+    async function onDateChange() {
+      const year = document.getElementById("yearSelect").value;
+      // グループ名に応じた schedule_(グループ名)_(年度).json をロード
+      const rawData = await fetchScheduleJson("akb48", year);
+      SCHEDULE_DATA = normalizeScheduleData(rawData);
       generateStageDatabase();
       renderCalendar();
     }
@@ -464,7 +444,6 @@
       }
     }
 
-    // ① 今日が含まれる年度月のスケジュールを表示し、本日の公演があるなら1番上に表示
     function renderCalendar() {
       const listContainer = document.getElementById('calendarList');
       listContainer.innerHTML = '';
@@ -522,7 +501,6 @@
       });
     }
 
-    // ③ 履歴からカレンダーの該当箇所へジャンプ
     function jumpToSchedule(dateStr, elementId) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
@@ -537,49 +515,51 @@
       }, 100);
     }
 
-    // ⑤ ポジション一覧表（Pos列廃止、赤枠・黄枠表示、⑨別ポジ出演の考慮）
+    // ② ポジション一覧表を日別表と同じ形（縦横反転）に変更 ＆ ③ 枠をなくし初日メンバーをピンク色に
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) return;
       document.getElementById('posStageTitle').innerText = stage.name;
+      
+      const headerTr = document.getElementById('positionTableHeader');
       const tbody = document.getElementById('positionTableBody');
-      tbody.innerHTML = '';
+      headerTr.innerHTML = ''; tbody.innerHTML = '';
 
       if (stage.fixed.length === 0) return;
 
-      const positionHistory = stage.fixed.map(() => new Set());
-      stage.schedules.forEach(show => {
-        if (show.positionsArray) {
-          show.positionsArray.forEach((member, idx) => {
-            if (member && idx < stage.fixed.length) positionHistory[idx].add(member);
-          });
-        }
+      const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
+
+      // 日別表と同様に公演日（または回数）をヘッダーにする
+      validShows.forEach((show, index) => {
+        const dateStr = show.date.split('/').slice(1).join('/');
+        const th = document.createElement('th');
+        th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${index === 0 ? '初日' : dateStr}</span>`;
+        headerTr.appendChild(th);
       });
 
+      // 各ポジション行（初日メンバーが縦に並び、横にその変遷・出演メンバーが並ぶ）
       stage.fixed.forEach((fixedMember, idx) => {
         const tr = document.createElement('tr');
-        tr.className = "border-b border-slate-100";
-        
-        const unders = Array.from(positionHistory[idx]).filter(m => m !== fixedMember);
-        
-        let underHTML = '';
-        if (unders.length > 0) {
-          underHTML = `<div class="flex flex-wrap gap-2 py-1">` + unders.map(uName => `
-            <span class="member-badge member-under" onclick="openMemberDetail('${escapeHtml(uName)}')">${escapeHtml(uName)}</span>
-          `).join('') + `</div>`;
-        }
+        tr.className = "border-b border-slate-100 hover:bg-slate-50";
 
-        tr.innerHTML = `
-          <td class="p-3 align-middle border-r border-slate-100">
-            <span class="member-badge member-first" onclick="openMemberDetail('${escapeHtml(fixedMember)}')">${escapeHtml(fixedMember)}</span>
-          </td>
-          <td class="p-3 align-middle">${underHTML}</td>
-        `;
+        validShows.forEach(show => {
+          const member = show.positionsArray[idx] || "";
+          const td = document.createElement('td');
+          td.className = "p-2.5 text-center border-r border-slate-100";
+          
+          if (member) {
+            const isOriginal = member === fixedMember;
+            const className = isOriginal ? 'member-first' : 'member-under';
+            td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
+          }
+          tr.appendChild(td);
+        });
         tbody.appendChild(tr);
       });
     }
 
-    // ⑥, ⑦, ⑧, ⑨ ポジション日別表
+    // ③ 日別表も同様に枠をなくし、初日メンバーをピンク色、アンダー等を従来通りの色に
     function renderDailyTable() {
       const stage = STAGE_DATABASE[currentStageKey];
       const headerTr = document.getElementById('dailyTableHeader');
@@ -590,7 +570,6 @@
 
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
       
-      // ⑦ 初日を初日の日付にし、初日列をなくす
       validShows.forEach(show => {
         const dateStr = show.date.split('/').slice(1).join('/');
         const th = document.createElement('th');
@@ -606,13 +585,12 @@
         validShows.forEach(show => {
           const member = show.positionsArray[idx] || "";
           const td = document.createElement('td');
-          td.className = "p-2 text-center border-r border-slate-100";
+          td.className = "p-2.5 text-center border-r border-slate-100";
           
           if (member) {
-            // ⑧, ⑨ 初日メンは赤枠、別ポジション出演等はアンダー扱い(黄枠)で名前を表示
             const isOriginal = member === fixedMember;
-            const badgeClass = isOriginal ? 'member-first' : 'member-under';
-            td.innerHTML = `<span class="member-badge ${badgeClass}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
+            const className = isOriginal ? 'member-first' : 'member-under';
+            td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
           }
           tr.appendChild(td);
         });
@@ -698,7 +676,6 @@
         breakdownList.appendChild(li);
       });
 
-      // ③ 出演回数履歴のフォーマット (例: 2 2026/09/10 「夢のポップスター」 倉野尾)
       const historyList = document.getElementById('memberShowsHistoryList');
       historyList.innerHTML = '';
       memberShows.slice().reverse().forEach((item, index) => {
