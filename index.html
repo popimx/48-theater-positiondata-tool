@@ -795,7 +795,7 @@
               const otherUnders = unders.filter(u => u !== assignedName);
               const u2 = otherUnders[0] || "別アンダー";
               const u3 = otherUnders[1] || "";
-              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないのに加え、同ポジの${u2}${u3 ? ' や ' + u3 : ''}の出演予定もないため、${assignedName}がこのポジションに入ると予想。`;
+              reasonHtml = `この日は初日メンバーの${fixedMember}の出演予定がないのに加え、同じポジションの${u2}${u3 ? ' や ' + u3 : ''}の出演予定もないため、${assignedName}がこのポジションに入ると予想。`;
             } else {
               const u2 = availableUnders.find(u => u !== assignedName) || "別アンダー";
               const u2PosIdx = memberToPosMap[u2];
