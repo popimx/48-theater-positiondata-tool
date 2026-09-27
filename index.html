@@ -222,7 +222,8 @@
     ];
 
     let SCHEDULE_DATA = [];
-    let ALL_SCHEDULE_DATA = []; // 全年度の統合データ（②網羅的表示用）
+    let ALL_SCHEDULE_DATA = []; // 全年度の統合データ
+    let GLOBAL_STAGE_DATABASE = {}; // ①・② 全年度データを元にした統合演目データベース
     let STAGE_DATABASE = {};
     let currentStageKey = null;
     let currentScheduleFilter = "ALL";
@@ -309,13 +310,12 @@
       }
     }
 
-    // ② 全年度の schedule.(グループ名)_(年度).json を統合してロード
+    // 全年度の schedule.(グループ名)_(年度).json を統合してロード
     async function loadAllYearsScheduleData() {
       let allList = [];
       const currentYear = new Date().getFullYear();
       const promises = [];
       
-      // 2020年〜現在の全データを非同期ロード
       for (let y = 2020; y <= currentYear; y++) {
         promises.push(fetchScheduleJson("akb48", y));
       }
@@ -327,6 +327,7 @@
         }
       });
       ALL_SCHEDULE_DATA = allList;
+      generateGlobalStageDatabase(); // ①・② 全年度統合の演目データベース生成
     }
 
     function normalizeScheduleData(rawData) {
@@ -349,12 +350,10 @@
         let membersArr = [];
         let performersStr = "";
         if (Array.isArray(item.members)) {
-          // ⑤ メンバー配列から "-" や "－" を除外
           membersArr = item.members.filter(m => m && m !== "-" && m !== "－");
           performersStr = membersArr.join("・");
         }
 
-        // ⑤ ポジション配列の正規化（"-" は除外しないが文字調整）
         let posArr = Array.isArray(item.positions) ? item.positions : [];
 
         return {
@@ -368,6 +367,41 @@
           membersArray: membersArr,
           positionsArray: posArr
         };
+      });
+    }
+
+    // ①・② 全年度データから演目名と初日ポジションを割り出すグローバルデータベース構築
+    function generateGlobalStageDatabase() {
+      GLOBAL_STAGE_DATABASE = {};
+      ALL_SCHEDULE_DATA.forEach(item => {
+        const base = item.baseStageName;
+        if (!base) return;
+
+        if (!GLOBAL_STAGE_DATABASE[base]) {
+          GLOBAL_STAGE_DATABASE[base] = {
+            id: base,
+            name: `「${base}」公演`,
+            group: item.theater.replace("劇場", "").trim() || "AKB48",
+            fixed: [],
+            allMembers: new Set(),
+            schedules: []
+          };
+        }
+        GLOBAL_STAGE_DATABASE[base].schedules.push(item);
+        item.membersArray.forEach(m => { 
+          if(m && m !== "-" && m !== "－") GLOBAL_STAGE_DATABASE[base].allMembers.add(m.trim()); 
+        });
+      });
+
+      Object.keys(GLOBAL_STAGE_DATABASE).forEach(key => {
+        const stage = GLOBAL_STAGE_DATABASE[key];
+        stage.schedules.sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
+        const firstShow = stage.schedules.find(s => s.positionsArray && s.positionsArray.length > 0);
+        if (firstShow) {
+          stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
+        }
+        const rawMembersSet = stage.allMembers;
+        stage.allMembers = MASTER_MEMBER_ORDER.filter(m => rawMembersSet.has(m) || MASTER_MEMBER_ORDER.includes(m));
       });
     }
 
@@ -396,10 +430,15 @@
       Object.keys(STAGE_DATABASE).forEach(key => {
         const stage = STAGE_DATABASE[key];
         stage.schedules.sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
-        const firstShow = stage.schedules.find(s => s.positionsArray && s.positionsArray.length > 0);
-        if (firstShow) {
-          // ⑤ "-" などを除外
-          stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
+        
+        // GLOBAL_STAGE_DATABASEから正しく初日ポジションを継承
+        if (GLOBAL_STAGE_DATABASE[key] && GLOBAL_STAGE_DATABASE[key].fixed.length > 0) {
+          stage.fixed = GLOBAL_STAGE_DATABASE[key].fixed;
+        } else {
+          const firstShow = stage.schedules.find(s => s.positionsArray && s.positionsArray.length > 0);
+          if (firstShow) {
+            stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
+          }
         }
         
         const rawMembersSet = stage.allMembers;
@@ -429,8 +468,9 @@
 
     function selectStage(stageKey) {
       currentStageKey = stageKey;
-      const stage = STAGE_DATABASE[stageKey];
-      
+      let stage = STAGE_DATABASE[stageKey] || GLOBAL_STAGE_DATABASE[stageKey];
+      if (!stage) return;
+
       document.getElementById('mainTabsContainer').classList.remove('hidden');
       document.getElementById('memberDetailContainer').classList.add('hidden');
 
@@ -527,7 +567,6 @@
       });
     }
 
-    // ③ ボタンを押したら対象スケジュールの背景色を薄いピンクに変化させてスクロール
     function jumpToSchedule(dateStr, elementId) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
@@ -537,7 +576,6 @@
       }
       goHome();
       setTimeout(() => {
-        // 全カードの強調状態を解除
         document.querySelectorAll('.sched-card').forEach(el => {
           el.classList.remove('bg-pink-100', 'border-pink-400');
         });
@@ -545,14 +583,13 @@
         const target = document.getElementById(`sched-${elementId}`);
         if(target) {
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // 対象カードの背景色を薄いピンク（bg-pink-100）に変化させる
           target.classList.add('bg-pink-100', 'border-pink-400');
         }
       }, 150);
     }
 
     function renderPositions() {
-      const stage = STAGE_DATABASE[currentStageKey];
+      const stage = STAGE_DATABASE[currentStageKey] || GLOBAL_STAGE_DATABASE[currentStageKey];
       if (!stage) return;
       document.getElementById('posStageTitle').innerText = stage.name;
       
@@ -573,7 +610,6 @@
         validShows.forEach(show => {
           if (show.positionsArray && show.positionsArray[colIdx]) {
             const m = show.positionsArray[colIdx].trim();
-            // ⑤ "-" や "－" を除外
             if (m && m !== "-" && m !== "－") experiencedSet.add(m);
           }
         });
@@ -617,7 +653,7 @@
     }
 
     function renderDailyTable() {
-      const stage = STAGE_DATABASE[currentStageKey];
+      const stage = STAGE_DATABASE[currentStageKey] || GLOBAL_STAGE_DATABASE[currentStageKey];
       const headerTr = document.getElementById('dailyTableHeader');
       const tbody = document.getElementById('dailyTableBody');
       
@@ -654,16 +690,14 @@
       });
     }
 
-    // ④ 経験者優先割り当てアルゴリズム ＆ ⑤ "-" の文言除外処理
     function runForecast() {
-      const stage = STAGE_DATABASE[currentStageKey];
+      const stage = STAGE_DATABASE[currentStageKey] || GLOBAL_STAGE_DATABASE[currentStageKey];
       if (!stage) {
         alert("先に公演を選択してください。");
         return;
       }
 
       const rawInput = document.getElementById('forecastInputText').value;
-      // ⑤ 入力文字列から "-" や "－" を除外
       const inputNames = rawInput.split(/[\s・,\n/]+/)
         .map(s => s.trim())
         .filter(s => s.length > 0 && s !== "-" && s !== "－");
@@ -680,7 +714,6 @@
 
       const stageName = stage.name.replace(/「|」|公演/g, '').trim();
 
-      // 全メンバー一覧表示
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
@@ -695,7 +728,6 @@
 
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
 
-      // 過去データ統計取得関数（⑤ "-" や "－" を完全に集計除外）
       function getMemberStats(memberName) {
         let totalCount = 0;
         let posCountMap = {};
@@ -718,15 +750,14 @@
         return { totalCount, posCountMap, lastDateMap, uniquePositionsCount: Object.keys(posCountMap).length };
       }
 
-      let assignedMapping = {}; // posIndex -> memberName
-      let memberToPosMap = {};   // memberName -> posIndex
+      let assignedMapping = {};
+      let memberToPosMap = {};
       let usedMembers = new Set();
 
       let positionCandidates = stage.fixed.map((fixedMember, pIdx) => {
         return { pIdx, fixedMember };
       });
 
-      // 【ステップ1】初日メンバー本人が本日出演する場合は優先してそのポジションへ固定割り当て
       positionCandidates.forEach(({ pIdx, fixedMember }) => {
         if (fixedMember && inputSet.has(fixedMember)) {
           assignedMapping[pIdx] = fixedMember;
@@ -735,16 +766,12 @@
         }
       });
 
-      // ④ 【ステップ2】経験者優先割り当て（1人でも経験ありがいればそのポジションに優先配置）
       let unassignedPositions = positionCandidates.filter(({ pIdx }) => assignedMapping[pIdx] === undefined);
       let unassignedMembers = inputMemberList.filter(m => !usedMembers.has(m));
 
-      // 空きポジションごとに「経験あり」のメンバーを探索して最適なマッチングを行う
       let changed = true;
       while (changed && unassignedPositions.length > 0 && unassignedMembers.length > 0) {
         changed = false;
-        
-        // 各ポジションで経験のある未割り当てメンバーを探索
         let bestPair = null;
         let maxExpCount = -1;
 
@@ -771,7 +798,6 @@
         }
       }
 
-      // ④ 【ステップ3】残り（未経験者・初挑戦者）を未割り当てのポジションへ配置
       unassignedMembers.forEach(m => {
         if (unassignedPositions.length > 0) {
           const targetPos = unassignedPositions.shift();
@@ -781,14 +807,12 @@
         }
       });
 
-      // 各ポジションの予想結果と文章生成（⑤ "-" の除外対応）
       stage.fixed.forEach((fixedMember, pIdx) => {
         const assignedName = assignedMapping[pIdx] || "未定";
         const stats = getMemberStats(assignedName);
         const posFreq = stats.posCountMap[fixedMember] || 0;
         const isExperienced = posFreq > 0 || assignedName === fixedMember;
 
-        // ⑤ 過去アンダー候補者から "-" や "－" を徹底除外
         const underMembersSet = new Set();
         validShows.forEach(show => {
           const m = show.positionsArray[pIdx];
@@ -833,7 +857,6 @@
             }
           }
         } else {
-          // 初めてこのポジションに入る（未経験者 / 初日メンバー）
           const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
 
           if (isStageFirstTimer) {
@@ -870,6 +893,7 @@
       });
     }
 
+    // ① 改善：全演目データベース(GLOBAL_STAGE_DATABASE)および全メンバーリストからいつ何時でも検索ヒットさせる
     function onSearchInput(val) {
       const suggestBox = document.getElementById('searchSuggest');
       if (!val.trim()) { suggestBox.classList.add('hidden'); return; }
@@ -877,13 +901,16 @@
       const query = val.trim().toLowerCase();
       let matches = [];
 
-      Object.keys(STAGE_DATABASE).forEach(key => {
-        const stage = STAGE_DATABASE[key];
+      // 全演目データ（GLOBAL_STAGE_DATABASE、未初期化ならSTAGE_DATABASE）から検索
+      const stageSource = Object.keys(GLOBAL_STAGE_DATABASE).length > 0 ? GLOBAL_STAGE_DATABASE : STAGE_DATABASE;
+      Object.keys(stageSource).forEach(key => {
+        const stage = stageSource[key];
         if (stage.name.toLowerCase().includes(query) || stage.id.toLowerCase().includes(query)) {
           matches.push({ type: 'stage', label: stage.name, key: key });
         }
       });
 
+      // 全メンバーマスターから検索
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name !== "-" && name !== "－" && name.toLowerCase().includes(query)) {
           matches.push({ type: 'member', label: name, name: name });
@@ -927,7 +954,7 @@
       renderMemberDetailView();
     }
 
-    // ② 全年度データ（ALL_SCHEDULE_DATA）を使用して網羅的な出演統計と出演履歴を表示
+    // ② 改善：初日メンバーでもアンダー出演でも「必ず出演したポジションの初日メンバー名」を表示
     function renderMemberDetailView() {
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
       const memberShows = dataSource.filter(item => item.membersArray.includes(selectedMemberName));
@@ -957,9 +984,13 @@
         div.onclick = () => jumpToSchedule(item.date, item.id);
         
         let targetPositionName = selectedMemberName;
-        const stageObj = STAGE_DATABASE[item.baseStageName];
+
+        // 全演目統合DB（または単年DB）から該当演目の初日ポジション配列（fixed）を参照
+        const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
         if (stageObj && stageObj.fixed && item.positionsArray && item.positionsArray.length > 0) {
+          // 出演したポジションのインデックスを取得
           const posIndex = item.positionsArray.indexOf(selectedMemberName);
+          // 必ずそのインデックスにある初日メンバー名（オリジナルメンバー）を設定
           if (posIndex !== -1 && stageObj.fixed[posIndex]) {
             targetPositionName = stageObj.fixed[posIndex];
           }
