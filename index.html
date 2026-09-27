@@ -123,7 +123,7 @@
         </div>
       </section>
 
-      <!-- Tab 4: 予想 (新規) -->
+      <!-- Tab 4: 予想 -->
       <section id="tab-forecast" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
           <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -145,7 +145,7 @@
             </div>
 
             <div>
-              <h3 class="text-xs font-bold text-slate-500 mb-2">【初日ポジション別の自動割り当て ＆ 予想理由】</h3>
+              <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジション別自動割り当て ＆ 予想理由】</h3>
               <div id="forecastPositionsList" class="space-y-3"></div>
             </div>
           </div>
@@ -167,17 +167,6 @@
         </div>
         <button onclick="goHome()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-bold border border-slate-200">
           <i class="fa-solid fa-xmark mr-1"></i> 閉じる
-        </button>
-      </div>
-
-      <!-- 卒業メンバー設定スイッチ -->
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-slate-800">卒業ステータス</h3>
-          <p class="text-xs text-slate-500">卒業メンバーに設定すると予想から除外されます</p>
-        </div>
-        <button id="toggleGraduatedBtn" onclick="toggleGraduatedStatus()" class="px-4 py-2 rounded-lg text-xs font-bold transition">
-          ステータス切替
         </button>
       </div>
 
@@ -242,8 +231,6 @@
       "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた", 
       "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"
     ];
-
-    let GRADUATED_MEMBERS = new Set(); // 卒業メンバー管理用
 
     let SCHEDULE_DATA = [];
     let STAGE_DATABASE = {};
@@ -401,7 +388,6 @@
         const firstShow = stage.schedules.find(s => s.positionsArray && s.positionsArray.length > 0);
         if (firstShow) stage.fixed = [...firstShow.positionsArray];
         
-        // データベースの全メンバーも指定順にソートして格納
         const rawMembersSet = stage.allMembers;
         stage.allMembers = MASTER_MEMBER_ORDER.filter(m => rawMembersSet.has(m) || MASTER_MEMBER_ORDER.includes(m));
       });
@@ -563,7 +549,7 @@
       }, 100);
     }
 
-    // 一覧表の描画（指定の順番を適用、卒業メンバー除外反映）
+    // ② ＆ ③ 一覧表の描画（1番上の行: 初日、2人目、3人目... ＆ 記載順: MASTER_MEMBER_ORDER順）
     function renderPositions() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -581,18 +567,18 @@
       let maxCols = 0;
 
       stage.fixed.forEach((fixedMember, colIdx) => {
-        const seenMembers = new Set();
-        const orderedMembers = [];
+        const experiencedSet = new Set();
 
         validShows.forEach(show => {
           if (show.positionsArray && show.positionsArray[colIdx]) {
             const m = show.positionsArray[colIdx].trim();
-            if (m && !seenMembers.has(m) && !GRADUATED_MEMBERS.has(m)) {
-              seenMembers.add(m);
-              orderedMembers.push(m);
-            }
+            if (m) experiencedSet.add(m);
           }
         });
+
+        // 初日メンバーを先頭にし、2人目以降は MASTER_MEMBER_ORDER の順でソート
+        const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
+        const orderedMembers = [fixedMember, ...undersOrdered];
 
         if (orderedMembers.length > 0) {
           rowDataList.push({ fixedMember, orderedMembers });
@@ -602,10 +588,11 @@
         }
       });
 
+      // ヘッダー生成（改善点②: 初日、2人目、3人目...）
       for (let i = 0; i < maxCols; i++) {
         const th = document.createElement('th');
         th.className = "p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap";
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${i === 0 ? '初日 / 主ポジション' : `${i + 1}人目`}</span>`;
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${i === 0 ? '初日' : `${i + 1}人目`}</span>`;
         headerTr.appendChild(th);
       }
 
@@ -656,7 +643,7 @@
           const td = document.createElement('td');
           td.className = "p-2.5 text-center border-r border-slate-100";
           
-          if (member && !GRADUATED_MEMBERS.has(member)) {
+          if (member) {
             const isOriginal = member === fixedMember;
             const className = isOriginal ? 'member-first' : 'member-under';
             td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
@@ -667,7 +654,7 @@
       });
     }
 
-    // ① & ③ 予想機能と詳細ロジック・条件分岐の実装
+    // ④ ⑤ ⑥ ⑦ 予想機能と完全一致マッチング、詳細予想文言の自動生成
     function runForecast() {
       const stage = STAGE_DATABASE[currentStageKey];
       if (!stage) {
@@ -676,9 +663,9 @@
       }
 
       const rawInput = document.getElementById('forecastInputText').value;
-      // 入力された出演メンバーを抽出
       const inputNames = rawInput.split(/[\s・,\n/]+/).map(s => s.trim()).filter(s => s.length > 0);
       const inputSet = new Set(inputNames);
+      const inputMemberList = Array.from(inputSet);
 
       const resultArea = document.getElementById('forecastResultArea');
       const allMembersGrid = document.getElementById('forecastAllMembersGrid');
@@ -687,9 +674,8 @@
       allMembersGrid.innerHTML = '';
       positionsList.innerHTML = '';
 
-      // 1. 全メンバー一覧（指定順、卒業メンバー除外）の描画 ＆ 出演マーク付与
+      // 全メンバー一覧表示
       MASTER_MEMBER_ORDER.forEach(name => {
-        if (GRADUATED_MEMBERS.has(name)) return; // 卒業メンバーは候補対象外
         const isAttending = inputSet.has(name);
         const div = document.createElement('div');
         div.className = `p-2 rounded border flex items-center justify-between ${isAttending ? 'bg-pink-50 border-pink-300 font-bold text-pink-700' : 'bg-white border-slate-200 text-slate-600'}`;
@@ -700,117 +686,153 @@
         allMembersGrid.appendChild(div);
       });
 
-      // メンバーごとの過去データを集計するヘルパー
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
 
+      // 過去データ統計取得関数
       function getMemberStats(memberName) {
         let totalCount = 0;
         let posCountMap = {};
+        let lastDateMap = {};
         validShows.forEach(show => {
           show.positionsArray.forEach((m, pIdx) => {
             if (m === memberName) {
               totalCount++;
               const orig = stage.fixed[pIdx];
               posCountMap[orig] = (posCountMap[orig] || 0) + 1;
+              lastDateMap[orig] = show.date;
             }
           });
         });
-        const uniquePositionsCount = Object.keys(posCountMap).length;
-        return { totalCount, posCountMap, uniquePositionsCount };
+        return { totalCount, posCountMap, lastDateMap, uniquePositionsCount: Object.keys(posCountMap).length };
       }
 
-      // 上位3人の候補を計算して選出する関数
-      function getTopCandidates(targetFixedMember, excludeNames = new Set()) {
-        const candidates = [];
-        MASTER_MEMBER_ORDER.forEach(m => {
-          if (GRADUATED_MEMBERS.has(m) || excludeNames.has(m)) return;
-          const stats = getMemberStats(m);
-          // スコアリング：出演回数 + ポジション頻度×2 + 複数ポジション補正
-          const posFreq = stats.posCountMap[targetFixedMember] || 0;
-          let multiPosBonus = stats.uniquePositionsCount > 1 ? 2 : (stats.uniquePositionsCount === 1 ? 1 : 0);
-          const score = (stats.totalCount * 1) + (posFreq * 5) + (multiPosBonus * 2);
+      // 【改善点⑦】入力された出演メンバーと自動予想割り当てを1対1で完全一致させるマッチングロジック
+      const positionsCount = stage.fixed.length;
+      let assignedMapping = {}; // posIndex -> memberName
+      let memberToPosMap = {};   // memberName -> posIndex
 
-          if (score > 0 || m === targetFixedMember) {
-            candidates.push({ name: m, score, stats, posFreq });
+      // スコアマトリックス作成
+      let bestMatching = [];
+      let usedMembers = new Set();
+
+      // 各入力メンバーと各ポジション間の適性スコアを計算して割り当て
+      let positionCandidates = stage.fixed.map((fixedMember, pIdx) => {
+        return { pIdx, fixedMember };
+      });
+
+      // 1. 初日メンバーで出演するメンバーを優先的に本人のポジションに割り当て
+      positionCandidates.forEach(({ pIdx, fixedMember }) => {
+        if (inputSet.has(fixedMember)) {
+          assignedMapping[pIdx] = fixedMember;
+          memberToPosMap[fixedMember] = pIdx;
+          usedMembers.add(fixedMember);
+        }
+      });
+
+      // 2. 残りのメンバーと空きポジションの割り当て（適性スコア優先）
+      let remainingMembers = inputMemberList.filter(m => !usedMembers.has(m));
+      let remainingPositions = positionCandidates.filter(({ pIdx }) => assignedMapping[pIdx] === undefined);
+
+      remainingMembers.forEach(member => {
+        const stats = getMemberStats(member);
+        let bestPosIdx = -1;
+        let maxScore = -1;
+
+        remainingPositions.forEach(({ pIdx, fixedMember }) => {
+          if (assignedMapping[pIdx] !== undefined) return;
+          const posFreq = stats.posCountMap[fixedMember] || 0;
+          let score = posFreq * 100 + stats.totalCount;
+          if (score > maxScore) {
+            maxScore = score;
+            bestPosIdx = pIdx;
           }
         });
-        candidates.sort((a, b) => b.score - a.score);
-        return candidates.slice(0, 3);
-      }
 
-      // 2. 初日ポジションごとの割り当て ＆ 予想理由の自動生成
-      stage.fixed.forEach((fixedMember, colIdx) => {
-        const isOriginalAttending = inputSet.has(fixedMember) && !GRADUATED_MEMBERS.has(fixedMember);
-        const isOriginalGraduated = GRADUATED_MEMBERS.has(fixedMember);
+        if (bestPosIdx !== -1) {
+          assignedMapping[bestPosIdx] = member;
+          memberToPosMap[member] = bestPosIdx;
+          usedMembers.add(member);
+        } else if (remainingPositions.length > 0) {
+          const target = remainingPositions.find(({ pIdx }) => assignedMapping[pIdx] === undefined);
+          if (target) {
+            assignedMapping[target.pIdx] = member;
+            memberToPosMap[member] = target.pIdx;
+            usedMembers.add(member);
+          }
+        }
+      });
 
-        // このポジションの過去のアンダー経験者を抽出
+      // 各ポジションの予想結果と文章（⑤ ⑥）の生成
+      stage.fixed.forEach((fixedMember, pIdx) => {
+        const assignedName = assignedMapping[pIdx] || "未定";
+        const stats = getMemberStats(assignedName);
+        const posFreq = stats.posCountMap[fixedMember] || 0;
+        const isExperienced = posFreq > 0 || assignedName === fixedMember; // 改善点④
+
+        // 各ポジションのアンダーリスト（過去経験者）
         const underMembersSet = new Set();
         validShows.forEach(show => {
-          const m = show.positionsArray[colIdx];
-          if (m && m !== fixedMember && !GRADUATED_MEMBERS.has(m)) {
-            underMembersSet.add(m);
-          }
+          const m = show.positionsArray[pIdx];
+          if (m && m !== fixedMember) underMembersSet.add(m);
         });
         const unders = Array.from(underMembersSet);
+        const availableUnders = unders.filter(u => inputSet.has(u));
 
-        let assignedName = "";
         let reasonHtml = "";
+        const isStageFirstTimer = (stats.totalCount === 0);
 
-        if (isOriginalAttending) {
-          assignedName = fixedMember;
-          reasonHtml = `<span class="text-xs text-slate-600">初日メンバー（${fixedMember}）が今回の出演メンバーに含まれているため、そのまま出演と予想。</span>`;
-        } else if (isOriginalGraduated) {
-          // メンバーの卒業でアンダーがいない場合、またはアンダー算出
-          const topCands = getTopCandidates(fixedMember);
-          const topName = topCands.length > 0 ? topCands[0].name : "未定";
-          assignedName = topName;
-          
-          let candListStr = topCands.map(c => `${c.name}（出演${c.stats.totalCount}回、頻度${c.posFreq}）`).join("、");
-          reasonHtml = `<span class="text-xs text-slate-600">(${fixedMember}) が卒業したため、これまでの傾向（アンダーメンバーの当該演目の公演の出演回数、そのポジションに入る頻度、複数ポジションを覚えているかなどの総合スコア上位: ${candListStr || "なし"}）を元に、今回は (${topName}) と予想。</span>`;
-        } else {
-          // 休演メンバーのケース
-          if (unders.length === 0) {
-            const topCands = getTopCandidates(fixedMember);
-            const topName = topCands.length > 0 ? topCands[0].name : "未定";
-            assignedName = topName;
-            reasonHtml = `<span class="text-xs text-slate-600">この日はこれまでの傾向を元に、今回は (${topName}) と予想。</span>`;
-          } else if (unders.length === 1) {
-            const u1 = unders[0];
-            assignedName = u1;
-            reasonHtml = `<span class="text-xs text-slate-600">(${fixedMember}) のアンダーが1人で、そのメンバーが出演できるときは (${fixedMember}) のアンダーが1人のため、(${u1}) と予想。</span>`;
-          } else {
-            // アンダーが2人以上の場合
-            // 出演メンバーに含まれているアンダーを抽出
-            const availableUnders = unders.filter(u => inputSet.has(u));
-
-            if (availableUnders.length >= 2) {
-              // 複数人が出演できる場合、統計に基づく確率上位を表示
-              const scoredUnders = availableUnders.map(u => {
-                const stats = getMemberStats(u);
-                const freq = stats.posCountMap[fixedMember] || 0;
-                return { name: u, score: stats.totalCount + freq * 3 };
-              }).sort((a, b) => b.score - a.score);
-
-              const topU = scoredUnders[0];
-              assignedName = topU.name;
-              const probPercent = Math.min(95, 50 + topU.score * 5);
-
-              reasonHtml = `
-                <div class="space-y-1 text-xs text-slate-600">
-                  <div>1行目に、この日は (${topU.name}) が (${probPercent}) % の確率で出演すると予想。</div>
-                  <div>2行目に、アンダーメンバーの当該演目の公演の出演回数、そのポジションに入る頻度、複数ポジションを覚えているか等の要素から高い方を上位3人まで表示: ${scoredUnders.slice(0, 3).map(s => s.name).join("、")}</div>
-                </div>
-              `;
-            } else if (availableUnders.length === 1) {
-              assignedName = availableUnders[0];
-              reasonHtml = `<span class="text-xs text-slate-600">休演メンバーのアンダーが2人で、そのうちの1人しか出演できないときは この日は (${unders.find(u => !inputSet.has(u)) || '別メンバー'}) が休演のため、(${assignedName}) と予想。</span>`;
+        if (isExperienced) {
+          // 【改善点⑤】経験ありメンバーの予想文言
+          if (assignedName === fixedMember) {
+            // 初日メンバー本人の場合
+            if (unders.length === 0) {
+              reasonHtml = `この日出演する ${assignedName} はこの演目の初日メンバーであり、${assignedName} ポジションに入れるメンバーもいないため、そのままこのポジションに入ると予想。`;
+            } else if (availableUnders.length === 0) {
+              const u1 = unders[0] || "アンダー候補";
+              const u2 = unders[1] || "";
+              reasonHtml = `この日出演する ${assignedName} はこの演目の初日メンバーであり、${assignedName} ポジションに入れる ${u1}${u2 ? ' も ' + u2 : ''} もこの日は出演しないため、そのままこのポジションに入ると予想。`;
             } else {
-              // アンダーはいるが全員不出演または他ポジ確定
-              const topCands = getTopCandidates(fixedMember);
-              const topName = topCands.length > 0 ? topCands[0].name : "未定";
-              assignedName = topName;
-              reasonHtml = `<span class="text-xs text-slate-600">休演メンバーのアンダーはいるも、アンダー全員が他のポジションで出演 or 休演のため、これまでの傾向を元に、今回は (${topName}) と予想。</span>`;
+              const u1 = availableUnders[0];
+              const u1PosIdx = memberToPosMap[u1];
+              const u1PosName = u1PosIdx !== undefined ? stage.fixed[u1PosIdx] : "別";
+              reasonHtml = `この日は ${u1} も出演予定だが、${assignedName} はこの演目の初日メンバーであり、${u1} は ${u1PosName} ポジションに入ると予想されるため、${assignedName} がこのポジションに入ると予想。`;
             }
+          } else {
+            // アンダーで入る場合
+            if (unders.length <= 1) {
+              reasonHtml = `この日は ${fixedMember} が出演しないため、そのまま ${assignedName} がこのポジションに入ると予想。`;
+            } else if (availableUnders.length <= 1) {
+              const otherUnders = unders.filter(u => u !== assignedName);
+              const u2 = otherUnders[0] || "別アンダー";
+              const u3 = otherUnders[1] || "";
+              reasonHtml = `この日は ${fixedMember} が出演しないのに加え、${u2}${u3 ? ' や ' + u3 : ''} も出演しないため、${assignedName} がこのポジションに入ると予想。`;
+            } else {
+              const u2 = availableUnders.find(u => u !== assignedName) || "別アンダー";
+              const u2PosIdx = memberToPosMap[u2];
+              const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "別";
+              
+              const p1Prob = 65;
+              const p2Prob = 35;
+              reasonHtml = `この日は ${u2} も出演予定だが、${u2} は ${u2PosName} ポジションに出演する確率が高いと予想し、${assignedName} がこのポジションに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${p1Prob}%、${u2} ${p2Prob}%</span>`;
+            }
+          }
+        } else {
+          // 【改善点⑥】初めてこのポジションに入るメンバーの予想文言
+          const stageName = stage.name.replace(/「|」/g, '');
+          const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
+
+          if (isStageFirstTimer) {
+            if (firstTimers.length <= 1) {
+              reasonHtml = `この日 ${assignedName} は ${stageName} 公演の初日を迎えるが、他の出演メンバーから ${fixedMember} ポジションでの出演がほぼ確実と予想できるので、このポジションに入ると予想。`;
+            } else {
+              const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
+              reasonHtml = `この日 ${assignedName} は ${stageName} 公演の初日を迎える予定だが、${m2} も初日を迎えること、他の出演メンバーのポジションの兼ね合いから ${fixedMember} か 他ポジション のどちらかで出演になると予想。`;
+            }
+          } else {
+            const u2 = availableUnders.find(u => u !== assignedName) || "別メンバー";
+            const u2Stats = getMemberStats(u2);
+            const lastDate = u2Stats.lastDateMap[fixedMember] || "過去";
+            reasonHtml = `この日は ${u2} も出演予定だが、${u2} は ${lastDate} 以来 ${fixedMember} ポジションでの出演がないため、${assignedName} がこのポジションに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
           }
         }
 
@@ -819,25 +841,15 @@
         card.innerHTML = `
           <div class="flex justify-between items-center font-bold">
             <span class="text-slate-700">【${escapeHtml(fixedMember)} ポジション】</span>
-            <span class="text-pink-600 text-sm">予想: ${escapeHtml(assignedName)}</span>
+            <div class="flex items-center gap-2">
+              ${isExperienced ? '<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded font-bold">☑ 経験あり</span>' : '<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold">初挑戦</span>'}
+              <span class="text-pink-600 text-sm">予想: ${escapeHtml(assignedName)}</span>
+            </div>
           </div>
-          <div>${reasonHtml}</div>
+          <div class="text-slate-600 leading-relaxed">${reasonHtml}</div>
         `;
         positionsList.appendChild(card);
       });
-    }
-
-    // ② 卒業メンバーの切り替え処理
-    function toggleGraduatedStatus() {
-      if (!selectedMemberName) return;
-      if (GRADUATED_MEMBERS.has(selectedMemberName)) {
-        GRADUATED_MEMBERS.delete(selectedMemberName);
-        alert(`${selectedMemberName} の卒業ステータスを解除しました。`);
-      } else {
-        GRADUATED_MEMBERS.add(selectedMemberName);
-        alert(`${selectedMemberName} を卒業メンバーに設定しました（予想対象外になります）。`);
-      }
-      openMemberDetail(selectedMemberName);
     }
 
     function onSearchInput(val) {
@@ -882,19 +894,10 @@
       suggestBox.classList.remove('hidden');
     }
 
+    // ① メンバー詳細ページ表示（卒業ステータススイッチ削除）
     function openMemberDetail(memberName) {
       selectedMemberName = memberName;
       document.getElementById('detailMemberName').innerText = memberName;
-
-      // 卒業ボタンの見た目更新
-      const gradBtn = document.getElementById('toggleGraduatedBtn');
-      if (GRADUATED_MEMBERS.has(memberName)) {
-        gradBtn.className = "px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 text-white transition";
-        gradBtn.innerText = "卒業中（クリックで解除）";
-      } else {
-        gradBtn.className = "px-4 py-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition";
-        gradBtn.innerText = "在籍中（クリックで卒業に設定）";
-      }
 
       document.getElementById('mainTabsContainer').classList.add('hidden');
       document.getElementById('memberDetailContainer').classList.remove('hidden');
