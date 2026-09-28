@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -732,7 +732,6 @@
       return `${absentUnders[0]}や${absentUnders[1]}など`;
     }
 
-    // 正確な共演実績を取得（m1:予想割り当て者, m2:ライバルメンバー）
     function getCoopProbability(m1, m2, pIdx1, pIdx2, validShows) {
       let countDefault = 0; // m1 -> pIdx1, m2 -> pIdx2
       let countSwapped = 0; // m2 -> pIdx1, m1 -> pIdx2
@@ -846,7 +845,7 @@
       return result;
     }
 
-    // 【修正】ハンガリアン法による全体最適化ポジション割り当て
+    // ハンガリアン法による最適ポジション割り当て（完全非負の階層スコアモデルに改修）
     function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
       const numMembers = inputMemberList.length;
@@ -855,15 +854,14 @@
       const costMatrix = Array.from({ length: numMembers }, () => new Array(numPos).fill(0));
       const inputSet = new Set(inputMemberList);
 
-      // 各メンバー × 各ポジションの適合スコア行列を作成
       inputMemberList.forEach((m, mIdx) => {
         for (let pIdx = 0; pIdx < numPos; pIdx++) {
           let score = 0;
           const targetFixed = stageFixed[pIdx];
 
-          // 1. オリジナルポジション本人である場合（最優先）
+          // 階層1: オリジナルポジション本人は最優先 (+10,000,000)
           if (targetFixed === m) {
-            score += 1000000;
+            score += 10000000;
           }
 
           let totalPerfAtPos = 0;
@@ -873,30 +871,35 @@
             const pos = show.positionsArray;
             if (pos && pos[pIdx] === m) {
               totalPerfAtPos++;
-              // 他の出演メンバーと共演している公演での配置かチェック
-              const hasCoStar = pos.some(otherMember => otherMember !== m && inputSet.has(otherMember));
+              let hasCoStar = false;
+
+              pos.forEach((otherM) => {
+                if (otherM !== m && inputSet.has(otherM)) {
+                  hasCoStar = true;
+                }
+              });
+
               if (hasCoStar) {
                 coStarPerfAtPos++;
               }
             }
           });
 
-          // 2. 共演実績のあるポジション配置への強力な加算（1回につき10,000pt）
-          score += coStarPerfAtPos * 10000;
-
-          // 3. 当該ポジション経験の有無（未経験ポジションへの強制割り当てを防止）
+          // 階層2: 該当ポジションの経験有無 (+1,000,000)
+          // これにより未経験ポジションが経験有りより優先される事故を物理的にブロック
           if (totalPerfAtPos > 0) {
-            score += 1000;
+            score += 1000000;
+            // 階層3: 通算出演回数による加算 (+10,000 / 回)
+            score += totalPerfAtPos * 10000;
+            // 階層4: 他の入力メンバーとの共演実績加算 (+1,000 / 回)
+            score += coStarPerfAtPos * 1000;
           }
-
-          // 4. 通算出演回数による微加算
-          score += totalPerfAtPos * 10;
 
           costMatrix[mIdx][pIdx] = score;
         }
       });
 
-      // ハンガリアン法でグループ全体のスコアを最大化する組み合わせを算出
+      // 全体最適な組み合わせを算出
       const assignmentMap = hungarianMaxWeight(costMatrix);
 
       const assignedMapping = {};
@@ -913,7 +916,7 @@
         }
       });
 
-      // 人数過不足の補正
+      // 過不足調整
       const unassignedMembers = inputMemberList.filter(m => !assignedMembers.has(m));
       const unassignedPositions = [];
       for (let pIdx = 0; pIdx < numPos; pIdx++) {
@@ -1031,10 +1034,15 @@
               const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "別";
               
               const coop = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
-              
+              const assignedNameInU2PosCount = getMemberStats(assignedName).posCountMap[u2PosName] || 0;
+
               if (coop.total > 0) {
                 if (coop.countDefault > 0 && coop.countSwapped === 0) {
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                  if (assignedNameInU2PosCount === 0) {
+                    reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去の共演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジで出演している実績があり、逆の組み合わせでは${assignedName}の${u2PosName}ポジでの出演経験がないため、従来通り${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジで出演すると予想。`;
+                  } else {
+                    reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                  }
                 } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
                   reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定。過去の共演時には${u2}が${fixedMember}ポジ、${assignedName}が${u2PosName}ポジに入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
                 } else {
