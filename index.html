@@ -711,7 +711,6 @@
       });
     }
 
-    // 【修正箇所】一覧表順で該当ポジションのアンダー（実際に経験のあるメンバー）のみを取得するよう改善
     function getOrderedUnderList(pIdx, fixedMember, validShows) {
       const experiencedSet = new Set();
 
@@ -724,7 +723,6 @@
         }
       });
 
-      // MASTER_MEMBER_ORDER順で該当ポジションの経験者のみを抽出して返す
       return MASTER_MEMBER_ORDER.filter(m => experiencedSet.has(m));
     }
 
@@ -735,6 +733,7 @@
       return `${absentUnders[0]}や${absentUnders[1]}など`;
     }
 
+    // 【更新】丸め込みを廃止し、正確な共演比率と件数を取得
     function getCoopProbability(m1, m2, pIdx1, pIdx2, validShows) {
       let countDefault = 0; // m1 -> pIdx1, m2 -> pIdx2
       let countSwapped = 0; // m2 -> pIdx1, m1 -> pIdx2
@@ -751,21 +750,32 @@
       });
 
       const total = countDefault + countSwapped;
-      if (total > 0) {
-        let p1 = Math.round((countDefault / total) * 100);
-        p1 = Math.min(Math.max(p1, 10), 90); 
-        return { p1, p2: 100 - p1 };
+      if (total === 0) {
+        return { p1: 65, p2: 35, total: 0, countDefault: 0, countSwapped: 0 };
       }
-      return { p1: 65, p2: 35 };
+
+      const rawP1 = Math.round((countDefault / total) * 100);
+      const rawP2 = 100 - rawP1;
+
+      return {
+        p1: rawP1,
+        p2: rawP2,
+        total: total,
+        countDefault: countDefault,
+        countSwapped: countSwapped
+      };
     }
 
+    // 【更新】共演ペアの実績ボーナスを加算して最適配置を計算
     function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
       const expMatrix = {};
+
       inputMemberList.forEach(m => {
         expMatrix[m] = new Array(numPos).fill(0);
       });
 
+      // 各メンバーの単体ポジション出演回数
       validShows.forEach(show => {
         show.positionsArray.forEach((m, pIdx) => {
           if (expMatrix[m] !== undefined && pIdx < numPos) {
@@ -774,6 +784,7 @@
         });
       });
 
+      // 本人（オリジナルポジション）への高スコア付与
       inputMemberList.forEach(m => {
         for (let i = 0; i < numPos; i++) {
           if (stageFixed[i] === m) {
@@ -782,45 +793,60 @@
         }
       });
 
-      let bestMapping = {};
-      let maxExperiencedCount = -1;
-      let maxTotalScore = -1;
+      // 同時出演時の共演ペア実績ボーナス（過去に共演した時のポジション配置を優先）
+      validShows.forEach(show => {
+        const pos = show.positionsArray;
+        if (!pos) return;
+        inputMemberList.forEach(m1 => {
+          inputMemberList.forEach(m2 => {
+            if (m1 !== m2 && pos.includes(m1) && pos.includes(m2)) {
+              const p1 = pos.indexOf(m1);
+              const p2 = pos.indexOf(m2);
+              if (p1 >= 0 && p1 < numPos) expMatrix[m1][p1] += 10;
+              if (p2 >= 0 && p2 < numPos) expMatrix[m2][p2] += 10;
+            }
+          });
+        });
+      });
 
-      function solve(mIdx, currentAssigned, usedPositions, expCount, totalScore) {
-        if (mIdx === inputMemberList.length) {
-          if (expCount > maxExperiencedCount || (expCount === maxExperiencedCount && totalScore > maxTotalScore)) {
-            maxExperiencedCount = expCount;
-            maxTotalScore = totalScore;
-            bestMapping = { ...currentAssigned };
-          }
-          return;
-        }
-
-        const member = inputMemberList[mIdx];
+      const pairs = [];
+      inputMemberList.forEach(m => {
         for (let pIdx = 0; pIdx < numPos; pIdx++) {
-          if (!usedPositions.has(pIdx)) {
-            usedPositions.add(pIdx);
-            currentAssigned[pIdx] = member;
-
-            const score = expMatrix[member][pIdx];
-            const isExp = score > 0;
-
-            solve(
-              mIdx + 1,
-              currentAssigned,
-              usedPositions,
-              expCount + (isExp ? 1 : 0),
-              totalScore + score
-            );
-
-            usedPositions.delete(pIdx);
-            delete currentAssigned[pIdx];
-          }
+          pairs.push({
+            member: m,
+            pIdx: pIdx,
+            score: expMatrix[m][pIdx]
+          });
         }
+      });
+
+      pairs.sort((a, b) => b.score - a.score);
+
+      const assignedMapping = {};
+      const usedMembers = new Set();
+      const usedPositions = new Set();
+
+      pairs.forEach(pair => {
+        if (!usedMembers.has(pair.member) && !usedPositions.has(pair.pIdx)) {
+          assignedMapping[pair.pIdx] = pair.member;
+          usedMembers.add(pair.member);
+          usedPositions.add(pair.pIdx);
+        }
+      });
+
+      const unassignedMembers = inputMemberList.filter(m => !usedMembers.has(m));
+      const unassignedPositions = [];
+      for (let pIdx = 0; pIdx < numPos; pIdx++) {
+        if (!usedPositions.has(pIdx)) unassignedPositions.push(pIdx);
       }
 
-      solve(0, {}, new Set(), 0, 0);
-      return bestMapping;
+      unassignedMembers.forEach((m, i) => {
+        if (i < unassignedPositions.length) {
+          assignedMapping[unassignedPositions[i]] = m;
+        }
+      });
+
+      return assignedMapping;
     }
 
     function runForecast() {
@@ -924,9 +950,18 @@
               const u2PosIdx = memberToPosMap[u2];
               const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "別";
               
-              const { p1, p2 } = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
+              const coop = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
               
-              reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジに出演する確率が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${p1}%、${u2} ${p2}%</span>`;
+              // 【更新】過去の共演実績でパターンが1通りの場合（一方の確率が100% / 0%）は確率タグを表示しない
+              if (coop.total > 0 && (coop.p1 === 100 || coop.p2 === 100 || coop.countSwapped === 0 || coop.countDefault === 0)) {
+                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+              } 
+              else if (coop.p1 === 0 || coop.p2 === 0) {
+                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する確率が高いと予想し、、${assignedName}が${fixedMember}ポジに入ると予想。`;
+              } 
+              else {
+                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する確率が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+              }
             }
           }
         } else {
@@ -934,13 +969,13 @@
 
           if (isStageFirstTimer) {
             if (firstTimers.length <= 1) {
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${fixedMember}ポジでの出演がほぼ確実と予想できるため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${assignedName}が${fixedMember}ポジに入ると予想。`;
             } else {
               const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
               const m2PosIdx = memberToPosMap[m2];
               const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "他";
 
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${fixedMember}ポジか${m2PosName}ポジでの出演になると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${fixedMember}ポジか${m2PosName}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
             }
           } else {
             const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別メンバー";
