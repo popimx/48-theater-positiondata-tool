@@ -872,7 +872,6 @@
       return result;
     }
 
-    /* ⑤ 修正点：全員が経験済みの組み合わせが存在する場合、初挑戦を出さないようスコアリング強化 */
     function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
       const numMembers = inputMemberList.length;
@@ -886,7 +885,6 @@
           let score = 0;
           const targetFixed = stageFixed[pIdx];
 
-          // 初日メンバー本人の場合
           if (targetFixed === m) {
             score += 100000000;
           }
@@ -912,7 +910,6 @@
             }
           });
 
-          // ⑤ 要件：経験あり（アンダー出演含む）を圧倒的優遇（初挑戦より圧倒的に優先させるため基本スコアを1億加算）
           if (totalPerfAtPos > 0) {
             score += 10000000;
             score += totalPerfAtPos * 100000;
@@ -1061,7 +1058,6 @@
 
         let isCondition1Matched = false;
 
-        // ④ 不確定となる2つのポジションで被りが発生する場合の例外表示処理
         if (pairDupEmpty && (pIdx === pairDupEmpty.dupPIdx || pIdx === pairDupEmpty.emptyPIdx)) {
           const dupFixed = stage.fixed[pairDupEmpty.dupPIdx];
           const emptyFixed = stage.fixed[pairDupEmpty.emptyPIdx];
@@ -1084,7 +1080,7 @@
                 reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジの経験者が現役メンバーにいないため、${assignedName}が入ると予想。`;
               } else if (availableUnders.length === 0) {
                 const undersText = formatUndersText(absentUnders);
-                reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
+                reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日は${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
               } else {
                 const u1 = availableUnders[0];
                 const u1PosIdx = memberToPosMap[u1];
@@ -1112,7 +1108,6 @@
 
                   if (coop.total > 0) {
                     if (coop.countDefault > 0 && coop.countSwapped === 0) {
-                      // ① 修正箇所: 不要な「この日の公演は同じ〜も出演予定だが」の冗長部分を排除してスッキリ化
                       reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に${u2}と共演した公演では全て${assignedName}が${fixedMember}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
                     } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
                       reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定。過去に共演した公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosText}に入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
@@ -1120,7 +1115,6 @@
                       reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
                     }
                   } else {
-                    // ③・④ 複数ポジション可能で回数（確率）が高いポジションが割り当てられた場合の理由
                     const assignedTotalInPos = getMemberStats(assignedName).posCountMap[fixedMember] || 0;
                     const altPosName = u2PosName;
                     const altPosCount = altPosName ? (getMemberStats(assignedName).posCountMap[altPosName] || 0) : 0;
@@ -1138,7 +1132,6 @@
               }
             }
           } else {
-            // ② 修正点：他ポジに専念しているメンバーに引っ張られて、関係ないメンバーが95%表示される問題の整合性修正
             if (isStageFirstTimer) {
               const firstTimerPositions = firstTimers.map(m => {
                 const p = memberToPosMap[m];
@@ -1164,7 +1157,6 @@
                 reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
             } else {
-              // 初挑戦だが、ポジション被りメンバー（下尾みう＆福岡聖菜など）がいる場合の判定
               const otherPosExps = availableUnders.filter(u => u !== assignedName);
               if (otherPosExps.length >= 2) {
                 const expsStr = otherPosExps.join("や");
