@@ -152,7 +152,7 @@
             <i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i> ポジション予想
           </h2>
           <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-600">出演メンバー（スペースや・などで区切るか、羅列してください）</label>
+            <label class="block text-xs font-bold text-slate-600">出演メンバー（出演メンバーを「、」または「・」区切りで入力してください。）</label>
             <textarea id="forecastInputText" rows="3" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう・鈴木くるみ・千葉恵里・永野芹佳・水島美結・向井地美音・村山彩希・山内瑞葵・山﨑空・秋山由奈・八木愛月..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
             <button onclick="runForecast()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow transition">
               予想を実行する
@@ -162,12 +162,12 @@
           <!-- 予想結果表示エリア -->
           <div id="forecastResultArea" class="hidden space-y-4 pt-2 border-t border-slate-100">
             <div>
-              <h3 class="text-xs font-bold text-slate-500 mb-2">【全メンバー一覧（出演マーク付き）】</h3>
+              <h3 class="text-xs font-bold text-slate-500 mb-2">【全メンバーの一覧（出演マーク付き）】</h3>
               <div id="forecastAllMembersGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
             </div>
 
             <div>
-              <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジション別自動割り当て ＆ 予想理由】</h3>
+              <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジションの割り当て ＆ 予想理由】</h3>
               <div id="forecastPositionsList" class="space-y-3"></div>
             </div>
           </div>
@@ -1222,7 +1222,7 @@
       }
 
       const rawInput = document.getElementById('forecastInputText').value;
-      const inputNames = rawInput.split(/[\s・,\n/]+/)
+      const inputNames = rawInput.split(/[\s・、,\n/]+/)
         .map(s => s.trim())
         .filter(s => s.length > 0 && s !== "-" && s !== "－");
 
