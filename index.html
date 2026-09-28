@@ -1414,7 +1414,7 @@
                 const fixedMemberAssignedPosName = fixedMemberAssignedPosIdx !== undefined ? stage.fixed[fixedMemberAssignedPosIdx] : "";
                 const fixedMemberPosText = fixedMemberAssignedPosName ? `${fixedMemberAssignedPosName}ポジ` : "他のポジション";
 
-                reasonHtml = `この日の公演は初日メンバーの${fixedMember}も出演予定だが、${fixedMember}は${fixedMemberPosText}で出演すると予想されるため、${fixedMember}ポジの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+                reasonHtml = `この日の公演は初日メンバーの${fixedMember}も出演予定だが、${fixedMember}は${fixedMemberAssignedPosName}ポジで出演すると予想されるため、${fixedMember}ポジの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
               } else {
                 if (availableUnders.length <= 1) {
                   if (absentUnders.length === 0) {
