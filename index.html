@@ -1031,7 +1031,7 @@
         }
       });
 
-      // ③用：公演自体の初日を迎えるメンバー（出演回数0回）のリスト
+      // 公演自体の初日を迎えるメンバー（出演回数0回）のリスト
       const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
 
       stage.fixed.forEach((fixedMember, pIdx) => {
@@ -1048,7 +1048,7 @@
         let displayAssignedName = assignedName;
         const isStageFirstTimer = (stats.totalCount === 0);
 
-        // --- ①の条件判定 ---
+        // --- 重複ポジション経験者の条件判定 ---
         let isCondition1Matched = false;
         if (pairDupEmpty && (pIdx === pairDupEmpty.dupPIdx || pIdx === pairDupEmpty.emptyPIdx)) {
           const dupFixed = stage.fixed[pairDupEmpty.dupPIdx];
@@ -1116,28 +1116,31 @@
             }
           } else {
             if (isStageFirstTimer) {
-              // --- ③の条件判定（初日メンバーが2名以上の場合） ---
-              if (firstTimers.length >= 2) {
-                const otherFirstTimers = firstTimers.filter(m => m !== assignedName);
-                const otherText = otherFirstTimers.length >= 2 
-                  ? `${otherFirstTimers[0]}や${otherFirstTimers[1]}` 
-                  : `${otherFirstTimers[0]}`;
+              // 一覧表のインデックス順（stage.fixedの登録順）でソートしてポジション名を列挙
+              const firstTimerPositions = firstTimers.map(m => {
+                const p = memberToPosMap[m];
+                return p !== undefined ? { pIdx: p, text: `${stage.fixed[p]}ポジ` } : null;
+              })
+              .filter(item => item !== null)
+              .sort((a, b) => a.pIdx - b.pIdx)
+              .map(item => item.text);
 
-                // 一覧表のインデックス順（stage.fixedの登録順）でソートしてポジション名を列挙
-                const firstTimerPositions = firstTimers.map(m => {
-                  const p = memberToPosMap[m];
-                  return p !== undefined ? { pIdx: p, text: `${stage.fixed[p]}ポジ` } : null;
-                })
-                .filter(item => item !== null)
-                .sort((a, b) => a.pIdx - b.pIdx)
-                .map(item => item.text);
+              const posText = firstTimerPositions.join("か");
+              const pct = Math.floor(100 / firstTimers.length);
+              const pctListStr = firstTimers.map(m => `${m} ${pct}%`).join("、");
 
-                const posText = firstTimerPositions.join("か");
-                const pct = Math.floor(100 / firstTimers.length);
-                const pctListStr = firstTimers.map(m => `${m} ${pct}%`).join("、");
-
-                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${otherText}など、${assignedName}も含めて${firstTimers.length}名がこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${posText}のいずれかに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${pctListStr}</span>`;
-              } else {
+              // ① 初日メンバーが2名の場合
+              if (firstTimers.length === 2) {
+                const namesStr = `${firstTimers[0]}と${firstTimers[1]}`;
+                reasonHtml = `${namesStr}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから、${namesStr}は${posText}のいずれかに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${firstTimers[0]} 50%、${firstTimers[1]} 50%</span>`;
+              } 
+              // ② 初日メンバーが3名以上の場合
+              else if (firstTimers.length >= 3) {
+                const sampleText = `${firstTimers[0]}や${firstTimers[1]}など、${firstTimers.length}名`;
+                reasonHtml = `${sampleText}がこの日に「${stageName}」公演の初日を迎える予定であること、他の出演メンバーのポジションの兼ね合いから、この日に初日を迎える${firstTimers.length}名は${posText}のいずれかに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${pctListStr}</span>`;
+              } 
+              // 初日メンバーが1名の場合
+              else {
                 reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
             } else {
