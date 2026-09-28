@@ -212,7 +212,6 @@
 
   <!-- JavaScript Logic -->
   <script>
-    // 指定された固定の全メンバーリスト順
     const MASTER_MEMBER_ORDER = [
       "秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀", "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純", 
       "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海", 
@@ -766,82 +765,159 @@
       };
     }
 
-    // 【修正】最適配置計算（同時出演時の具体的な配置パターンを重視してスコア化）
+    // --- ハンガリアン法（二部マッチング最適化アルゴリズム） ---
+    function hungarianMaxWeight(costMatrix) {
+      const rows = costMatrix.length;
+      if (rows === 0) return {};
+      const cols = costMatrix[0].length;
+      const n = Math.max(rows, cols);
+
+      let maxVal = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (costMatrix[r][c] > maxVal) maxVal = costMatrix[r][c];
+        }
+      }
+
+      const a = Array.from({ length: n }, () => new Array(n).fill(maxVal));
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          a[r][c] = maxVal - costMatrix[r][c];
+        }
+      }
+
+      const u = new Array(n + 1).fill(0);
+      const v = new Array(n + 1).fill(0);
+      const p = new Array(n + 1).fill(0);
+      const way = new Array(n + 1).fill(0);
+
+      for (let i = 1; i <= n; i++) {
+        p[0] = i;
+        let j0 = 0;
+        const minv = new Array(n + 1).fill(Infinity);
+        const used = new Array(n + 1).fill(false);
+
+        do {
+          used[j0] = true;
+          const i0 = p[j0];
+          let delta = Infinity;
+          let j1 = 0;
+
+          for (let j = 1; j <= n; j++) {
+            if (!used[j]) {
+              const cur = a[i0 - 1][j - 1] - u[i0] - v[j];
+              if (cur < minv[j]) {
+                minv[j] = cur;
+                way[j] = j0;
+              }
+              if (minv[j] < delta) {
+                delta = minv[j];
+                j1 = j;
+              }
+            }
+          }
+
+          for (let j = 0; j <= n; j++) {
+            if (used[j]) {
+              u[p[j]] += delta;
+              v[j] -= delta;
+            } else {
+              minv[j] -= delta;
+            }
+          }
+          j0 = j1;
+        } while (p[j0] !== 0);
+
+        do {
+          const j1 = way[j0];
+          p[j0] = p[j1];
+          j0 = j1;
+        } while (j0 !== 0);
+      }
+
+      const result = {};
+      for (let j = 1; j <= n; j++) {
+        const r = p[j] - 1;
+        const c = j - 1;
+        if (r < rows && c < cols) {
+          result[r] = c;
+        }
+      }
+      return result;
+    }
+
+    // 【修正】ハンガリアン法による全体最適化ポジション割り当て
     function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
-      const expMatrix = {};
+      const numMembers = inputMemberList.length;
+      if (numMembers === 0 || numPos === 0) return {};
 
-      inputMemberList.forEach(m => {
-        expMatrix[m] = new Array(numPos).fill(0);
-      });
+      const costMatrix = Array.from({ length: numMembers }, () => new Array(numPos).fill(0));
+      const inputSet = new Set(inputMemberList);
 
-      // 単体ポジションでの出演実績（基礎点）
-      validShows.forEach(show => {
-        show.positionsArray.forEach((m, pIdx) => {
-          if (expMatrix[m] !== undefined && pIdx < numPos) {
-            expMatrix[m][pIdx] += 10;
-          }
-        });
-      });
-
-      // オリジナルポジション本人への加算
-      inputMemberList.forEach(m => {
-        for (let i = 0; i < numPos; i++) {
-          if (stageFixed[i] === m) {
-            expMatrix[m][i] += 10000;
-          }
-        }
-      });
-
-      // 【修正】同時出演時の共演ペア実績ボーナス
-      // 一緒に出演した公演で実際に担当していたポジションにしっかりとスコアを加算
-      validShows.forEach(show => {
-        const pos = show.positionsArray;
-        if (!pos) return;
-        const presentInputMembers = inputMemberList.filter(m => pos.includes(m));
-
-        for (let i = 0; i < presentInputMembers.length; i++) {
-          for (let j = i + 1; j < presentInputMembers.length; j++) {
-            const m1 = presentInputMembers[i];
-            const m2 = presentInputMembers[j];
-            const p1 = pos.indexOf(m1);
-            const p2 = pos.indexOf(m2);
-
-            if (p1 >= 0 && p1 < numPos) expMatrix[m1][p1] += 100;
-            if (p2 >= 0 && p2 < numPos) expMatrix[m2][p2] += 100;
-          }
-        }
-      });
-
-      const pairs = [];
-      inputMemberList.forEach(m => {
+      // 各メンバー × 各ポジションの適合スコア行列を作成
+      inputMemberList.forEach((m, mIdx) => {
         for (let pIdx = 0; pIdx < numPos; pIdx++) {
-          pairs.push({
-            member: m,
-            pIdx: pIdx,
-            score: expMatrix[m][pIdx]
+          let score = 0;
+          const targetFixed = stageFixed[pIdx];
+
+          // 1. オリジナルポジション本人である場合（最優先）
+          if (targetFixed === m) {
+            score += 1000000;
+          }
+
+          let totalPerfAtPos = 0;
+          let coStarPerfAtPos = 0;
+
+          validShows.forEach(show => {
+            const pos = show.positionsArray;
+            if (pos && pos[pIdx] === m) {
+              totalPerfAtPos++;
+              // 他の出演メンバーと共演している公演での配置かチェック
+              const hasCoStar = pos.some(otherMember => otherMember !== m && inputSet.has(otherMember));
+              if (hasCoStar) {
+                coStarPerfAtPos++;
+              }
+            }
           });
+
+          // 2. 共演実績のあるポジション配置への強力な加算（1回につき10,000pt）
+          score += coStarPerfAtPos * 10000;
+
+          // 3. 当該ポジション経験の有無（未経験ポジションへの強制割り当てを防止）
+          if (totalPerfAtPos > 0) {
+            score += 1000;
+          }
+
+          // 4. 通算出演回数による微加算
+          score += totalPerfAtPos * 10;
+
+          costMatrix[mIdx][pIdx] = score;
         }
       });
 
-      pairs.sort((a, b) => b.score - a.score);
+      // ハンガリアン法でグループ全体のスコアを最大化する組み合わせを算出
+      const assignmentMap = hungarianMaxWeight(costMatrix);
 
       const assignedMapping = {};
-      const usedMembers = new Set();
-      const usedPositions = new Set();
+      const assignedMembers = new Set();
+      const assignedPositions = new Set();
 
-      pairs.forEach(pair => {
-        if (!usedMembers.has(pair.member) && !usedPositions.has(pair.pIdx)) {
-          assignedMapping[pair.pIdx] = pair.member;
-          usedMembers.add(pair.member);
-          usedPositions.add(pair.pIdx);
+      Object.entries(assignmentMap).forEach(([mIdxStr, pIdx]) => {
+        const mIdx = parseInt(mIdxStr, 10);
+        if (mIdx < numMembers && pIdx < numPos) {
+          const memberName = inputMemberList[mIdx];
+          assignedMapping[pIdx] = memberName;
+          assignedMembers.add(memberName);
+          assignedPositions.add(pIdx);
         }
       });
 
-      const unassignedMembers = inputMemberList.filter(m => !usedMembers.has(m));
+      // 人数過不足の補正
+      const unassignedMembers = inputMemberList.filter(m => !assignedMembers.has(m));
       const unassignedPositions = [];
       for (let pIdx = 0; pIdx < numPos; pIdx++) {
-        if (!usedPositions.has(pIdx)) unassignedPositions.push(pIdx);
+        if (!assignedPositions.has(pIdx)) unassignedPositions.push(pIdx);
       }
 
       unassignedMembers.forEach((m, i) => {
@@ -956,17 +1032,13 @@
               
               const coop = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
               
-              // 【修正】共演時のポジション配置パターンと向きを正しく判定
               if (coop.total > 0) {
                 if (coop.countDefault > 0 && coop.countSwapped === 0) {
-                  // 過去の共演で100% (assignedNameがfixedMemberポジ, u2がu2PosNameポジ) だった場合
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に${u2}と共演した「${stageName}」公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
                 } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
-                  // 過去の共演で100%逆 (u2がfixedMemberポジ, assignedNameがu2PosNameポジ) だった場合
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定である。過去に${u2}と共演した「${stageName}」公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosName}ポジに入っていたが、この日の公演は他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定。過去の共演時には${u2}が${fixedMember}ポジ、${assignedName}が${u2PosName}ポジに入っていたが、全体のポジション構成の兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
                 } else {
-                  // 両方の配置実績が存在する場合
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に${u2}と共演した「${stageName}」公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去の共演割合等から${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
                 }
               } else {
                 reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
@@ -978,7 +1050,7 @@
 
           if (isStageFirstTimer) {
             if (firstTimers.length <= 1) {
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${assignedName}が${fixedMember}ポジに入ると予想。`;
             } else {
               const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
               const m2PosIdx = memberToPosMap[m2];
