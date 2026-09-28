@@ -1061,7 +1061,10 @@
                   const isU2PosExperienced = u2InU2PosCount > 0 || u2 === u2PosName;
 
                   if (!isU2PosExperienced && u2PosExpList.length === 0 && u2PosName) {
-                    reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2PosName}ポジの経験者がいないため、${fixedMember}ポジの出演経験がある${assignedName}と${u2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${u2} 50%</span>`;
+                    const mList = [assignedName, u2].sort((a, b) => MASTER_MEMBER_ORDER.indexOf(a) - MASTER_MEMBER_ORDER.indexOf(b));
+                    const m1 = mList[0];
+                    const m2 = mList[1];
+                    reasonHtml = `この日の公演は${u2PosName}ポジの経験者がいないため、同じ${fixedMember}ポジを務める${m1}と${m2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${m1} 50%、${m2} 50%</span>`;
                   } else {
                     reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosText}で出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
                   }
@@ -1087,7 +1090,10 @@
             const mOther = expList.find(u => u !== assignedName);
 
             if (mOther) {
-              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${sharedPosName}ポジを務める${mOther}と${assignedName}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${mOther} 50%</span>`;
+              const mList = [assignedName, mOther].sort((a, b) => MASTER_MEMBER_ORDER.indexOf(a) - MASTER_MEMBER_ORDER.indexOf(b));
+              const m1 = mList[0];
+              const m2 = mList[1];
+              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${sharedPosName}ポジを務める${m1}と${m2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${m1} 50%、${m2} 50%</span>`;
             } else {
               reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないのと、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
             }
