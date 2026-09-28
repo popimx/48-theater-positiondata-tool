@@ -453,7 +453,6 @@
       });
     }
 
-    // 全ての全データから日別表・出演欄に登場する全メンバー一覧を重複なく抽出
     function getAllUniqueMembers() {
       const set = new Set(MASTER_MEMBER_ORDER);
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
@@ -750,8 +749,8 @@
     }
 
     function getCoopProbability(m1, m2, pIdx1, pIdx2, validShows) {
-      let countDefault = 0; // m1 -> pIdx1, m2 -> pIdx2
-      let countSwapped = 0; // m2 -> pIdx1, m1 -> pIdx2
+      let countDefault = 0;
+      let countSwapped = 0;
 
       validShows.forEach(show => {
         const pos = show.positionsArray;
@@ -781,7 +780,6 @@
       };
     }
 
-    // --- ハンガリアン法（二部マッチング最適化アルゴリズム） ---
     function hungarianMaxWeight(costMatrix) {
       const rows = costMatrix.length;
       if (rows === 0) return {};
@@ -1002,18 +1000,6 @@
         return { totalCount, posCountMap, lastDateMap, uniquePositionsCount: Object.keys(posCountMap).length };
       }
 
-      function getAvailableExperiencedList(pIdx, fixedMember) {
-        const list = [];
-        if (fixedMember && fixedMember !== "-" && fixedMember !== "－" && inputSet.has(fixedMember)) {
-          list.push(fixedMember);
-        }
-        const unders = getOrderedUnderList(pIdx, fixedMember, validShows).filter(u => inputSet.has(u));
-        unders.forEach(u => {
-          if (!list.includes(u)) list.push(u);
-        });
-        return list;
-      }
-
       const assignedMapping = findOptimalAssignment(inputMemberList, stage.fixed, validShows);
       const memberToPosMap = {};
       Object.entries(assignedMapping).forEach(([pIdx, m]) => {
@@ -1097,16 +1083,49 @@
               reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
             }
           } else {
-            const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
-            if (u2) {
-              const u2Stats = getMemberStats(u2);
-              const rawLastDate = u2Stats.lastDateMap[fixedMember];
-              const lastDateStr = rawLastDate ? formatShortDate(rawLastDate) : "";
-              const dateReason = lastDateStr ? `${lastDateStr}以来` : "最近";
-              
-              reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${dateReason}${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
+            // 他ポジ経験はあるが該当ポジ未経験の場合
+            const targetPosExperiencedMembers = inputMemberList.filter(m => {
+              const mStats = getMemberStats(m);
+              return (mStats.posCountMap[fixedMember] || 0) > 0 || m === fixedMember;
+            });
+
+            // 仕様①：該当ポジの経験者がおらず、同じポジを経験した2名以上が他ポジでバッティングしているケース
+            if (targetPosExperiencedMembers.length === 0) {
+              const samePosCandidates = inputMemberList.filter(m => {
+                const mStats = getMemberStats(m);
+                return mStats.totalCount > 0;
+              });
+
+              // バッティング候補が複数いる場合は50%/50%で表示
+              if (samePosCandidates.length >= 2) {
+                const c1 = samePosCandidates[0];
+                const c2 = samePosCandidates[1];
+                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${stage.fixed[memberToPosMap[c1] || pIdx]}ポジを務める${c1}と${c2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${c1} 50%、${c2} 50%</span>`;
+              } else {
+                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+              }
             } else {
-              reasonHtml = "";
+              // 仕様②：出演回数割合に基づく動的パーセンテージ算出
+              const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
+              if (u2) {
+                const u2Stats = getMemberStats(u2);
+                const rawLastDate = u2Stats.lastDateMap[fixedMember];
+                const lastDateStr = rawLastDate ? formatShortDate(rawLastDate) : "";
+                const dateReason = lastDateStr ? `${lastDateStr}以来` : "最近";
+
+                // assignedNameの当該ポジ出演回数 ÷ この演目の総出演回数
+                const assignedPosCount = stats.posCountMap[fixedMember] || 0;
+                let assignedPct = stats.totalCount > 0 ? Math.round((assignedPosCount / stats.totalCount) * 100) : 50;
+
+                // 範囲の正規化 (端数調整)
+                if (assignedPct > 95) assignedPct = 95;
+                if (assignedPct < 5) assignedPct = 5;
+                const u2Pct = 100 - assignedPct;
+
+                reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${dateReason}${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${assignedPct}%、${u2} ${u2Pct}%</span>`;
+              } else {
+                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${assignedName}が${fixedMember}ポジに入ると予想。`;
+              }
             }
           }
         }
