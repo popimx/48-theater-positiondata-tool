@@ -636,9 +636,11 @@
           }
         });
 
-        // MASTER_MEMBER_ORDER に含まれるメンバーのみに絞り込む
+        // アンダー出演（2人目以降）は MASTER_MEMBER_ORDER に含まれるメンバーのみ抽出
         const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
-        const initialMembers = MASTER_MEMBER_ORDER.includes(fixedMember) ? [fixedMember, ...undersOrdered] : undersOrdered;
+        
+        // 初日出演メンバー(fixedMember)は MASTER_MEMBER_ORDER の有無にかかわらず初日枠(1人目)として保持
+        const initialMembers = fixedMember ? [fixedMember, ...undersOrdered] : undersOrdered;
         const orderedMembers = initialMembers.filter(m => m && m !== "-" && m !== "－");
 
         if (orderedMembers.length > 0) {
