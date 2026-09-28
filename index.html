@@ -1083,7 +1083,7 @@
             } else {
               if (availableUnders.length <= 1) {
                 const undersText = formatUndersText(absentUnders);
-                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、${undersText ? fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
               } else {
                 const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
                 if (u2) {
