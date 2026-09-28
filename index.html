@@ -1036,9 +1036,9 @@
                 if (coop.countDefault > 0 && coop.countSwapped === 0) {
                   reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
                 } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定。過去の共演時には${u2}が${fixedMember}ポジ、${assignedName}が${u2PosName}ポジに入っていたが、全体のポジション構成の兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定。過去の共演時には${u2}が${fixedMember}ポジ、${assignedName}が${u2PosName}ポジに入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
                 } else {
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去の共演割合等から${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去の共演時のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
                 }
               } else {
                 reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
