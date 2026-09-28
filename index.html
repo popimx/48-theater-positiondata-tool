@@ -858,7 +858,7 @@
               const otherUnders = unders.filter(u => u !== assignedName && u !== "-" && u !== "－");
               const u2 = otherUnders[0] || "";
               const u3 = otherUnders[1] || "";
-              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${u2 ? '同じ'${fixedMember}ポジを務める' + u2 + (u3 ? 'や' + u3 : '') + 'の出演予定もないため、' : ''}そのまま${assignedName}が入ると予想。`;
+              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${u2 ? '同じ${fixedMember}ポジを務める' + u2 + (u3 ? 'や' + u3 : '') + 'の出演予定もないため、' : ''}そのまま${assignedName}が入ると予想。`;
             } else {
               const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別アンダー";
               const u2PosIdx = memberToPosMap[u2];
