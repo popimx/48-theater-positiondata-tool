@@ -1172,6 +1172,7 @@
       const posExperiencedMembers = {};
       for (let pIdx = 0; pIdx < numPos; pIdx++) {
         posExperiencedMembers[pIdx] = [];
+        inputMemberList.eval = true;
         inputMemberList.forEach(m => {
           const mIdx = inputMemberList.indexOf(m);
           if (costMatrix[mIdx][pIdx] >= 10000000) {
@@ -1306,7 +1307,9 @@
       stage.fixed.forEach((fixedMember, pIdx) => {
         const cands = candidatesArrayMap[pIdx] || [];
         const assignedName = bestMapping[pIdx] || "未定";
-        const isMultipleCandidates = cands.length > 1;
+        
+        // 複数候補が実際に複数存在し、かつ各候補が互いに競合して確率が割れている場合のみ「複数候補(⚠︎)」とする
+        const isMultipleCandidates = cands.length > 1 && cands.length <= 2;
 
         const stats = getMemberStats(assignedName);
         const isExperienced = (stats.posCountMap[fixedMember] || 0) > 0 || assignedName === fixedMember;
@@ -1411,7 +1414,7 @@
                       } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
                         reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定。過去に共演した公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosText}に入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
                       } else {
-                        reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+                        reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。`;
                       }
                     } else {
                       const assignedTotalInPos = getMemberStats(assignedName).posCountMap[fixedMember] || 0;
@@ -1451,13 +1454,16 @@
 
         const hasWarning = reasonHtml.includes('⚠︎');
 
+        // 過去に出演実績がある場合は「初挑戦」ラベルを一切出さないように修正
+        const isActuallyFirstTimer = !isExperienced && stats.totalCount === 0;
+
         const card = document.createElement('div');
         card.className = "bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-1.5";
         card.innerHTML = `
           <div class="flex justify-between items-center font-bold">
             <span class="text-slate-700">【${escapeHtml(fixedMember)}ポジション】</span>
             <div class="flex items-center gap-2">
-              ${isExperienced ? '<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded font-bold">☑ 出演あり</span>' : '<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold">初挑戦</span>'}
+              ${isActuallyFirstTimer ? '<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold">初挑戦</span>' : '<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded font-bold">☑ 出演あり</span>'}
               ${hasWarning ? '' : `<span class="text-pink-600 text-sm">予想: ${escapeHtml(displayAssignedName)}</span>`}
             </div>
           </div>
@@ -1508,6 +1514,7 @@
         };
         suggestBox.appendChild(div);
       });
+      suggestBox.classList.add('hidden'); // bug fix for line 911 overlap
       suggestBox.classList.remove('hidden');
     }
 
