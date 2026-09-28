@@ -636,9 +636,10 @@
           }
         });
 
-        const allUnique = getAllUniqueMembers();
-        const undersOrdered = allUnique.filter(m => m !== fixedMember && experiencedSet.has(m));
-        const orderedMembers = [fixedMember, ...undersOrdered].filter(m => m && m !== "-" && m !== "－");
+        // MASTER_MEMBER_ORDER に含まれるメンバーのみに絞り込む
+        const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
+        const initialMembers = MASTER_MEMBER_ORDER.includes(fixedMember) ? [fixedMember, ...undersOrdered] : undersOrdered;
+        const orderedMembers = initialMembers.filter(m => m && m !== "-" && m !== "－");
 
         if (orderedMembers.length > 0) {
           rowDataList.push({ fixedMember, orderedMembers });
@@ -737,8 +738,8 @@
         }
       });
 
-      const allUnique = getAllUniqueMembers();
-      return allUnique.filter(m => experiencedSet.has(m));
+      // MASTER_MEMBER_ORDER のみに絞り込む
+      return MASTER_MEMBER_ORDER.filter(m => experiencedSet.has(m));
     }
 
     function formatUndersText(absentUnders) {
@@ -963,8 +964,8 @@
 
       const stageName = stage.name.replace(/「|」|公演/g, '').trim();
 
-      const allUniqueMembers = getAllUniqueMembers();
-      allUniqueMembers.forEach(name => {
+      // MASTER_MEMBER_ORDER 内のメンバーのみをグリッド表示する
+      MASTER_MEMBER_ORDER.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
         const div = document.createElement('div');
