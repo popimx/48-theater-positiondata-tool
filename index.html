@@ -1072,7 +1072,7 @@
           if (isExperienced) {
             if (assignedName === fixedMember) {
               if (orderedUnders.length === 0) {
-                reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジの経験者がメンバーにいないため、${assignedName}が入ると予想。`;
+                reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジの経験者が現役メンバーにいないため、${assignedName}が入ると予想。`;
               } else if (availableUnders.length === 0) {
                 const undersText = formatUndersText(absentUnders);
                 reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
