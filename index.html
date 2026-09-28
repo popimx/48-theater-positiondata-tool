@@ -1029,17 +1029,17 @@
               reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジに入れるメンバーもいないため、${assignedName}が入ると予想。`;
             } else if (availableUnders.length === 0) {
               const undersText = formatUndersText(absentUnders);
-              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は同じ${fixedMember}ポジを務める${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
+              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は同じ${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
             } else {
               const u1 = availableUnders[0];
               const u1PosIdx = memberToPosMap[u1];
               const u1PosName = u1PosIdx !== undefined ? stage.fixed[u1PosIdx] : "別";
-              reasonHtml = `この日の公演は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosName}ポジに入る可能性が高いと予想されるため、${assignedName}が入ると予想。`;
+              reasonHtml = `この日の公演は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosName}ポジに入る可能性が高いと予想し、${assignedName}が入ると予想。`;
             }
           } else {
             if (availableUnders.length <= 1) {
               const undersText = formatUndersText(absentUnders);
-              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? '同じ' + fixedMember + 'ポジを務める' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? '同じ' + fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
             } else {
               const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別アンダー";
               const u2PosIdx = memberToPosMap[u2];
@@ -1067,7 +1067,7 @@
                 const isU2PosExperienced = u2InU2PosCount > 0 || u2 === u2PosName;
 
                 if (!isU2PosExperienced && u2PosExpList.length === 0) {
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2PosName}ポジの経験者が不在のため、${fixedMember}ポジ経験のある${assignedName}と${u2}でポジションを分け合うと予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${u2} 50%</span>`;
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2PosName}ポジの経験者がいないため、${fixedMember}ポジの出演経験がある${assignedName}と${u2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${u2} 50%</span>`;
                 } else {
                   reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
                 }
@@ -1090,13 +1090,13 @@
             const expList = getAvailableExperiencedList(pIndex, sharedPosName);
             const mOther = expList.find(u => u !== assignedName) || "他メンバー";
 
-            reasonHtml = `この日の公演は${fixedMember}ポジの経験者が不在のため、同じ${sharedPosName}ポジを務める${mOther}と${assignedName}でポジションを分け合い、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${mOther} 50%</span>`;
+            reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${sharedPosName}ポジを務める${mOther}と${assignedName}のどちらかが{fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${mOther} 50%</span>`;
           } else {
             const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
 
             if (isStageFirstTimer) {
               if (firstTimers.length <= 1) {
-                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${assignedName}が${fixedMember}ポジに入ると予想。`;
+                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
               } else {
                 const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
                 const m2PosIdx = memberToPosMap[m2];
