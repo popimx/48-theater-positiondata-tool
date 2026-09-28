@@ -661,7 +661,6 @@
       });
     }
 
-    // ② 改善：日付表記を全て 25/4/3 形式に変換
     function formatShortDate(dateStr) {
       if (!dateStr) return "";
       const parts = dateStr.replace(/-/g, '/').split('/');
@@ -712,35 +711,21 @@
       });
     }
 
-    // ③ 改善：一覧表順・出演早い順で不在アンダーリスト取得＆フォーマット化
+    // 【修正箇所】一覧表順で該当ポジションのアンダー（実際に経験のあるメンバー）のみを取得するよう改善
     function getOrderedUnderList(pIdx, fixedMember, validShows) {
       const experiencedSet = new Set();
-      const firstPerfDateMap = {};
 
       validShows.forEach(show => {
         if (show.positionsArray && show.positionsArray[pIdx]) {
           const m = show.positionsArray[pIdx].trim();
           if (m && m !== "-" && m !== "－" && m !== fixedMember) {
             experiencedSet.add(m);
-            if (!firstPerfDateMap[m] || show.date < firstPerfDateMap[m]) {
-              firstPerfDateMap[m] = show.date;
-            }
           }
         }
       });
 
-      // ① 一覧表の記載順（MASTER_MEMBER_ORDER順の経験者）
-      const experiencedOrdered = MASTER_MEMBER_ORDER.filter(m => experiencedSet.has(m));
-      
-      // ② 一覧表に名前がないメンバー（経験なしメンバーが出演早い順）
-      const nonExperienced = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && !experiencedSet.has(m));
-      nonExperienced.sort((a, b) => {
-        const dateA = firstPerfDateMap[a] || "9999/99/99";
-        const dateB = firstPerfDateMap[b] || "9999/99/99";
-        return dateA.localeCompare(dateB);
-      });
-
-      return [...experiencedOrdered, ...nonExperienced];
+      // MASTER_MEMBER_ORDER順で該当ポジションの経験者のみを抽出して返す
+      return MASTER_MEMBER_ORDER.filter(m => experiencedSet.has(m));
     }
 
     function formatUndersText(absentUnders) {
@@ -750,7 +735,6 @@
       return `${absentUnders[0]}や${absentUnders[1]}など`;
     }
 
-    // ③ 改善：共演時のポジションデータを用いた一貫した確率計算
     function getCoopProbability(m1, m2, pIdx1, pIdx2, validShows) {
       let countDefault = 0; // m1 -> pIdx1, m2 -> pIdx2
       let countSwapped = 0; // m2 -> pIdx1, m1 -> pIdx2
@@ -775,7 +759,6 @@
       return { p1: 65, p2: 35 };
     }
 
-    // ③ 改善：バックトラッキングによる最適ポジション配役割り当て（全員経験ありの組み合わせ最優先）
     function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
       const expMatrix = {};
@@ -900,7 +883,6 @@
         return { totalCount, posCountMap, lastDateMap, uniquePositionsCount: Object.keys(posCountMap).length };
       }
 
-      // ③ 最適化マッチングアルゴリズムによるポジション割り当て
       const assignedMapping = findOptimalAssignment(inputMemberList, stage.fixed, validShows);
       const memberToPosMap = {};
       Object.entries(assignedMapping).forEach(([pIdx, m]) => {
@@ -942,7 +924,6 @@
               const u2PosIdx = memberToPosMap[u2];
               const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "別";
               
-              // ③ 共演データを用いた確率算出と統一的な整合性の維持
               const { p1, p2 } = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
               
               reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジに出演する確率が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${p1}%、${u2} ${p2}%</span>`;
@@ -1043,7 +1024,6 @@
       renderMemberDetailView();
     }
 
-    // ① 改善：出演履歴の演目・イベント名のフォーマット成形関数
     function formatHistoryStageTitle(item) {
       const baseName = item.baseStageName;
       const sub = (item.subTitle || "").trim();
@@ -1109,7 +1089,6 @@
           }
         }
 
-        // ① フォーマット整形後のタイトルを取得
         const formattedStageLabel = formatHistoryStageTitle(item);
 
         div.innerHTML = `
