@@ -1050,10 +1050,10 @@
       const rawTitle = (item.displayTitle || item.title || "").trim();
 
       if (sub.includes("初日") || rawTitle.includes("初日")) {
-        return `「${baseName}」公演 初日`;
+        return `「${baseName}」初日`;
       }
       if (sub.includes("千秋楽") || rawTitle.includes("千秋楽")) {
-        return `「${baseName}」公演 千秋楽`;
+        return `「${baseName}」千秋楽`;
       }
       if (sub.includes("生誕祭") || rawTitle.includes("生誕祭")) {
         let name = sub.replace(/生誕祭/g, "").trim();
