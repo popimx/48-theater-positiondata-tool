@@ -1083,7 +1083,6 @@
             } else {
               if (availableUnders.length <= 1) {
                 const undersText = formatUndersText(absentUnders);
-                // ②の修正（'同じ' を除外）
                 reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、${undersText ? fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
               } else {
                 const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
@@ -1124,10 +1123,14 @@
                   ? `${otherFirstTimers[0]}や${otherFirstTimers[1]}` 
                   : `${otherFirstTimers[0]}`;
 
+                // 一覧表のインデックス順（stage.fixedの登録順）でソートしてポジション名を列挙
                 const firstTimerPositions = firstTimers.map(m => {
                   const p = memberToPosMap[m];
-                  return p !== undefined ? `${stage.fixed[p]}ポジ` : "";
-                }).filter(p => p !== "").sort();
+                  return p !== undefined ? { pIdx: p, text: `${stage.fixed[p]}ポジ` } : null;
+                })
+                .filter(item => item !== null)
+                .sort((a, b) => a.pIdx - b.pIdx)
+                .map(item => item.text);
 
                 const posText = firstTimerPositions.join("か");
                 const pct = Math.floor(100 / firstTimers.length);
@@ -1160,6 +1163,9 @@
           }
         }
 
+        // ⚠︎表記（警告マーク）が含まれているか判定
+        const hasWarning = reasonHtml.includes('⚠︎');
+
         const card = document.createElement('div');
         card.className = "bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-1.5";
         card.innerHTML = `
@@ -1167,7 +1173,7 @@
             <span class="text-slate-700">【${escapeHtml(fixedMember)}ポジション】</span>
             <div class="flex items-center gap-2">
               ${isExperienced ? '<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded font-bold">☑ 経験あり</span>' : '<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold">初挑戦</span>'}
-              <span class="text-pink-600 text-sm">予想: ${escapeHtml(displayAssignedName)}</span>
+              ${hasWarning ? '' : `<span class="text-pink-600 text-sm">予想: ${escapeHtml(displayAssignedName)}</span>`}
             </div>
           </div>
           ${reasonHtml ? `<div class="text-slate-600 leading-relaxed">${reasonHtml}</div>` : ''}
