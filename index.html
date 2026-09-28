@@ -1090,7 +1090,7 @@
             const expList = getAvailableExperiencedList(pIndex, sharedPosName);
             const mOther = expList.find(u => u !== assignedName) || "他メンバー";
 
-            reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${sharedPosName}ポジを務める${mOther}と${assignedName}のどちらかが{fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${mOther} 50%</span>`;
+            reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${sharedPosName}ポジを務める${mOther}と${assignedName}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${mOther} 50%</span>`;
           } else {
             const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
 
