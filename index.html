@@ -1126,7 +1126,7 @@
             // このポジション自体に経験者がいる場合
             const expCands = cands.filter(m => (getMemberStats(m).posCountMap[fixedMember] || 0) > 0 || m === fixedMember);
             const expCandsTextAnd = expCands.length === 2 ? `${expCands[0]}と${expCands[1]}` : expCands.join("や");
-            reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${expCandsTextAnd}が出演予定であり、他のポジションの兼ね合いから、${fixedMember}ポジには${candsTextAnd}のどちらかが入ると予想。${warningBadge}`;
+            reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${expCandsTextAnd}が出演予定。他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジには${candsTextAnd}のどちらかが入ると予想。${warningBadge}`;
           } else {
             // このポジション自体には経験者がいない場合（初挑戦ポジション）
             if (dupSourcePosIdxs.length > 0 && cands.length === 2) {
@@ -1137,10 +1137,10 @@
               const pos1Name = `${stage.fixed[relatedPosIdxs[0]]}ポジ`;
               const pos2Name = `${stage.fixed[relatedPosIdxs[1]]}ポジ`;
 
-              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、${dupPosName}でポジション被りとなる${candsTextAnd}のどちらかが${pos1Name}、どちらかが${pos2Name}に入ると予想。${warningBadge}`;
+              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、${dupPosName}でポジション被りとなる${candsTextAnd}のどちらかが${pos1Name}ポジ、どちらかが${pos2Name}ポジに入ると予想。${warningBadge}`;
             } else {
               /* 改善点③：3人以上の選択肢の場合 */
-              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジには${candsTextOr}のいずれかが入ると予想。${warningBadge}`;
+              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジには${candsTextOr}のいずれかのメンバーが入ると予想。${warningBadge}`;
             }
           }
         } else {
