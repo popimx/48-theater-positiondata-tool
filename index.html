@@ -733,7 +733,7 @@
       return `${absentUnders[0]}や${absentUnders[1]}など`;
     }
 
-    // 【更新】丸め込みを廃止し、正確な共演比率と件数を取得
+    // 正確な共演実績を取得（m1:予想割り当て者, m2:ライバルメンバー）
     function getCoopProbability(m1, m2, pIdx1, pIdx2, validShows) {
       let countDefault = 0; // m1 -> pIdx1, m2 -> pIdx2
       let countSwapped = 0; // m2 -> pIdx1, m1 -> pIdx2
@@ -751,7 +751,7 @@
 
       const total = countDefault + countSwapped;
       if (total === 0) {
-        return { p1: 65, p2: 35, total: 0, countDefault: 0, countSwapped: 0 };
+        return { p1: 50, p2: 50, total: 0, countDefault: 0, countSwapped: 0 };
       }
 
       const rawP1 = Math.round((countDefault / total) * 100);
@@ -766,7 +766,7 @@
       };
     }
 
-    // 【更新】共演ペアの実績ボーナスを加算して最適配置を計算
+    // 【修正】最適配置計算（同時出演時の具体的な配置パターンを重視してスコア化）
     function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
       const expMatrix = {};
@@ -775,38 +775,42 @@
         expMatrix[m] = new Array(numPos).fill(0);
       });
 
-      // 各メンバーの単体ポジション出演回数
+      // 単体ポジションでの出演実績（基礎点）
       validShows.forEach(show => {
         show.positionsArray.forEach((m, pIdx) => {
           if (expMatrix[m] !== undefined && pIdx < numPos) {
-            expMatrix[m][pIdx]++;
+            expMatrix[m][pIdx] += 10;
           }
         });
       });
 
-      // 本人（オリジナルポジション）への高スコア付与
+      // オリジナルポジション本人への加算
       inputMemberList.forEach(m => {
         for (let i = 0; i < numPos; i++) {
           if (stageFixed[i] === m) {
-            expMatrix[m][i] += 1000;
+            expMatrix[m][i] += 10000;
           }
         }
       });
 
-      // 同時出演時の共演ペア実績ボーナス（過去に共演した時のポジション配置を優先）
+      // 【修正】同時出演時の共演ペア実績ボーナス
+      // 一緒に出演した公演で実際に担当していたポジションにしっかりとスコアを加算
       validShows.forEach(show => {
         const pos = show.positionsArray;
         if (!pos) return;
-        inputMemberList.forEach(m1 => {
-          inputMemberList.forEach(m2 => {
-            if (m1 !== m2 && pos.includes(m1) && pos.includes(m2)) {
-              const p1 = pos.indexOf(m1);
-              const p2 = pos.indexOf(m2);
-              if (p1 >= 0 && p1 < numPos) expMatrix[m1][p1] += 10;
-              if (p2 >= 0 && p2 < numPos) expMatrix[m2][p2] += 10;
-            }
-          });
-        });
+        const presentInputMembers = inputMemberList.filter(m => pos.includes(m));
+
+        for (let i = 0; i < presentInputMembers.length; i++) {
+          for (let j = i + 1; j < presentInputMembers.length; j++) {
+            const m1 = presentInputMembers[i];
+            const m2 = presentInputMembers[j];
+            const p1 = pos.indexOf(m1);
+            const p2 = pos.indexOf(m2);
+
+            if (p1 >= 0 && p1 < numPos) expMatrix[m1][p1] += 100;
+            if (p2 >= 0 && p2 < numPos) expMatrix[m2][p2] += 100;
+          }
+        }
       });
 
       const pairs = [];
@@ -952,15 +956,20 @@
               
               const coop = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
               
-              // 【更新】過去の共演実績でパターンが1通りの場合（一方の確率が100% / 0%）は確率タグを表示しない
-              if (coop.total > 0 && (coop.p1 === 100 || coop.p2 === 100 || coop.countSwapped === 0 || coop.countDefault === 0)) {
-                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
-              } 
-              else if (coop.p1 === 0 || coop.p2 === 0) {
-                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する確率が高いと予想し、、${assignedName}が${fixedMember}ポジに入ると予想。`;
-              } 
-              else {
-                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する確率が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+              // 【修正】共演時のポジション配置パターンと向きを正しく判定
+              if (coop.total > 0) {
+                if (coop.countDefault > 0 && coop.countSwapped === 0) {
+                  // 過去の共演で100% (assignedNameがfixedMemberポジ, u2がu2PosNameポジ) だった場合
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に${u2}と共演した「${stageName}」公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosName}ポジに入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
+                  // 過去の共演で100%逆 (u2がfixedMemberポジ, assignedNameがu2PosNameポジ) だった場合
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定である。過去に${u2}と共演した「${stageName}」公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosName}ポジに入っていたが、この日の公演は他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+                } else {
+                  // 両方の配置実績が存在する場合
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に${u2}と共演した「${stageName}」公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+                }
+              } else {
+                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
             }
           }
@@ -969,7 +978,7 @@
 
           if (isStageFirstTimer) {
             if (firstTimers.length <= 1) {
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${assignedName}が${fixedMember}ポジに入ると予想。`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
             } else {
               const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
               const m2PosIdx = memberToPosMap[m2];
