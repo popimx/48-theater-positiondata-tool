@@ -453,6 +453,21 @@
       });
     }
 
+    // 全ての全データから日別表・出演欄に登場する全メンバー一覧を重複なく抽出
+    function getAllUniqueMembers() {
+      const set = new Set(MASTER_MEMBER_ORDER);
+      const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
+      dataSource.forEach(item => {
+        if (item.membersArray) {
+          item.membersArray.forEach(m => { if (m && m !== "-" && m !== "－") set.add(m.trim()); });
+        }
+        if (item.positionsArray) {
+          item.positionsArray.forEach(m => { if (m && m !== "-" && m !== "－") set.add(m.trim()); });
+        }
+      });
+      return Array.from(set);
+    }
+
     async function onDateChange() {
       const year = document.getElementById("yearSelect").value;
       const rawData = await fetchScheduleJson("akb48", year);
@@ -622,7 +637,8 @@
           }
         });
 
-        const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
+        const allUnique = getAllUniqueMembers();
+        const undersOrdered = allUnique.filter(m => m !== fixedMember && experiencedSet.has(m));
         const orderedMembers = [fixedMember, ...undersOrdered].filter(m => m && m !== "-" && m !== "－");
 
         if (orderedMembers.length > 0) {
@@ -722,7 +738,8 @@
         }
       });
 
-      return MASTER_MEMBER_ORDER.filter(m => experiencedSet.has(m));
+      const allUnique = getAllUniqueMembers();
+      return allUnique.filter(m => experiencedSet.has(m));
     }
 
     function formatUndersText(absentUnders) {
@@ -948,7 +965,8 @@
 
       const stageName = stage.name.replace(/「|」|公演/g, '').trim();
 
-      MASTER_MEMBER_ORDER.forEach(name => {
+      const allUniqueMembers = getAllUniqueMembers();
+      allUniqueMembers.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
         const div = document.createElement('div');
@@ -1056,18 +1074,7 @@
                     reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
                   }
                 } else {
-                  const u2PosExpList = u2PosIdx !== undefined ? getAvailableExperiencedList(u2PosIdx, u2PosName) : [];
-                  const u2InU2PosCount = u2PosName ? (getMemberStats(u2).posCountMap[u2PosName] || 0) : 0;
-                  const isU2PosExperienced = u2InU2PosCount > 0 || u2 === u2PosName;
-
-                  if (!isU2PosExperienced && u2PosExpList.length === 0 && u2PosName) {
-                    const mList = [assignedName, u2].sort((a, b) => MASTER_MEMBER_ORDER.indexOf(a) - MASTER_MEMBER_ORDER.indexOf(b));
-                    const m1 = mList[0];
-                    const m2 = mList[1];
-                    reasonHtml = `この日の公演は${u2PosName}ポジの経験者がいないため、同じ${fixedMember}ポジを務める${m1}と${m2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${m1} 50%、${m2} 50%</span>`;
-                  } else {
-                    reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosText}で出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
-                  }
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosText}で出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
                 }
               } else {
                 reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
@@ -1076,53 +1083,30 @@
           }
         } else {
           // assignedNameがfixedMemberポジ未経験の場合
-          const assignedNameStats = getMemberStats(assignedName);
-          const sharedPosName = Object.keys(assignedNameStats.posCountMap).find(posName => {
-            const pIndex = stage.fixed.indexOf(posName);
-            if (pIndex === -1) return false;
-            const expList = getAvailableExperiencedList(pIndex, posName);
-            return expList.length >= 2;
-          });
+          const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
 
-          if (sharedPosName && availableUnders.length === 0) {
-            const pIndex = stage.fixed.indexOf(sharedPosName);
-            const expList = getAvailableExperiencedList(pIndex, sharedPosName);
-            const mOther = expList.find(u => u !== assignedName);
+          if (isStageFirstTimer) {
+            const m2 = firstTimers.find(m => m !== assignedName);
+            if (m2) {
+              const m2PosIdx = memberToPosMap[m2];
+              const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "";
+              const m2PosText = m2PosName ? `か${m2PosName}ポジ` : "";
 
-            if (mOther) {
-              const mList = [assignedName, mOther].sort((a, b) => MASTER_MEMBER_ORDER.indexOf(a) - MASTER_MEMBER_ORDER.indexOf(b));
-              const m1 = mList[0];
-              const m2 = mList[1];
-              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${sharedPosName}ポジを務める${m1}と${m2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${m1} 50%、${m2} 50%</span>`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${fixedMember}ポジ${m2PosText}に入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
             } else {
-              reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないのと、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
             }
           } else {
-            const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
-
-            if (isStageFirstTimer) {
-              const m2 = firstTimers.find(m => m !== assignedName);
-              if (m2) {
-                const m2PosIdx = memberToPosMap[m2];
-                const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "";
-                const m2PosText = m2PosName ? `か${m2PosName}ポジ` : "";
-
-                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${fixedMember}ポジ${m2PosText}に入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
-              } else {
-                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
-              }
+            const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
+            if (u2) {
+              const u2Stats = getMemberStats(u2);
+              const rawLastDate = u2Stats.lastDateMap[fixedMember];
+              const lastDateStr = rawLastDate ? formatShortDate(rawLastDate) : "";
+              const dateReason = lastDateStr ? `${lastDateStr}以来` : "最近";
+              
+              reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${dateReason}${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
             } else {
-              const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
-              if (u2) {
-                const u2Stats = getMemberStats(u2);
-                const rawLastDate = u2Stats.lastDateMap[fixedMember];
-                const lastDateStr = rawLastDate ? formatShortDate(rawLastDate) : "";
-                const dateReason = lastDateStr ? `${lastDateStr}以来` : "最近";
-                
-                reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${dateReason}${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
-              } else {
-                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないのと、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
-              }
+              reasonHtml = "";
             }
           }
         }
@@ -1137,7 +1121,7 @@
               <span class="text-pink-600 text-sm">予想: ${escapeHtml(assignedName)}</span>
             </div>
           </div>
-          <div class="text-slate-600 leading-relaxed">${reasonHtml}</div>
+          ${reasonHtml ? `<div class="text-slate-600 leading-relaxed">${reasonHtml}</div>` : ''}
         `;
         positionsList.appendChild(card);
       });
@@ -1158,7 +1142,8 @@
         }
       });
 
-      MASTER_MEMBER_ORDER.forEach(name => {
+      const allUniqueMembers = getAllUniqueMembers();
+      allUniqueMembers.forEach(name => {
         if (name !== "-" && name !== "－" && name.toLowerCase().includes(query)) {
           matches.push({ type: 'member', label: name, name: name });
         }
