@@ -1342,7 +1342,7 @@
           reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${fixedMember}ポジの経験者も出演メンバー内に見当たらないため、${fixedMember}ポジに入るメンバーを予想できません。`;
         } else if (isMultipleCandidates) {
           displayAssignedName = cands.join(" / ");
-          badgeHtml = '<span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded font-bold">⚠ 複数候補</span>';
+          badgeHtml = '<span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded font-bold">⚠ 未確定</span>';
           forecastText = displayAssignedName;
 
           const basePct = Math.floor(100 / cands.length);
