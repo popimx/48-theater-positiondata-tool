@@ -1025,7 +1025,7 @@
               reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジの経験者がいないため、${assignedName}が入ると予想。`;
             } else if (availableUnders.length === 0) {
               const undersText = formatUndersText(absentUnders);
-              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は同じ${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
+              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
             } else {
               const u1 = availableUnders[0];
               const u1PosIdx = memberToPosMap[u1];
@@ -1050,17 +1050,17 @@
                 if (coop.total > 0) {
                   if (coop.countDefault > 0 && coop.countSwapped === 0) {
                     if (assignedNameInU2PosCount === 0) {
-                      reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、今回も${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入ると予想。`;
+                      reasonHtml = `この日の公演は同じ${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、今回も${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入ると予想。`;
                     } else {
-                      reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                      reasonHtml = `この日の公演は同じ${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
                     }
                   } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
-                    reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定。過去に共演した公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosText}に入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+                    reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定。過去に共演した公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosText}に入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
                   } else {
-                    reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+                    reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
                   }
                 } else {
-                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosText}で出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                  reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${u2PosText}で出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
                 }
               } else {
                 reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${fixedMember}ポジの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
@@ -1102,11 +1102,11 @@
               if (matchedPair.length >= 2) {
                 const c1 = matchedPair[0];
                 const c2 = matchedPair[1];
-                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${fixedMember}ポジを務める${c1}と${c2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${c1} 50%、${c2} 50%</span>`;
+                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、${fixedMember}ポジの出演経験がある${c1}と${c2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${c1} 50%、${c2} 50%</span>`;
               } else if (samePosCandidates.length >= 2) {
                 const c1 = samePosCandidates[0];
                 const c2 = samePosCandidates[1];
-                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、同じ${fixedMember}ポジを務める${c1}と${c2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${c1} 50%、${c2} 50%</span>`;
+                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、${fixedMember}ポジの出演経験がある${c1}と${c2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${c1} 50%、${c2} 50%</span>`;
               } else {
                 reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
