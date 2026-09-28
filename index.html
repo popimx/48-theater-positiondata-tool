@@ -222,8 +222,8 @@
     ];
 
     let SCHEDULE_DATA = [];
-    let ALL_SCHEDULE_DATA = []; // 全年度の統合データ
-    let GLOBAL_STAGE_DATABASE = {}; // ①・② 全年度データを元にした統合演目データベース
+    let ALL_SCHEDULE_DATA = []; 
+    let GLOBAL_STAGE_DATABASE = {}; 
     let STAGE_DATABASE = {};
     let currentStageKey = null;
     let currentScheduleFilter = "ALL";
@@ -259,7 +259,7 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       initYearMonthDropdowns();
-      await loadAllYearsScheduleData(); // 全年度データを事前読み込み
+      await loadAllYearsScheduleData(); 
       await onDateChange();
 
       document.addEventListener('click', (e) => {
@@ -310,7 +310,6 @@
       }
     }
 
-    // 全年度の schedule.(グループ名)_(年度).json を統合してロード
     async function loadAllYearsScheduleData() {
       let allList = [];
       const currentYear = new Date().getFullYear();
@@ -327,7 +326,7 @@
         }
       });
       ALL_SCHEDULE_DATA = allList;
-      generateGlobalStageDatabase(); // ①・② 全年度統合の演目データベース生成
+      generateGlobalStageDatabase(); 
     }
 
     function normalizeScheduleData(rawData) {
@@ -347,7 +346,6 @@
         let mainTitle = rawTitle;
         let subTitle = item.event || item.subTitle || "";
 
-        // タイトルから「〜公演」と「イベント名/副題（生誕祭など）」を分離
         if (!subTitle) {
           const match = rawTitle.match(/^(「.*?」公演)(?:\s+(.*))?$/);
           if (match) {
@@ -382,7 +380,6 @@
       });
     }
 
-    // ①・② 全年度データから演目名と初日ポジションを割り出すグローバルデータベース構築
     function generateGlobalStageDatabase() {
       GLOBAL_STAGE_DATABASE = {};
       ALL_SCHEDULE_DATA.forEach(item => {
@@ -443,7 +440,6 @@
         const stage = STAGE_DATABASE[key];
         stage.schedules.sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
         
-        // GLOBAL_STAGE_DATABASEから正しく初日ポジションを継承
         if (GLOBAL_STAGE_DATABASE[key] && GLOBAL_STAGE_DATABASE[key].fixed.length > 0) {
           stage.fixed = GLOBAL_STAGE_DATABASE[key].fixed;
         } else {
@@ -665,6 +661,19 @@
       });
     }
 
+    // ② 改善：日付表記を全て 25/4/3 形式に変換
+    function formatShortDate(dateStr) {
+      if (!dateStr) return "";
+      const parts = dateStr.replace(/-/g, '/').split('/');
+      if (parts.length === 3) {
+        const yy = parts[0].slice(-2);
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        return `${yy}/${m}/${d}`;
+      }
+      return dateStr;
+    }
+
     function renderDailyTable() {
       const stage = STAGE_DATABASE[currentStageKey] || GLOBAL_STAGE_DATABASE[currentStageKey];
       const headerTr = document.getElementById('dailyTableHeader');
@@ -676,10 +685,10 @@
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
       
       validShows.forEach(show => {
-        const dateStr = show.date.split('/').slice(1).join('/');
+        const shortDateStr = formatShortDate(show.date);
         const th = document.createElement('th');
         th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap";
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${escapeHtml(dateStr)}</span>`;
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600">${escapeHtml(shortDateStr)}</span>`;
         headerTr.appendChild(th);
       });
 
@@ -701,6 +710,134 @@
         });
         tbody.appendChild(tr);
       });
+    }
+
+    // ③ 改善：一覧表順・出演早い順で不在アンダーリスト取得＆フォーマット化
+    function getOrderedUnderList(pIdx, fixedMember, validShows) {
+      const experiencedSet = new Set();
+      const firstPerfDateMap = {};
+
+      validShows.forEach(show => {
+        if (show.positionsArray && show.positionsArray[pIdx]) {
+          const m = show.positionsArray[pIdx].trim();
+          if (m && m !== "-" && m !== "－" && m !== fixedMember) {
+            experiencedSet.add(m);
+            if (!firstPerfDateMap[m] || show.date < firstPerfDateMap[m]) {
+              firstPerfDateMap[m] = show.date;
+            }
+          }
+        }
+      });
+
+      // ① 一覧表の記載順（MASTER_MEMBER_ORDER順の経験者）
+      const experiencedOrdered = MASTER_MEMBER_ORDER.filter(m => experiencedSet.has(m));
+      
+      // ② 一覧表に名前がないメンバー（経験なしメンバーが出演早い順）
+      const nonExperienced = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && !experiencedSet.has(m));
+      nonExperienced.sort((a, b) => {
+        const dateA = firstPerfDateMap[a] || "9999/99/99";
+        const dateB = firstPerfDateMap[b] || "9999/99/99";
+        return dateA.localeCompare(dateB);
+      });
+
+      return [...experiencedOrdered, ...nonExperienced];
+    }
+
+    function formatUndersText(absentUnders) {
+      if (!absentUnders || absentUnders.length === 0) return "";
+      if (absentUnders.length === 1) return absentUnders[0];
+      if (absentUnders.length === 2) return `${absentUnders[0]}や${absentUnders[1]}`;
+      return `${absentUnders[0]}や${absentUnders[1]}など`;
+    }
+
+    // ③ 改善：共演時のポジションデータを用いた一貫した確率計算
+    function getCoopProbability(m1, m2, pIdx1, pIdx2, validShows) {
+      let countDefault = 0; // m1 -> pIdx1, m2 -> pIdx2
+      let countSwapped = 0; // m2 -> pIdx1, m1 -> pIdx2
+
+      validShows.forEach(show => {
+        const pos = show.positionsArray;
+        if (pos && pos.includes(m1) && pos.includes(m2)) {
+          if (pos[pIdx1] === m1 && pos[pIdx2] === m2) {
+            countDefault++;
+          } else if (pos[pIdx1] === m2 && pos[pIdx2] === m1) {
+            countSwapped++;
+          }
+        }
+      });
+
+      const total = countDefault + countSwapped;
+      if (total > 0) {
+        let p1 = Math.round((countDefault / total) * 100);
+        p1 = Math.min(Math.max(p1, 10), 90); 
+        return { p1, p2: 100 - p1 };
+      }
+      return { p1: 65, p2: 35 };
+    }
+
+    // ③ 改善：バックトラッキングによる最適ポジション配役割り当て（全員経験ありの組み合わせ最優先）
+    function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
+      const numPos = stageFixed.length;
+      const expMatrix = {};
+      inputMemberList.forEach(m => {
+        expMatrix[m] = new Array(numPos).fill(0);
+      });
+
+      validShows.forEach(show => {
+        show.positionsArray.forEach((m, pIdx) => {
+          if (expMatrix[m] !== undefined && pIdx < numPos) {
+            expMatrix[m][pIdx]++;
+          }
+        });
+      });
+
+      inputMemberList.forEach(m => {
+        for (let i = 0; i < numPos; i++) {
+          if (stageFixed[i] === m) {
+            expMatrix[m][i] += 1000;
+          }
+        }
+      });
+
+      let bestMapping = {};
+      let maxExperiencedCount = -1;
+      let maxTotalScore = -1;
+
+      function solve(mIdx, currentAssigned, usedPositions, expCount, totalScore) {
+        if (mIdx === inputMemberList.length) {
+          if (expCount > maxExperiencedCount || (expCount === maxExperiencedCount && totalScore > maxTotalScore)) {
+            maxExperiencedCount = expCount;
+            maxTotalScore = totalScore;
+            bestMapping = { ...currentAssigned };
+          }
+          return;
+        }
+
+        const member = inputMemberList[mIdx];
+        for (let pIdx = 0; pIdx < numPos; pIdx++) {
+          if (!usedPositions.has(pIdx)) {
+            usedPositions.add(pIdx);
+            currentAssigned[pIdx] = member;
+
+            const score = expMatrix[member][pIdx];
+            const isExp = score > 0;
+
+            solve(
+              mIdx + 1,
+              currentAssigned,
+              usedPositions,
+              expCount + (isExp ? 1 : 0),
+              totalScore + score
+            );
+
+            usedPositions.delete(pIdx);
+            delete currentAssigned[pIdx];
+          }
+        }
+      }
+
+      solve(0, {}, new Set(), 0, 0);
+      return bestMapping;
     }
 
     function runForecast() {
@@ -763,61 +900,11 @@
         return { totalCount, posCountMap, lastDateMap, uniquePositionsCount: Object.keys(posCountMap).length };
       }
 
-      let assignedMapping = {};
-      let memberToPosMap = {};
-      let usedMembers = new Set();
-
-      let positionCandidates = stage.fixed.map((fixedMember, pIdx) => {
-        return { pIdx, fixedMember };
-      });
-
-      positionCandidates.forEach(({ pIdx, fixedMember }) => {
-        if (fixedMember && inputSet.has(fixedMember)) {
-          assignedMapping[pIdx] = fixedMember;
-          memberToPosMap[fixedMember] = pIdx;
-          usedMembers.add(fixedMember);
-        }
-      });
-
-      let unassignedPositions = positionCandidates.filter(({ pIdx }) => assignedMapping[pIdx] === undefined);
-      let unassignedMembers = inputMemberList.filter(m => !usedMembers.has(m));
-
-      let changed = true;
-      while (changed && unassignedPositions.length > 0 && unassignedMembers.length > 0) {
-        changed = false;
-        let bestPair = null;
-        let maxExpCount = -1;
-
-        for (let posObj of unassignedPositions) {
-          const { pIdx, fixedMember } = posObj;
-          for (let m of unassignedMembers) {
-            const stats = getMemberStats(m);
-            const expCount = stats.posCountMap[fixedMember] || 0;
-            if (expCount > 0 && expCount > maxExpCount) {
-              maxExpCount = expCount;
-              bestPair = { pIdx, member: m };
-            }
-          }
-        }
-
-        if (bestPair) {
-          assignedMapping[bestPair.pIdx] = bestPair.member;
-          memberToPosMap[bestPair.member] = bestPair.pIdx;
-          usedMembers.add(bestPair.member);
-          
-          unassignedPositions = unassignedPositions.filter(p => p.pIdx !== bestPair.pIdx);
-          unassignedMembers = unassignedMembers.filter(m => m !== bestPair.member);
-          changed = true;
-        }
-      }
-
-      unassignedMembers.forEach(m => {
-        if (unassignedPositions.length > 0) {
-          const targetPos = unassignedPositions.shift();
-          assignedMapping[targetPos.pIdx] = m;
-          memberToPosMap[m] = targetPos.pIdx;
-          usedMembers.add(m);
-        }
+      // ③ 最適化マッチングアルゴリズムによるポジション割り当て
+      const assignedMapping = findOptimalAssignment(inputMemberList, stage.fixed, validShows);
+      const memberToPosMap = {};
+      Object.entries(assignedMapping).forEach(([pIdx, m]) => {
+        memberToPosMap[m] = parseInt(pIdx, 10);
       });
 
       stage.fixed.forEach((fixedMember, pIdx) => {
@@ -826,47 +913,39 @@
         const posFreq = stats.posCountMap[fixedMember] || 0;
         const isExperienced = posFreq > 0 || assignedName === fixedMember;
 
-        const underMembersSet = new Set();
-        validShows.forEach(show => {
-          const m = show.positionsArray[pIdx];
-          if (m && m !== fixedMember && m !== "-" && m !== "－") underMembersSet.add(m);
-        });
-        const unders = Array.from(underMembersSet);
-        const availableUnders = unders.filter(u => inputSet.has(u));
+        const orderedUnders = getOrderedUnderList(pIdx, fixedMember, validShows);
+        const absentUnders = orderedUnders.filter(u => !inputSet.has(u));
+        const availableUnders = orderedUnders.filter(u => inputSet.has(u));
 
         let reasonHtml = "";
         const isStageFirstTimer = (stats.totalCount === 0);
 
         if (isExperienced) {
           if (assignedName === fixedMember) {
-            if (unders.length === 0) {
+            if (orderedUnders.length === 0) {
               reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジに入れるメンバーもいないため、${assignedName}が入ると予想。`;
             } else if (availableUnders.length === 0) {
-              const u1 = unders[0] || "アンダー候補";
-              const u2 = unders[1] || "";
-              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は同じ${fixedMember}ポジを務める${u1}${u2 ? 'や' + u2 : ''}の出演予定もないため、${assignedName}が入ると予想。`;
+              const undersText = formatUndersText(absentUnders);
+              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は同じ${fixedMember}ポジを務める${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
             } else {
               const u1 = availableUnders[0];
               const u1PosIdx = memberToPosMap[u1];
               const u1PosName = u1PosIdx !== undefined ? stage.fixed[u1PosIdx] : "別";
               reasonHtml = `この日の公演は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosName}ポジに入る可能性が高いと予想されるため、${assignedName}が入ると予想。`;
             }
-            } else {
-            if (unders.length <= 1) {
-              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
-            } else if (availableUnders.length <= 1) {
-              const otherUnders = unders.filter(u => u !== assignedName && u !== "-" && u !== "－");
-              const u2 = otherUnders[0] || "";
-              const u3 = otherUnders[1] || "";
-              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${u2 ? `同じ${fixedMember}ポジを務める` + u2 + (u3 ? 'や' + u3 : '') + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+          } else {
+            if (availableUnders.length <= 1) {
+              const undersText = formatUndersText(absentUnders);
+              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? '同じ' + fixedMember + 'ポジを務める' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
             } else {
               const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別アンダー";
               const u2PosIdx = memberToPosMap[u2];
               const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "別";
               
-              const p1Prob = 65;
-              const p2Prob = 35;
-              reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジに出演する確率が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${p1Prob}%、${u2} ${p2Prob}%</span>`;
+              // ③ 共演データを用いた確率算出と統一的な整合性の維持
+              const { p1, p2 } = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
+              
+              reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジに出演する確率が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${p1}%、${u2} ${p2}%</span>`;
             }
           }
         } else {
@@ -906,7 +985,6 @@
       });
     }
 
-    // ① 改善：全演目データベース(GLOBAL_STAGE_DATABASE)および全メンバーリストからいつ何時でも検索ヒットさせる
     function onSearchInput(val) {
       const suggestBox = document.getElementById('searchSuggest');
       if (!val.trim()) { suggestBox.classList.add('hidden'); return; }
@@ -914,7 +992,6 @@
       const query = val.trim().toLowerCase();
       let matches = [];
 
-      // 全演目データ（GLOBAL_STAGE_DATABASE、未初期化ならSTAGE_DATABASE）から検索
       const stageSource = Object.keys(GLOBAL_STAGE_DATABASE).length > 0 ? GLOBAL_STAGE_DATABASE : STAGE_DATABASE;
       Object.keys(stageSource).forEach(key => {
         const stage = stageSource[key];
@@ -923,7 +1000,6 @@
         }
       });
 
-      // 全メンバーマスターから検索
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name !== "-" && name !== "－" && name.toLowerCase().includes(query)) {
           matches.push({ type: 'member', label: name, name: name });
@@ -967,7 +1043,34 @@
       renderMemberDetailView();
     }
 
-    // ② 改善：初日メンバーでもアンダー出演でも「必ず出演したポジションの初日メンバー名」を表示
+    // ① 改善：出演履歴の演目・イベント名のフォーマット成形関数
+    function formatHistoryStageTitle(item) {
+      const baseName = item.baseStageName;
+      const sub = (item.subTitle || "").trim();
+      const rawTitle = (item.displayTitle || item.title || "").trim();
+
+      if (sub.includes("初日") || rawTitle.includes("初日")) {
+        return `「${baseName}」公演 初日`;
+      }
+      if (sub.includes("千秋楽") || rawTitle.includes("千秋楽")) {
+        return `「${baseName}」公演 千秋楽`;
+      }
+      if (sub.includes("生誕祭") || rawTitle.includes("生誕祭")) {
+        let name = sub.replace(/生誕祭/g, "").trim();
+        if (!name) name = selectedMemberName;
+        if (!name.startsWith("🎂")) name = "🎂" + name;
+        return `「${baseName}」 <span class="text-[0.85em] font-normal">${escapeHtml(name)}</span>`;
+      }
+      if (sub.includes("卒業公演") || rawTitle.includes("卒業公演")) {
+        let name = sub.replace(/卒業公演/g, "").trim();
+        if (!name) name = selectedMemberName;
+        if (!name.startsWith("🎓")) name = "🎓" + name;
+        return `「${baseName}」 <span class="text-[0.85em] font-normal">${escapeHtml(name)}</span>`;
+      }
+
+      return `「${baseName}」`;
+    }
+
     function renderMemberDetailView() {
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
       const memberShows = dataSource.filter(item => item.membersArray.includes(selectedMemberName));
@@ -998,23 +1101,21 @@
         
         let targetPositionName = selectedMemberName;
 
-        // 全演目統合DB（または単年DB）から該当演目の初日ポジション配列（fixed）を参照
         const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
         if (stageObj && stageObj.fixed && item.positionsArray && item.positionsArray.length > 0) {
-          // 出演したポジションのインデックスを取得
           const posIndex = item.positionsArray.indexOf(selectedMemberName);
-          // 必ずそのインデックスにある初日メンバー名（オリジナルメンバー）を設定
           if (posIndex !== -1 && stageObj.fixed[posIndex]) {
             targetPositionName = stageObj.fixed[posIndex];
           }
         }
 
-        const stageLabel = item.subTitle ? `「${item.baseStageName}」 ${item.subTitle}` : `「${item.baseStageName}」`;
+        // ① フォーマット整形後のタイトルを取得
+        const formattedStageLabel = formatHistoryStageTitle(item);
 
         div.innerHTML = `
           <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
           <span class="text-slate-600">${item.date}</span>
-          <span class="font-bold text-slate-800 flex-1 truncate">${escapeHtml(stageLabel)}</span>
+          <span class="font-bold text-slate-800 flex-1 truncate">${formattedStageLabel}</span>
           <span class="text-pink-600 font-bold whitespace-nowrap">${escapeHtml(targetPositionName)}</span>
         `;
         historyList.appendChild(div);
