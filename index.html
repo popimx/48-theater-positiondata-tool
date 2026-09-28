@@ -1015,7 +1015,7 @@
         });
       });
 
-      // ①用：同じポジション経験者が重複しており、かつ経験者不在ポジションがあるペアの検出
+      // 重複ポジション経験者が存在し、かつ経験者不在ポジションがあるペアの検出
       let pairDupEmpty = null;
       stage.fixed.forEach((f1, p1) => {
         if (posExpMembersMap[p1].length >= 2) {
@@ -1082,8 +1082,13 @@
               }
             } else {
               if (availableUnders.length <= 1) {
-                const undersText = formatUndersText(absentUnders);
-                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+                // ① 初日メンバーが休演、アンダーが1人しかおらず、そのアンダーが出演できる場合
+                if (absentUnders.length === 0) {
+                  reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、${fixedMember}ポジの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+                } else {
+                  const undersText = formatUndersText(absentUnders);
+                  reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+                }
               } else {
                 const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
                 if (u2) {
@@ -1116,7 +1121,6 @@
             }
           } else {
             if (isStageFirstTimer) {
-              // 一覧表のインデックス順（stage.fixedの登録順）でソートしてポジション名を列挙
               const firstTimerPositions = firstTimers.map(m => {
                 const p = memberToPosMap[m];
                 return p !== undefined ? { pIdx: p, text: `${stage.fixed[p]}ポジ` } : null;
@@ -1129,17 +1133,14 @@
               const pct = Math.floor(100 / firstTimers.length);
               const pctListStr = firstTimers.map(m => `${m} ${pct}%`).join("、");
 
-              // ① 初日メンバーが2名の場合
               if (firstTimers.length === 2) {
                 const namesStr = `${firstTimers[0]}と${firstTimers[1]}`;
                 reasonHtml = `${namesStr}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから、${namesStr}は${posText}のいずれかに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${firstTimers[0]} 50%、${firstTimers[1]} 50%</span>`;
               } 
-              // ② 初日メンバーが3名以上の場合
               else if (firstTimers.length >= 3) {
                 const sampleText = `${firstTimers[0]}や${firstTimers[1]}など、${firstTimers.length}名`;
                 reasonHtml = `${sampleText}がこの日に「${stageName}」公演の初日を迎える予定であること、他の出演メンバーのポジションの兼ね合いから、この日に初日を迎える${firstTimers.length}名は${posText}のいずれかに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${pctListStr}</span>`;
               } 
-              // 初日メンバーが1名の場合
               else {
                 reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
@@ -1166,7 +1167,6 @@
           }
         }
 
-        // ⚠︎表記（警告マーク）が含まれているか判定
         const hasWarning = reasonHtml.includes('⚠︎');
 
         const card = document.createElement('div');
