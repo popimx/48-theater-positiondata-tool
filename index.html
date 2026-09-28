@@ -487,9 +487,10 @@
       switchTab('calendar');
     }
 
+    /* ② 修正点：GLOBAL_STAGE_DATABASE を優先参照して全期間を対象にする */
     function selectStage(stageKey) {
       currentStageKey = stageKey;
-      let stage = STAGE_DATABASE[stageKey] || GLOBAL_STAGE_DATABASE[stageKey];
+      let stage = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
       if (!stage) return;
 
       document.getElementById('mainTabsContainer').classList.remove('hidden');
@@ -589,7 +590,6 @@
       });
     }
 
-    /* ① 修正点：ジャンプ後にピンクの枠線で強調表示 */
     function jumpToSchedule(dateStr, elementId) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
@@ -611,8 +611,9 @@
       }, 200);
     }
 
+    /* ② 修正点：GLOBAL_STAGE_DATABASE を優先参照して初日から全データを網羅 */
     function renderPositions() {
-      const stage = STAGE_DATABASE[currentStageKey] || GLOBAL_STAGE_DATABASE[currentStageKey];
+      const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) return;
       document.getElementById('posStageTitle').innerText = stage.name;
       
@@ -637,10 +638,8 @@
           }
         });
 
-        // アンダー出演（2人目以降）は MASTER_MEMBER_ORDER に含まれるメンバーのみ抽出
         const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
         
-        // 初日出演メンバー(fixedMember)は MASTER_MEMBER_ORDER の有無にかかわらず初日枠(1人目)として保持
         const initialMembers = fixedMember ? [fixedMember, ...undersOrdered] : undersOrdered;
         const orderedMembers = initialMembers.filter(m => m && m !== "-" && m !== "－");
 
@@ -691,9 +690,12 @@
       return dateStr;
     }
 
-    /* ① 修正点：日別表の日付ヘッダーを押したら該当スケジュールへ飛ぶ */
+    /* ①＆② 修正点：
+       1. カレンダーアイコン（スケジュールマーク）を削除
+       2. GLOBAL_STAGE_DATABASE を優先参照し、初日から全期間の日程を網羅生成
+    */
     function renderDailyTable() {
-      const stage = STAGE_DATABASE[currentStageKey] || GLOBAL_STAGE_DATABASE[currentStageKey];
+      const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       const headerTr = document.getElementById('dailyTableHeader');
       const tbody = document.getElementById('dailyTableBody');
       
@@ -708,7 +710,8 @@
         th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-pink-50 transition group";
         th.title = "クリックしてスケジュールを表示";
         th.onclick = () => jumpToSchedule(show.date, show.id);
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600"><i class="fa-regular fa-calendar-days text-[10px] mr-1 text-pink-400"></i>${escapeHtml(shortDateStr)}</span>`;
+        // ① スケジュールマークアイコンを廃止し、日付のテキストのみ表示
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(shortDateStr)}</span>`;
         headerTr.appendChild(th);
       });
 
@@ -732,7 +735,6 @@
       });
     }
 
-    /* ② 修正点：inputMemberList（予想入力欄に記載があるメンバー）に指定があり、かつ日別表に出演歴があるメンバーを追加指定可能にする */
     function getOrderedUnderList(pIdx, fixedMember, validShows, inputMemberList = []) {
       const experiencedSet = new Set();
 
@@ -745,10 +747,8 @@
         }
       });
 
-      // MASTER_MEMBER_ORDER 内のメンバーを優先抽出
       const masterList = MASTER_MEMBER_ORDER.filter(m => experiencedSet.has(m));
 
-      // ポジション予想の出演メンバーに含まれており、かつ日別表の該当ポジションに出演歴がある非MASTERメンバーを例外追加
       if (inputMemberList && inputMemberList.length > 0) {
         inputMemberList.forEach(m => {
           if (experiencedSet.has(m) && !MASTER_MEMBER_ORDER.includes(m) && !masterList.includes(m)) {
@@ -958,8 +958,9 @@
       return assignedMapping;
     }
 
+    /* ② 修正点：GLOBAL_STAGE_DATABASE を優先参照して計算 */
     function runForecast() {
-      const stage = STAGE_DATABASE[currentStageKey] || GLOBAL_STAGE_DATABASE[currentStageKey];
+      const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) {
         alert("先に公演を選択してください。");
         return;
@@ -982,7 +983,6 @@
 
       const stageName = stage.name.replace(/「|」|公演/g, '').trim();
 
-      // MASTER_MEMBER_ORDER 内のメンバーのみをグリッド表示する（継続）
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
@@ -1025,7 +1025,6 @@
         memberToPosMap[m] = parseInt(pIdx, 10);
       });
 
-      // 各ポジションにおける経験者リストの取得
       const posExpMembersMap = {};
       stage.fixed.forEach((fixedMember, pIdx) => {
         posExpMembersMap[pIdx] = inputMemberList.filter(m => {
@@ -1034,7 +1033,6 @@
         });
       });
 
-      // 重複ポジション経験者が存在し、かつ経験者不在ポジションがあるペアの検出
       let pairDupEmpty = null;
       stage.fixed.forEach((f1, p1) => {
         if (posExpMembersMap[p1].length >= 2) {
@@ -1050,7 +1048,6 @@
         }
       });
 
-      // 公演自体の初日を迎えるメンバー（出演回数0回）のリスト
       const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
 
       stage.fixed.forEach((fixedMember, pIdx) => {
@@ -1059,7 +1056,6 @@
         const posFreq = stats.posCountMap[fixedMember] || 0;
         const isExperienced = posFreq > 0 || assignedName === fixedMember;
 
-        /* ② 修正点：inputMemberList を渡して「名前指定＋日別表経験アリ」の非MASTERメンバーも許容 */
         const orderedUnders = getOrderedUnderList(pIdx, fixedMember, validShows, inputMemberList);
         const absentUnders = orderedUnders.filter(u => !inputSet.has(u));
         const availableUnders = orderedUnders.filter(u => inputSet.has(u));
@@ -1068,7 +1064,6 @@
         let displayAssignedName = assignedName;
         const isStageFirstTimer = (stats.totalCount === 0);
 
-        // --- 重複ポジション経験者の条件判定 ---
         let isCondition1Matched = false;
         if (pairDupEmpty && (pIdx === pairDupEmpty.dupPIdx || pIdx === pairDupEmpty.emptyPIdx)) {
           const dupFixed = stage.fixed[pairDupEmpty.dupPIdx];
