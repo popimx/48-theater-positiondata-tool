@@ -26,6 +26,26 @@
     .member-first:hover { opacity: 0.7; }
     .member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
     .member-under:hover { opacity: 0.7; }
+
+    /* カレンダーグリッド用スタイル */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 2px;
+      background-color: #e2e8f0;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .cal-cell {
+      background-color: #ffffff;
+      min-height: 70px;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+    }
+    .cal-cell.other-month { background-color: #f8fafc; color: #94a3b8; }
+    .cal-cell.today { background-color: #fdf2f8; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans">
@@ -61,11 +81,23 @@
             <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
               <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
             </h2>
-            <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
-              <button onclick="changeMonth(-1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-left"></i></button>
-              <select id="yearSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
-              <select id="monthSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
-              <button onclick="changeMonth(1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+              <!-- ビュー切り替えボタン -->
+              <div class="bg-slate-100 p-0.5 rounded-lg border border-slate-200 flex text-xs">
+                <button id="viewListBtn" onclick="toggleCalendarView('list')" class="px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm">
+                  <i class="fa-solid fa-list mr-1"></i> リスト
+                </button>
+                <button id="viewGridBtn" onclick="toggleCalendarView('grid')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
+                  <i class="fa-solid fa-calendar-grid mr-1"></i> 月間
+                </button>
+              </div>
+
+              <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                <button onclick="changeMonth(-1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-left"></i></button>
+                <select id="yearSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
+                <select id="monthSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
+                <button onclick="changeMonth(1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
             </div>
           </div>
 
@@ -81,6 +113,7 @@
           </div>
           
           <div id="calendarList" class="space-y-3"></div>
+          <div id="calendarGrid" class="hidden"></div>
         </div>
       </section>
 
@@ -180,6 +213,39 @@
 
   </main>
 
+  <!-- スケジュール詳細ポップアップ モーダル -->
+  <div id="scheduleModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-lg w-full p-4 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-start border-b pb-3">
+        <div>
+          <span id="modalTheater" class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700"></span>
+          <h3 id="modalTitle" class="text-base font-bold text-slate-800 mt-1"></h3>
+          <p id="modalDate" class="text-xs text-slate-500 font-medium"></p>
+        </div>
+        <button onclick="closeScheduleModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="modalMembersArea" class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2">
+        <div class="font-bold text-slate-700 flex justify-between items-center">
+          <span>【出演メンバー / ポジション】</span>
+          <span id="modalPosCount" class="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200"></span>
+        </div>
+        <div id="modalMemberList" class="grid grid-cols-2 gap-1.5 pt-1"></div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button id="modalBtnGoStage" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition text-center">
+          演目詳細を開く
+        </button>
+        <button onclick="closeScheduleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-3 rounded-lg text-xs transition">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Bottom Navigation -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
     <div id="navNormal" class="max-w-4xl mx-auto flex justify-around">
@@ -228,6 +294,7 @@
     let currentScheduleFilter = "ALL";
     let selectedMemberName = null;
     let todayString = "";
+    let calendarViewMode = 'list'; // 'list' or 'grid'
 
     const FALLBACK_SCHEDULE_2026 = [
       {
@@ -475,6 +542,27 @@
       renderCalendar();
     }
 
+    function toggleCalendarView(mode) {
+      calendarViewMode = mode;
+      const listBtn = document.getElementById('viewListBtn');
+      const gridBtn = document.getElementById('viewGridBtn');
+      const listContainer = document.getElementById('calendarList');
+      const gridContainer = document.getElementById('calendarGrid');
+
+      if (mode === 'list') {
+        listBtn.className = "px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm";
+        gridBtn.className = "px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600";
+        listContainer.classList.remove('hidden');
+        gridContainer.classList.add('hidden');
+      } else {
+        gridBtn.className = "px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm";
+        listBtn.className = "px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600";
+        gridContainer.classList.remove('hidden');
+        listContainer.classList.add('hidden');
+      }
+      renderCalendar();
+    }
+
     function goHome() {
       selectedMemberName = null;
       document.getElementById('mainTabsContainer').classList.remove('hidden');
@@ -523,23 +611,35 @@
       }
     }
 
-    function renderCalendar() {
-      const listContainer = document.getElementById('calendarList');
-      listContainer.innerHTML = '';
-
+    function getFilteredSchedules() {
       const year = document.getElementById("yearSelect").value;
       const month = document.getElementById("monthSelect").value;
       const datePrefix = `${year}/${month}`;
 
-      let filtered = SCHEDULE_DATA.filter(item => {
+      return SCHEDULE_DATA.filter(item => {
         const matchesDate = item.date ? item.date.startsWith(datePrefix) : true;
         if (!matchesDate) return false;
         if (currentScheduleFilter === 'ALL') return true;
         return item.theater && item.theater.includes(currentScheduleFilter);
       });
+    }
 
+    function renderCalendar() {
+      if (calendarViewMode === 'grid') {
+        renderCalendarGrid();
+      } else {
+        renderCalendarList();
+      }
+    }
+
+    function renderCalendarList() {
+      const listContainer = document.getElementById('calendarList');
+      listContainer.innerHTML = '';
+
+      const filtered = getFilteredSchedules();
       const todayShows = [];
       const otherShows = [];
+
       filtered.forEach(item => {
         if (item.date === todayString) todayShows.push(item);
         else otherShows.push(item);
@@ -556,7 +656,7 @@
         const card = document.createElement('div');
         card.id = `sched-${item.id}`;
         card.className = `sched-card p-3 rounded-lg border shadow-sm transition cursor-pointer ${isToday ? 'bg-pink-50 border-pink-300' : 'bg-white border-slate-200 hover:border-pink-300'}`;
-        card.onclick = () => selectStage(item.baseStageName);
+        card.onclick = () => openScheduleModal(item);
         
         const dateParts = item.date.split('/');
         const monthDay = dateParts.length >= 3 ? `${dateParts[1]}/${dateParts[2]}` : item.date;
@@ -580,13 +680,137 @@
             ${item.performersText ? `
               <div class="bg-slate-50 border border-slate-100 rounded p-2 text-xs text-slate-600">
                 <span class="font-bold text-slate-700 block mb-0.5">【出演メンバー】</span>
-                <span>${escapeHtml(item.performersText)}</span>
+                <span class="line-clamp-2">${escapeHtml(item.performersText)}</span>
               </div>
             ` : ''}
           </div>
         `;
         listContainer.appendChild(card);
       });
+    }
+
+    function renderCalendarGrid() {
+      const gridContainer = document.getElementById('calendarGrid');
+      gridContainer.innerHTML = '';
+
+      const year = parseInt(document.getElementById("yearSelect").value, 10);
+      const month = parseInt(document.getElementById("monthSelect").value, 10);
+
+      const firstDay = new Date(year, month - 1, 1);
+      const lastDay = new Date(year, month, 0);
+      const startDayOfWeek = firstDay.getDay(); 
+      const totalDays = lastDay.getDate();
+
+      const filtered = getFilteredSchedules();
+      const schedMap = {};
+      filtered.forEach(item => {
+        const dStr = item.date;
+        if (!schedMap[dStr]) schedMap[dStr] = [];
+        schedMap[dStr].push(item);
+      });
+
+      let html = `<div class="cal-grid">`;
+      const dayLabels = ['日', '月', '火', '水', '木', '金', '土'];
+      
+      dayLabels.forEach((label, i) => {
+        const color = i === 0 ? 'text-red-500' : (i === 6 ? 'text-blue-500' : 'text-slate-600');
+        html += `<div class="bg-slate-100 p-1 text-center font-bold text-xs ${color}">${label}</div>`;
+      });
+
+      for (let i = 0; i < startDayOfWeek; i++) {
+        html += `<div class="cal-cell other-month"></div>`;
+      }
+
+      for (let day = 1; day <= totalDays; day++) {
+        const mStr = month.toString().padStart(2, '0');
+        const dStr = day.toString().padStart(2, '0');
+        const fullDateStr = `${year}/${mStr}/${dStr}`;
+        const isToday = fullDateStr === todayString;
+
+        const dayShows = schedMap[fullDateStr] || [];
+
+        html += `
+          <div class="cal-cell ${isToday ? 'today border border-pink-400' : ''}">
+            <span class="text-[10px] font-bold ${isToday ? 'text-pink-600' : 'text-slate-600'}">${day}</span>
+            <div class="space-y-1 mt-1 overflow-y-auto max-h-16 flex-1">
+        `;
+
+        dayShows.forEach(s => {
+          html += `
+            <div onclick="openScheduleModalById('${s.id}')" class="bg-pink-100 hover:bg-pink-200 text-pink-800 text-[9px] p-0.5 rounded leading-tight cursor-pointer truncate" title="${escapeHtml(s.displayTitle)}">
+              ${s.time ? s.time + ' ' : ''}${escapeHtml(s.baseStageName)}
+            </div>
+          `;
+        });
+
+        html += `</div></div>`;
+      }
+
+      const totalCells = startDayOfWeek + totalDays;
+      const remainingCells = (7 - (totalCells % 7)) % 7;
+      for (let i = 0; i < remainingCells; i++) {
+        html += `<div class="cal-cell other-month"></div>`;
+      }
+
+      html += `</div>`;
+      gridContainer.innerHTML = html;
+    }
+
+    function openScheduleModalById(id) {
+      const item = SCHEDULE_DATA.find(s => s.id === id);
+      if (item) openScheduleModal(item);
+    }
+
+    function openScheduleModal(item) {
+      document.getElementById('modalTheater').innerText = item.theater || 'AKB48劇場';
+      document.getElementById('modalTitle').innerText = item.displayTitle + (item.subTitle ? ` ${item.subTitle}` : '');
+      document.getElementById('modalDate').innerText = `${item.date} ${item.time || ''}`;
+
+      const listEl = document.getElementById('modalMemberList');
+      const posCountEl = document.getElementById('modalPosCount');
+      listEl.innerHTML = '';
+
+      const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
+
+      if (item.positionsArray && item.positionsArray.length > 0) {
+        posCountEl.innerText = `${item.positionsArray.length}人公演`;
+        item.positionsArray.forEach((m, idx) => {
+          const posName = (stageObj && stageObj.fixed && stageObj.fixed[idx]) ? stageObj.fixed[idx] : `Pos.${idx+1}`;
+          const isOrig = (m === posName);
+          const div = document.createElement('div');
+          div.className = "bg-white p-1.5 rounded border border-slate-200 flex items-center justify-between";
+          div.innerHTML = `
+            <span class="text-[10px] text-slate-400 truncate">${escapeHtml(posName)}ポジ</span>
+            <span class="${isOrig ? 'member-first' : 'member-under'} text-xs" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${escapeHtml(m)}</span>
+          `;
+          listEl.appendChild(div);
+        });
+      } else if (item.membersArray && item.membersArray.length > 0) {
+        posCountEl.innerText = `${item.membersArray.length}名出演`;
+        item.membersArray.forEach(m => {
+          const div = document.createElement('div');
+          div.className = "bg-white p-1.5 rounded border border-slate-200 flex items-center justify-between";
+          div.innerHTML = `
+            <span class="member-first text-xs" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${escapeHtml(m)}</span>
+          `;
+          listEl.appendChild(div);
+        });
+      } else {
+        posCountEl.innerText = '情報なし';
+        listEl.innerHTML = '<p class="text-slate-400 text-center col-span-2 py-2">メンバー情報がありません。</p>';
+      }
+
+      const btnGo = document.getElementById('modalBtnGoStage');
+      btnGo.onclick = () => {
+        closeScheduleModal();
+        selectStage(item.baseStageName);
+      };
+
+      document.getElementById('scheduleModal').classList.remove('hidden');
+    }
+
+    function closeScheduleModal() {
+      document.getElementById('scheduleModal').classList.add('hidden');
     }
 
     function jumpToSchedule(dateStr, elementId) {
@@ -598,14 +822,19 @@
       }
       goHome();
       setTimeout(() => {
-        document.querySelectorAll('.sched-card').forEach(el => {
-          el.classList.remove('bg-pink-100', 'border-pink-500', 'ring-2', 'ring-pink-500', 'border-pink-400');
-        });
+        if (calendarViewMode === 'grid') {
+          const item = SCHEDULE_DATA.find(s => s.id === elementId);
+          if (item) openScheduleModal(item);
+        } else {
+          document.querySelectorAll('.sched-card').forEach(el => {
+            el.classList.remove('bg-pink-100', 'border-pink-500', 'ring-2', 'ring-pink-500', 'border-pink-400');
+          });
 
-        const target = document.getElementById(`sched-${elementId}`);
-        if(target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          target.classList.add('bg-pink-100', 'border-pink-500', 'ring-2', 'ring-pink-500');
+          const target = document.getElementById(`sched-${elementId}`);
+          if(target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('bg-pink-100', 'border-pink-500', 'ring-2', 'ring-pink-500');
+          }
         }
       }, 200);
     }
@@ -872,7 +1101,6 @@
       return result;
     }
 
-    /* 改善点①・③対応：全ポジションの最適割り当て可能性を判定する拡張アルゴリズム */
     function getAllOptimalAssignments(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
       const numMembers = inputMemberList.length;
@@ -1069,7 +1297,6 @@
         return { totalCount, posCountMap, lastDateMap, uniquePositionsCount: Object.keys(posCountMap).length };
       }
 
-      /* 改善点①・③対応：候補メンバーと代表割り当ての算出 */
       const { bestMapping, candidatesArrayMap } = getAllOptimalAssignments(inputMemberList, stage.fixed, validShows);
       const memberToPosMap = {};
       Object.entries(bestMapping).forEach(([pIdx, m]) => {
@@ -1092,7 +1319,6 @@
         let displayAssignedName = assignedName;
 
         if (isMultipleCandidates) {
-          /* 改善点①・③対応：不確定（複数候補）の場合のテキスト作成 */
           displayAssignedName = cands.join(" / ");
 
           const basePct = Math.floor(100 / cands.length);
@@ -1103,7 +1329,6 @@
 
           const warningBadge = `<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${pctListStr}</span>`;
 
-          // ポジション被り元の他ポジション（stage.fixed のインデックス昇順）
           const dupSourcePosIdxs = [];
           cands.forEach(m => {
             stage.fixed.forEach((fM, otherPIdx) => {
@@ -1123,14 +1348,11 @@
           const hasSelfExp = cands.some(m => (getMemberStats(m).posCountMap[fixedMember] || 0) > 0 || m === fixedMember);
 
           if (hasSelfExp) {
-            // このポジション自体に経験者がいる場合
             const expCands = cands.filter(m => (getMemberStats(m).posCountMap[fixedMember] || 0) > 0 || m === fixedMember);
             const expCandsTextAnd = expCands.length === 2 ? `${expCands[0]}と${expCands[1]}` : expCands.join("や");
             reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${expCandsTextAnd}が出演予定。他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジには${candsTextAnd}のどちらかが入ると予想。${warningBadge}`;
           } else {
-            // このポジション自体には経験者がいない場合（初挑戦ポジション）
             if (dupSourcePosIdxs.length > 0 && cands.length === 2) {
-              /* 改善点①：人名は入力順、比較ポジは一覧表の初日欄（stage.fixed）の順番 */
               const dupPosName = `${stage.fixed[dupSourcePosIdxs[0]]}ポジ`;
               
               const relatedPosIdxs = Array.from(new Set([pIdx, ...dupSourcePosIdxs])).sort((a, b) => a - b);
@@ -1139,12 +1361,10 @@
 
               reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、${dupPosName}でポジション被りとなる${candsTextAnd}のどちらかが${pos1Name}ポジ、どちらかが${pos2Name}ポジに入ると予想。${warningBadge}`;
             } else {
-              /* 改善点③：3人以上の選択肢の場合 */
               reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジには${candsTextOr}のいずれかのメンバーが入ると予想。${warningBadge}`;
             }
           }
         } else {
-          /* 確定予想の場合 */
           const isFixedMemberAttending = inputSet.has(fixedMember);
 
           if (isExperienced) {
@@ -1162,7 +1382,6 @@
                 reasonHtml = `この日の公演は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosText}に入る可能性が高いと予想し、${assignedName}が入ると予想。`;
               }
             } else {
-              /* 改善点②：fixedMember が出演予定にある場合の誤表示対策 */
               if (isFixedMemberAttending) {
                 const fixedMemberAssignedPosIdx = memberToPosMap[fixedMember];
                 const fixedMemberAssignedPosName = fixedMemberAssignedPosIdx !== undefined ? stage.fixed[fixedMemberAssignedPosIdx] : "";
@@ -1277,7 +1496,7 @@
         const div = document.createElement('div');
         div.className = "p-3 hover:bg-pink-50 cursor-pointer flex justify-between items-center";
         div.innerHTML = `
-          <span class="font-bold text-slate-800">${m.label}</span>
+          <span class="font-bold text-slate-800">${escapeHtml(m.label)}</span>
           <span class="text-[10px] font-bold px-2 py-1 rounded ${m.type === 'stage' ? 'bg-pink-100 text-pink-700' : 'bg-slate-100 text-slate-600'}">
             ${m.type === 'stage' ? '公演' : 'メンバー'}
           </span>`;
@@ -1340,17 +1559,45 @@
       document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberShows.length}回`;
 
       const showCountsMap = {};
+      const posDetailMap = {};
+
       memberShows.forEach(item => {
         const baseName = item.baseStageName; 
         showCountsMap[baseName] = (showCountsMap[baseName] || 0) + 1;
+
+        if (!posDetailMap[baseName]) posDetailMap[baseName] = {};
+        const stageObj = GLOBAL_STAGE_DATABASE[baseName] || STAGE_DATABASE[baseName];
+        
+        if (stageObj && stageObj.fixed && item.positionsArray) {
+          const posIdx = item.positionsArray.indexOf(selectedMemberName);
+          if (posIdx !== -1 && stageObj.fixed[posIdx]) {
+            const posName = stageObj.fixed[posIdx];
+            posDetailMap[baseName][posName] = (posDetailMap[baseName][posName] || 0) + 1;
+          }
+        }
       });
 
       const breakdownList = document.getElementById('showsBreakdownList');
       breakdownList.innerHTML = '';
       Object.entries(showCountsMap).forEach(([title, count]) => {
         const li = document.createElement('li');
-        li.className = "flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200";
-        li.innerHTML = `<span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600 hover:underline" onclick="selectStage('${title}')">「${title}」公演</span> <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded">${count}回</span>`;
+        li.className = "bg-slate-50 p-2.5 rounded border border-slate-200 space-y-1";
+
+        let posTextArray = [];
+        if (posDetailMap[title]) {
+          Object.entries(posDetailMap[title]).forEach(([pName, pCount]) => {
+            posTextArray.push(`${pName}ポジ: ${pCount}回`);
+          });
+        }
+        const subPosText = posTextArray.length > 0 ? posTextArray.join(' / ') : '';
+
+        li.innerHTML = `
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600 hover:underline" onclick="selectStage('${title}')">「${escapeHtml(title)}」公演</span> 
+            <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded">${count}回</span>
+          </div>
+          ${subPosText ? `<div class="text-[11px] text-slate-500 font-medium pl-1">${escapeHtml(subPosText)}</div>` : ''}
+        `;
         breakdownList.appendChild(li);
       });
 
@@ -1376,7 +1623,7 @@
 
         div.innerHTML = `
           <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
-          <span class="text-slate-600">${item.date}</span>
+          <span class="text-slate-600">${escapeHtml(item.date)}</span>
           <span class="font-bold text-slate-800 flex-1 truncate">${formattedStageLabel}</span>
           <span class="text-pink-600 font-bold whitespace-nowrap">${escapeHtml(targetPositionName)}</span>
         `;
