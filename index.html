@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -845,7 +845,7 @@
       return result;
     }
 
-    // ハンガリアン法による最適ポジション割り当て（完全非負の階層スコアモデルに改修）
+    // ハンガリアン法による最適ポジション割り当て（完全非負の階層スコアモデル）
     function findOptimalAssignment(inputMemberList, stageFixed, validShows) {
       const numPos = stageFixed.length;
       const numMembers = inputMemberList.length;
@@ -886,7 +886,6 @@
           });
 
           // 階層2: 該当ポジションの経験有無 (+1,000,000)
-          // これにより未経験ポジションが経験有りより優先される事故を物理的にブロック
           if (totalPerfAtPos > 0) {
             score += 1000000;
             // 階層3: 通算出演回数による加算 (+10,000 / 回)
@@ -992,6 +991,19 @@
         return { totalCount, posCountMap, lastDateMap, uniquePositionsCount: Object.keys(posCountMap).length };
       }
 
+      // 出演者の中で該当ポジションの経験者（初日メンバー＋アンダー）のリストを返すヘルパー
+      function getAvailableExperiencedList(pIdx, fixedMember) {
+        const list = [];
+        if (fixedMember && fixedMember !== "-" && fixedMember !== "－" && inputSet.has(fixedMember)) {
+          list.push(fixedMember);
+        }
+        const unders = getOrderedUnderList(pIdx, fixedMember, validShows).filter(u => inputSet.has(u));
+        unders.forEach(u => {
+          if (!list.includes(u)) list.push(u);
+        });
+        return list;
+      }
+
       const assignedMapping = findOptimalAssignment(inputMemberList, stage.fixed, validShows);
       const memberToPosMap = {};
       Object.entries(assignedMapping).forEach(([pIdx, m]) => {
@@ -1049,28 +1061,55 @@
                   reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
                 }
               } else {
-                reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                // 共演実績がない場合：u2の割り当て先ポジ(u2PosName)に経験者がおらず、分け合う形になるかをチェック
+                const u2PosExpList = u2PosIdx !== undefined ? getAvailableExperiencedList(u2PosIdx, u2PosName) : [];
+                const u2InU2PosCount = getMemberStats(u2).posCountMap[u2PosName] || 0;
+                const isU2PosExperienced = u2InU2PosCount > 0 || u2 === u2PosName;
+
+                if (!isU2PosExperienced && u2PosExpList.length === 0) {
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2PosName}ポジの経験者が不在のため、${fixedMember}ポジ経験のある${assignedName}と${u2}でポジションを分け合うと予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${u2} 50%</span>`;
+                } else {
+                  reasonHtml = `この日の公演は同じ${fixedMember}ポジを務める${u2}も出演予定だが、${u2}は${u2PosName}ポジで出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                }
               }
             }
           }
         } else {
-          const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
+          // assignedNameがfixedMemberポジ未経験の場合
+          const assignedNameStats = getMemberStats(assignedName);
+          // assignedNameが経験のあるポジションで、そのポジションの経験者が複数(例: mOther)出演しているか検索
+          const sharedPosName = Object.keys(assignedNameStats.posCountMap).find(posName => {
+            const pIndex = stage.fixed.indexOf(posName);
+            if (pIndex === -1) return false;
+            const expList = getAvailableExperiencedList(pIndex, posName);
+            return expList.length >= 2;
+          });
 
-          if (isStageFirstTimer) {
-            if (firstTimers.length <= 1) {
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${assignedName}が${fixedMember}ポジに入ると予想。`;
-            } else {
-              const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
-              const m2PosIdx = memberToPosMap[m2];
-              const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "他";
+          if (sharedPosName && availableUnders.length === 0) {
+            const pIndex = stage.fixed.indexOf(sharedPosName);
+            const expList = getAvailableExperiencedList(pIndex, sharedPosName);
+            const mOther = expList.find(u => u !== assignedName) || "他メンバー";
 
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${fixedMember}ポジか${m2PosName}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
-            }
+            reasonHtml = `この日の公演は${fixedMember}ポジの経験者が不在のため、同じ${sharedPosName}ポジを務める${mOther}と${assignedName}でポジションを分け合い、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${mOther} 50%</span>`;
           } else {
-            const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別メンバー";
-            const u2Stats = getMemberStats(u2);
-            const lastDate = u2Stats.lastDateMap[fixedMember] || "過去";
-            reasonHtml = `この日の公演は${u2}も出演予定だが、${u2}は${lastDate}以来${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
+            const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
+
+            if (isStageFirstTimer) {
+              if (firstTimers.length <= 1) {
+                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーから${assignedName}が${fixedMember}ポジに入ると予想。`;
+              } else {
+                const m2 = firstTimers.find(m => m !== assignedName) || "他メンバー";
+                const m2PosIdx = memberToPosMap[m2];
+                const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "他";
+
+                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${fixedMember}ポジか${m2PosName}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
+              }
+            } else {
+              const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－") || "別メンバー";
+              const u2Stats = getMemberStats(u2);
+              const lastDate = u2Stats.lastDateMap[fixedMember] || "過去";
+              reasonHtml = `この日の公演は${u2}も出演予定だが、${u2}は${lastDate}以来${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 60%、${u2} 40%</span>`;
+            }
           }
         }
 
