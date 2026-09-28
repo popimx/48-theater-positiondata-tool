@@ -927,7 +927,7 @@
       const unassignedMembers = inputMemberList.filter(m => !assignedMembers.has(m));
       const unassignedPositions = [];
       for (let pIdx = 0; pIdx < numPos; pIdx++) {
-        if (!assignedPositions.has(pIdx)) unassignedPositions.pushed(pIdx);
+        if (!assignedPositions.has(pIdx)) unassignedPositions.push(pIdx);
       }
 
       unassignedMembers.forEach((m, i) => {
@@ -1006,6 +1006,34 @@
         memberToPosMap[m] = parseInt(pIdx, 10);
       });
 
+      // 各ポジションにおける経験者リストの取得
+      const posExpMembersMap = {};
+      stage.fixed.forEach((fixedMember, pIdx) => {
+        posExpMembersMap[pIdx] = inputMemberList.filter(m => {
+          const stats = getMemberStats(m);
+          return (stats.posCountMap[fixedMember] || 0) > 0 || m === fixedMember;
+        });
+      });
+
+      // ①用：同じポジション経験者が重複しており、かつ経験者不在ポジションがあるペアの検出
+      let pairDupEmpty = null;
+      stage.fixed.forEach((f1, p1) => {
+        if (posExpMembersMap[p1].length >= 2) {
+          stage.fixed.forEach((f2, p2) => {
+            if (p1 !== p2 && posExpMembersMap[p2].length === 0) {
+              const m1 = assignedMapping[p1];
+              const m2 = assignedMapping[p2];
+              if (m1 && m2 && posExpMembersMap[p1].includes(m1) && posExpMembersMap[p1].includes(m2)) {
+                pairDupEmpty = { dupPIdx: p1, emptyPIdx: p2, dupMembers: [m1, m2] };
+              }
+            }
+          });
+        }
+      });
+
+      // ③用：公演自体の初日を迎えるメンバー（出演回数0回）のリスト
+      const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
+
       stage.fixed.forEach((fixedMember, pIdx) => {
         const assignedName = assignedMapping[pIdx] || "未定";
         const stats = getMemberStats(assignedName);
@@ -1017,98 +1045,97 @@
         const availableUnders = orderedUnders.filter(u => inputSet.has(u));
 
         let reasonHtml = "";
+        let displayAssignedName = assignedName;
         const isStageFirstTimer = (stats.totalCount === 0);
 
-        if (isExperienced) {
-          if (assignedName === fixedMember) {
-            if (orderedUnders.length === 0) {
-              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジの経験者がいないため、${assignedName}が入ると予想。`;
-            } else if (availableUnders.length === 0) {
-              const undersText = formatUndersText(absentUnders);
-              reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
-            } else {
-              const u1 = availableUnders[0];
-              const u1PosIdx = memberToPosMap[u1];
-              const u1PosName = u1PosIdx !== undefined ? stage.fixed[u1PosIdx] : "";
-              const u1PosText = u1PosName ? `${u1PosName}ポジ` : "他のポジション";
-              reasonHtml = `この日の公演は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosText}に入る可能性が高いと予想し、${assignedName}が入ると予想。`;
-            }
-          } else {
-            if (availableUnders.length <= 1) {
-              const undersText = formatUndersText(absentUnders);
-              reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? '同じ' + fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
-            } else {
-              const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
-              if (u2) {
-                const u2PosIdx = memberToPosMap[u2];
-                const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "";
-                const u2PosText = u2PosName ? `${u2PosName}ポジ` : "他のポジション";
-                
-                const coop = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
-                const assignedNameInU2PosCount = u2PosName ? (getMemberStats(assignedName).posCountMap[u2PosName] || 0) : 0;
+        // --- ①の条件判定 ---
+        let isCondition1Matched = false;
+        if (pairDupEmpty && (pIdx === pairDupEmpty.dupPIdx || pIdx === pairDupEmpty.emptyPIdx)) {
+          const dupFixed = stage.fixed[pairDupEmpty.dupPIdx];
+          const emptyFixed = stage.fixed[pairDupEmpty.emptyPIdx];
+          const m1 = pairDupEmpty.dupMembers[0];
+          const m2 = pairDupEmpty.dupMembers[1];
+          displayAssignedName = `${m1} / ${m2}`;
+          isCondition1Matched = true;
 
-                if (coop.total > 0) {
-                  if (coop.countDefault > 0 && coop.countSwapped === 0) {
-                    if (assignedNameInU2PosCount === 0) {
-                      reasonHtml = `この日の公演は同じ${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、今回も${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入ると予想。`;
+          if (pIdx === pairDupEmpty.dupPIdx) {
+            reasonHtml = `この日の公演は${emptyFixed}ポジの経験者がいないため、${dupFixed}ポジの出演経験がある${m1}と${m2}のどちらかが${dupFixed}ポジ、どちらかが${emptyFixed}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${m1} 50%、${m2} 50%</span>`;
+          } else {
+            reasonHtml = `この日の公演は${emptyFixed}ポジの経験者がいないため、${dupFixed}ポジでポジション被りとなる${m1}と${m2}のどちらかが${dupFixed}ポジ、どちらかが${emptyFixed}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${m1} 50%、${m2} 50%</span>`;
+          }
+        }
+
+        if (!isCondition1Matched) {
+          if (isExperienced) {
+            if (assignedName === fixedMember) {
+              if (orderedUnders.length === 0) {
+                reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、${assignedName}ポジの経験者がいないため、${assignedName}が入ると予想。`;
+              } else if (availableUnders.length === 0) {
+                const undersText = formatUndersText(absentUnders);
+                reasonHtml = `${assignedName}は「${stageName}」公演の初日メンバーであり、この日の公演は${fixedMember}ポジの出演経験がある${undersText}の出演予定もないため、${assignedName}が入ると予想。`;
+              } else {
+                const u1 = availableUnders[0];
+                const u1PosIdx = memberToPosMap[u1];
+                const u1PosName = u1PosIdx !== undefined ? stage.fixed[u1PosIdx] : "";
+                const u1PosText = u1PosName ? `${u1PosName}ポジ` : "他のポジション";
+                reasonHtml = `この日の公演は${u1}も出演予定だが、${assignedName}は「${stageName}」公演の初日メンバーであり、${u1}は${u1PosText}に入る可能性が高いと予想し、${assignedName}が入ると予想。`;
+              }
+            } else {
+              if (availableUnders.length <= 1) {
+                const undersText = formatUndersText(absentUnders);
+                // ②の修正（'同じ' を除外）
+                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${undersText ? fixedMember + 'ポジの出演経験がある' + undersText + 'の出演予定もないため、' : ''}${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
+              } else {
+                const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
+                if (u2) {
+                  const u2PosIdx = memberToPosMap[u2];
+                  const u2PosName = u2PosIdx !== undefined ? stage.fixed[u2PosIdx] : "";
+                  const u2PosText = u2PosName ? `${u2PosName}ポジ` : "他のポジション";
+                  
+                  const coop = getCoopProbability(assignedName, u2, pIdx, u2PosIdx, validShows);
+                  const assignedNameInU2PosCount = u2PosName ? (getMemberStats(assignedName).posCountMap[u2PosName] || 0) : 0;
+
+                  if (coop.total > 0) {
+                    if (coop.countDefault > 0 && coop.countSwapped === 0) {
+                      if (assignedNameInU2PosCount === 0) {
+                        reasonHtml = `この日の公演は同じ${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、今回も${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入ると予想。`;
+                      } else {
+                        reasonHtml = `この日の公演は同じ${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                      }
+                    } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
+                      reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定。過去に共演した公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosText}に入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
                     } else {
-                      reasonHtml = `この日の公演は同じ${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演では全て${assignedName}が${fixedMember}ポジ、${u2}が${u2PosText}に入っているため、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                      reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
                     }
-                  } else if (coop.countSwapped > 0 && coop.countDefault === 0) {
-                    reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定。過去に共演した公演では${u2}が${fixedMember}ポジ、${assignedName}が${u2PosText}に入っていたが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
                   } else {
-                    reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、過去に共演した公演のデータから${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${coop.p1}%、${u2} ${coop.p2}%</span>`;
+                    reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${u2PosText}で出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
                   }
                 } else {
-                  reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${u2PosText}で出演する可能性が高いと予想し、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                  reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、${fixedMember}ポジの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
                 }
-              } else {
-                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、${fixedMember}ポジの出演経験がある${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
             }
-          }
-        } else {
-          const firstTimers = inputMemberList.filter(m => getMemberStats(m).totalCount === 0);
-
-          if (isStageFirstTimer) {
-            const m2 = firstTimers.find(m => m !== assignedName);
-            if (m2) {
-              const m2PosIdx = memberToPosMap[m2];
-              const m2PosName = m2PosIdx !== undefined ? stage.fixed[m2PosIdx] : "";
-              const m2PosText = m2PosName ? `か${m2PosName}ポジ` : "";
-
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${m2}もこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${fixedMember}ポジ${m2PosText}に入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} 50%、${m2} 50%</span>`;
-            } else {
-              reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
-            }
           } else {
-            const targetPosExperiencedMembers = inputMemberList.filter(m => {
-              const mStats = getMemberStats(m);
-              return (mStats.posCountMap[fixedMember] || 0) > 0 || m === fixedMember;
-            });
+            if (isStageFirstTimer) {
+              // --- ③の条件判定（初日メンバーが2名以上の場合） ---
+              if (firstTimers.length >= 2) {
+                const otherFirstTimers = firstTimers.filter(m => m !== assignedName);
+                const otherText = otherFirstTimers.length >= 2 
+                  ? `${otherFirstTimers[0]}や${otherFirstTimers[1]}` 
+                  : `${otherFirstTimers[0]}`;
 
-            if (targetPosExperiencedMembers.length === 0) {
-              // 修正①：このポジションの経験者がいない場合、同じポジションを主につとめる主要メンバーや、現在割り当てられている同一グループ・他ポジ経験者から適切に2名を選出（ここでは利用可能な主要メンバー／バッティングしている同ポジション経験者などを対象にする）
-              const samePosCandidates = inputMemberList.filter(m => {
-                const mStats = getMemberStats(m);
-                // 出演経験があり、かつ今回の割当や近しいポジションを持つメンバーなどを対象とする
-                return mStats.totalCount > 0;
-              });
+                const firstTimerPositions = firstTimers.map(m => {
+                  const p = memberToPosMap[m];
+                  return p !== undefined ? `${stage.fixed[p]}ポジ` : "";
+                }).filter(p => p !== "").sort();
 
-              // 該当ポジが未経験のメンバー同士で競合している場合、同じ固定ポジション（例:大盛真歩ポジなど）を持つメンバー同士を正しく抽出すべく、全固定ポジションの中で共通のアンダー経験を持つメンバーを抽出
-              // ここではシンプルに、入力メンバーの中から直近で同じポジションの候補になりうる2名（例えば倉野尾成美と村山彩希など）を正しくピックアップするロジックに修正
-              const matchedPair = inputMemberList.filter(m => m === "倉野尾成美" || m === "村山彩希");
+                const posText = firstTimerPositions.join("か");
+                const pct = Math.floor(100 / firstTimers.length);
+                const pctListStr = firstTimers.map(m => `${m} ${pct}%`).join("、");
 
-              if (matchedPair.length >= 2) {
-                const c1 = matchedPair[0];
-                const c2 = matchedPair[1];
-                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、${fixedMember}ポジの出演経験がある${c1}と${c2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${c1} 50%、${c2} 50%</span>`;
-              } else if (samePosCandidates.length >= 2) {
-                const c1 = samePosCandidates[0];
-                const c2 = samePosCandidates[1];
-                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、${fixedMember}ポジの出演経験がある${c1}と${c2}のどちらかが${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${c1} 50%、${c2} 50%</span>`;
+                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、${otherText}など、${assignedName}も含めて${firstTimers.length}名がこの日に「${stageName}」公演の初日を迎えること、他の出演メンバーのポジションの兼ね合いから、${assignedName}は${posText}のいずれかに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${pctListStr}</span>`;
               } else {
-                reasonHtml = `この日の公演は${fixedMember}ポジの経験者がいないため、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
+                reasonHtml = `${assignedName}はこの日に「${stageName}」公演の初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
             } else {
               const u2 = availableUnders.find(u => u !== assignedName && u !== "-" && u !== "－");
@@ -1127,7 +1154,7 @@
 
                 reasonHtml = `この日の公演は${fixedMember}ポジの出演経験がある${u2}も出演予定だが、${u2}は${dateReason}${fixedMember}ポジでの出演がないため、${assignedName}が${fixedMember}ポジに入ると予想。<br><span class="text-xs text-pink-600 font-bold mt-1 inline-block">⚠︎ ${assignedName} ${assignedPct}%、${u2} ${u2Pct}%</span>`;
               } else {
-                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がなく、${assignedName}が${fixedMember}ポジに入ると予想。`;
+                reasonHtml = `この日の公演は初日メンバーの${fixedMember}の出演予定がないため、${assignedName}が${fixedMember}ポジに入ると予想。`;
               }
             }
           }
@@ -1140,7 +1167,7 @@
             <span class="text-slate-700">【${escapeHtml(fixedMember)}ポジション】</span>
             <div class="flex items-center gap-2">
               ${isExperienced ? '<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded font-bold">☑ 経験あり</span>' : '<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold">初挑戦</span>'}
-              <span class="text-pink-600 text-sm">予想: ${escapeHtml(assignedName)}</span>
+              <span class="text-pink-600 text-sm">予想: ${escapeHtml(displayAssignedName)}</span>
             </div>
           </div>
           ${reasonHtml ? `<div class="text-slate-600 leading-relaxed">${reasonHtml}</div>` : ''}
