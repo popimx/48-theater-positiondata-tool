@@ -661,6 +661,7 @@
         const dateParts = item.date.split('/');
         const monthDay = dateParts.length >= 3 ? `${dateParts[1]}/${dateParts[2]}` : item.date;
 
+        /* 【要件①対応】 line-clamp-2 を削除し、出演メンバー名を最後まで全表示 */
         card.innerHTML = `
           <div class="flex flex-col gap-2">
             <div class="flex items-center justify-between">
@@ -680,7 +681,7 @@
             ${item.performersText ? `
               <div class="bg-slate-50 border border-slate-100 rounded p-2 text-xs text-slate-600">
                 <span class="font-bold text-slate-700 block mb-0.5">【出演メンバー】</span>
-                <span class="line-clamp-2">${escapeHtml(item.performersText)}</span>
+                <span class="break-words">${escapeHtml(item.performersText)}</span>
               </div>
             ` : ''}
           </div>
@@ -1006,6 +1007,17 @@
       return `${list.slice(0, -1).join('や')}や${list[list.length - 1]}`;
     }
 
+    /* 【要件④対応用】貼られた入力順にメンバー配列をソートするヘルパー関数 */
+    function sortByInputOrder(members, inputMemberList) {
+      return [...members].sort((a, b) => {
+        let idxA = inputMemberList.indexOf(a);
+        let idxB = inputMemberList.indexOf(b);
+        if (idxA === -1) idxA = 999;
+        if (idxB === -1) idxB = 999;
+        return idxA - idxB;
+      });
+    }
+
     function runForecast() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) {
@@ -1092,9 +1104,7 @@
         }
       });
 
-      // ----------------------------------------------------
-      // 【競合解決フェーズ】確定ポジションの割り当てと候補の連鎖除外
-      // ----------------------------------------------------
+      // 競合解決フェーズ
       const attendingExpMap = {};
       stage.fixed.forEach((_, pIdx) => {
         attendingExpMap[pIdx] = [...initialAttendingExpMap[pIdx]];
@@ -1159,7 +1169,6 @@
         let reasonHtml = "";
         let percentText = "";
 
-        // 判定 logic: soloMultiPosMember
         const soloMultiMember = Object.keys(soloMultiPosMembers).find(m => soloMultiPosMembers[m].includes(pIdx));
 
         if (soloMultiMember) {
@@ -1182,27 +1191,40 @@
             percentText = `${soloMultiMember} ${pct}%`;
 
           } else {
+            /* 【要件③⑤対応】複数パターン時の個別%削除＆一括表示＆余分な改行の最適化 */
             badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
             const lowPct = Math.round((otherCount / totalCount) * 100);
 
             let patternCount = 1 + duplicatePosGroups.length;
-            reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。他の出演メンバーのポジションの兼ね合いから、次の${patternCount}つのパターンが考えられる。<br><br>`;
 
-            reasonHtml += `① ${soloMultiMember}は${stage.fixed[primaryPIdx]}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${stage.fixed[primaryPIdx]}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${stage.fixed[primaryPIdx]}ポジでの出演が${primaryCount}回、${fixedMember}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。<br>`;
-            reasonHtml += `<span class="font-bold text-slate-800">${soloMultiMember} ${lowPct}%</span><br><br>`;
+            if (patternCount === 1) {
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。${soloMultiMember}は${stage.fixed[primaryPIdx]}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${stage.fixed[primaryPIdx]}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${stage.fixed[primaryPIdx]}ポジでの出演が${primaryCount}回、${fixedMember}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。`;
+              percentText = `${soloMultiMember} ${lowPct}%`;
+            } else {
+              let patterns = [];
+              patterns.push(`① ${soloMultiMember}は${stage.fixed[primaryPIdx]}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${stage.fixed[primaryPIdx]}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${stage.fixed[primaryPIdx]}ポジでの出演が${primaryCount}回、${fixedMember}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。`);
 
-            let pIdxCount = 2;
-            duplicatePosGroups.forEach(grp => {
-              const dupText = formatMemberListText(grp.members);
-              reasonHtml += `${getCircleNum(pIdxCount)} 他の出演メンバーのポジションの兼ね合いから、${grp.posName}でポジション被りとなる${dupText}のどちらかが${grp.posName}、どちらかが${fixedMember}ポジで出演する可能性。<br>`;
+              let pIdxCount = 2;
+              duplicatePosGroups.forEach(grp => {
+                const dupText = formatMemberListText(grp.members);
+                patterns.push(`${getCircleNum(pIdxCount)} 他の出演メンバーのポジションの兼ね合いから、${grp.posName}でポジション被りとなる${dupText}のどちらかが${grp.posName}、どちらかが${fixedMember}ポジで出演する可能性。`);
+                pIdxCount++;
+              });
 
-              const grpPct = 25;
-              const grpPctStr = grp.members.map(m => `${m} ${grpPct}%`).join('　');
-              reasonHtml += `<span class="font-bold text-slate-800">${grpPctStr}</span><br><br>`;
-              pIdxCount++;
-            });
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。他の出演メンバーのポジションの兼ね合いから、次の${patternCount}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
 
-            percentText = "";
+              // 【要件④⑤対応】全員の%を入力メンバー順にソートして一括生成
+              let pctMap = {};
+              pctMap[soloMultiMember] = lowPct;
+              duplicatePosGroups.forEach(grp => {
+                const grpPct = 25;
+                grp.members.forEach(m => { pctMap[m] = grpPct; });
+              });
+
+              const allMembersInvolved = Object.keys(pctMap);
+              const sortedMembers = sortByInputOrder(allMembersInvolved, inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            }
           }
 
         } else if (expAttending.length === 0) {
@@ -1216,25 +1238,49 @@
 
           const totalPatterns = candidateGroups.length;
 
-          if (totalPatterns > 0) {
-            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>`;
-
+          if (totalPatterns === 1) {
+            /* 【要件③対応】パターンが1つだけの時の文章を簡潔化 */
+            const cand = candidateGroups[0];
             let allCandidates = [];
+
+            if (cand.type === 'group') {
+              reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他のメンバーのポジションの兼ね合いから、どちらかが${fixedMember}ポジ、${cand.posName}で出演すると予想。`;
+              allCandidates.push(...cand.members);
+            } else {
+              reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。この日の「${stageName}」公演で初日を迎える${cand.name}が${fixedMember}ポジで出演すると予想。`;
+              allCandidates.push(cand.name);
+            }
+
+            const uniqCandidates = Array.from(new Set(allCandidates));
+            /* 【要件④対応】貼られた出演メンバー順にソート */
+            const sortedCandidates = sortByInputOrder(uniqCandidates, inputMemberList);
+            const equalPct = Math.floor(100 / sortedCandidates.length);
+            percentText = sortedCandidates.map(m => `${m} ${equalPct}%`).join('　');
+
+          } else if (totalPatterns > 1) {
+            let patterns = [];
+            let allCandidates = [];
+
             candidateGroups.forEach((cand, idx) => {
               const circleNumber = getCircleNum(idx + 1);
               if (cand.type === 'group') {
                 const memText = formatMemberListText(cand.members);
-                reasonHtml += `${circleNumber} ${cand.posName}でポジション被りとなる${memText}のどちらかが${fixedMember}ポジ、どちらかが${cand.posName}で出演する可能性。<br><br>`;
+                patterns.push(`${circleNumber} ${cand.posName}でポジション被りとなる${memText}のどちらかが${fixedMember}ポジ、どちらかが${cand.posName}で出演する可能性。`);
                 allCandidates.push(...cand.members);
               } else {
-                reasonHtml += `${circleNumber} この日の「${stageName}」公演で初日を迎える${cand.name}が${fixedMember}ポジで出演する可能性。<br><br>`;
+                patterns.push(`${circleNumber} この日の「${stageName}」公演で初日を迎える${cand.name}が${fixedMember}ポジで出演する可能性。`);
                 allCandidates.push(cand.name);
               }
             });
 
+            /* 余分な空行を出さないよう配列のjoinで結合 */
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+
             const uniqCandidates = Array.from(new Set(allCandidates));
-            const equalPct = Math.floor(100 / uniqCandidates.length);
-            percentText = uniqCandidates.map(m => `${m} ${equalPct}%`).join('　');
+            /* 【要件④対応】貼られた出演メンバー順にソート */
+            const sortedCandidates = sortByInputOrder(uniqCandidates, inputMemberList);
+            const equalPct = Math.floor(100 / sortedCandidates.length);
+            percentText = sortedCandidates.map(m => `${m} ${equalPct}%`).join('　');
 
           } else {
             reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。`;
@@ -1273,9 +1319,11 @@
             }
           } else {
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
-            const memText = formatMemberListText(expAttending);
-            const pct = Math.floor(100 / expAttending.length);
-            percentText = expAttending.map(m => `${m} ${pct}%`).join('　');
+            /* 【要件④対応】貼られた出演メンバー順にソート */
+            const sortedExpAttending = sortByInputOrder(expAttending, inputMemberList);
+            const memText = formatMemberListText(sortedExpAttending);
+            const pct = Math.floor(100 / sortedExpAttending.length);
+            percentText = sortedExpAttending.map(m => `${m} ${pct}%`).join('　');
 
             reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。他のメンバーのポジションの兼ね合いから、どちらかが${fixedMember}ポジで出演すると予想。`;
           }
@@ -1435,7 +1483,9 @@
             posTextArray.push(`${pName} : ${pCount}回`);
           });
         }
-        const subPosText = posTextArray.length > 0 ? posTextArray.join('　/　') : '';
+        
+        /* 【要件②対応】 区切り文字の「 / 」を取り除き、全角スペース区切りに変更 */
+        const subPosText = posTextArray.length > 0 ? posTextArray.join('　') : '';
 
         li.innerHTML = `
           <div class="flex justify-between items-center">
