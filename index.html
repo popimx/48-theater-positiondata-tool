@@ -88,7 +88,7 @@
                   <i class="fa-solid fa-list mr-1"></i> リスト
                 </button>
                 <button id="viewGridBtn" onclick="toggleCalendarView('grid')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
-                  <i class="fa-solid fa-calendar-grid mr-1"></i> 月間
+                  <i class="fa-solid fa-table-cells mr-1"></i> 月間
                 </button>
               </div>
 
@@ -1424,7 +1424,7 @@
           }
 
         } else {
-                   // 通常の経験者ありポジション
+          // 通常の経験者ありポジション
           if (expAttending.length === 1) {
             const assignedMember = expAttending[0];
             const isOriginal = (assignedMember === fixedMember);
@@ -1436,7 +1436,6 @@
             if (initialCandidates.length > 1) {
               const removedMembers = initialCandidates.filter(m => m !== assignedMember);
               
-              // 理由テキスト（「～の可能性が高いと予想されること」などの接続部）の生成
               const removedReasons = removedMembers.map(m => {
                 const info = memberAssignedToPos[m];
                 return info ? `${m}が${info.posName}で出演する可能性` : `${m}が他ポジションで出演する可能性`;
@@ -1444,10 +1443,8 @@
 
               let removedText = "";
               if (removedReasons.length >= 2) {
-                // 3人以上の経験者がいる場合（取り除かれたメンバーが2人以上）：最後の要素手前まで「、」、最後は「が高いと予想されるため」に接続
                 removedText = removedReasons.join('、') + 'が高いと予想されるため';
               } else {
-                // 2人の経験者がいる場合（取り除かれたメンバーが1人）：従来通り「が高いと予想されること、」で接続
                 removedText = removedReasons[0] + 'が高いと予想されること';
               }
 
@@ -1463,7 +1460,9 @@
                 reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
               }
             }
-      
+          }
+        }
+
         const card = document.createElement('div');
         card.className = "bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2";
         card.innerHTML = `
@@ -1519,7 +1518,6 @@
         };
         suggestBox.appendChild(div);
       });
-      suggestBox.classList.add('hidden');
       suggestBox.classList.remove('hidden');
     }
 
@@ -1539,7 +1537,7 @@
     }
 
     function formatHistoryStageTitle(item) {
-      const baseName = item.baseStageName;
+      const baseName = escapeHtml(item.baseStageName);
       const sub = (item.subTitle || "").trim();
       const rawTitle = (item.displayTitle || item.title || "").trim();
 
@@ -1618,7 +1616,7 @@
 
         li.innerHTML = `
           <div class="flex justify-between items-center">
-            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600 hover:underline" onclick="selectStage('${title}')">「${escapeHtml(title)}」公演</span> 
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600 hover:underline" onclick="selectStage('${escapeHtml(title)}')">「${escapeHtml(title)}」公演</span> 
             <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded">${count}回</span>
           </div>
           ${subPosText ? `<div class="text-[11px] text-slate-500 font-medium pl-1">${escapeHtml(subPosText)}</div>` : ''}
