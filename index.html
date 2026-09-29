@@ -1278,7 +1278,7 @@
 
           } else {
             // 従ポジション（兼務ポジの低い方のポジ）
-            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
+            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ${fixedMember}ポジで初出演</span>`;
             const lowPct = Math.round((otherCount / totalCount) * 100);
 
             let patternItems = [];
@@ -1329,7 +1329,7 @@
                 if (item.type === 'soloMulti') {
                   patterns.push(`${circle} ${soloMultiMember}は${item.primaryPos}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${item.primaryPos}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${item.primaryPos}ポジでの出演が${item.primaryCount}回、${fixedMember}ポジでの出演が${item.otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。`);
                 } else if (item.type === 'duplicate') {
-                  patterns.push(`${circle} 他の出演メンバーのポジションの兼ね合いから、${item.posName}でポジション被りとなる${item.memText}のどちらかが${item.posName}、どちらかが${fixedMember}ポジで出演する可能性。`);
+                  patterns.push(`${circle} ${item.posName}でポジション被りとなる${item.memText}のどちらかが${item.posName}、どちらかが${fixedMember}ポジで出演する可能性。`);
                 } else if (item.type === 'newMembers') {
                   if (item.isSingle) {
                     patterns.push(`${circle} この日の「${stageName}」公演で初日を迎える${item.memText}が${fixedMember}ポジに出演する可能性。`);
@@ -1353,7 +1353,7 @@
 
         } else if (expAttending.length === 0) {
           // 経験者不在の空きポジション
-          badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
+          badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ${fixedMember}ポジで初出演</span>`;
 
           const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
 
@@ -1441,12 +1441,7 @@
                 return info ? `${m}が${info.posName}で出演する可能性` : `${m}が他ポジションで出演する可能性`;
               });
 
-              let removedText = "";
-              if (removedReasons.length >= 2) {
-                removedText = removedReasons.join('、') + 'が高いと予想されるため';
-              } else {
-                removedText = removedReasons[0] + 'が高いと予想されること';
-              }
+              let removedText = removedReasons.join('、') + 'が高いと予想されるため';
 
               if (isOriginal) {
                 reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
