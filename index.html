@@ -21,29 +21,29 @@
     }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .member-first { color: #db2777; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
-    .member-first:hover { opacity: 0.7; }
-    .member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
-    .member-under:hover { opacity: 0.7; }
-    /* カレンダーグリッド用スタイル */
-    .cal-grid {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      gap: 2px;
-      background-color: #e2e8f0;
-      border: 1px solid #e2e8f0;
-      border-radius: 0.5rem;
-      overflow: hidden;
-    }
-    .cal-cell {
-      background-color: #ffffff;
-      min-height: 70px;
-      padding: 4px;
-      display: flex;
-      flex-direction: column;
-    }
-    .cal-cell.other-month { background-color: #f8fafc; color: #94a3b8; }
-    .cal-cell.today { background-color: #fdf2f8; }
+.member-first { color: #db2777; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
+.member-first:hover { opacity: 0.7; }
+.member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
+.member-under:hover { opacity: 0.7; }
+/* カレンダーグリッド用スタイル */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  background-color: #e2e8f0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.cal-cell {
+  background-color: #ffffff;
+  min-height: 70px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+.cal-cell.other-month { background-color: #f8fafc; color: #94a3b8; }
+.cal-cell.today { background-color: #fdf2f8; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans">
@@ -54,153 +54,147 @@
         <i class="fa-solid fa-masks-theater"></i> 劇場公演 データサイト
       </h1>
     </div>
-    <!-- 検索バー ＆ サジェスト -->
-    <div class="max-w-4xl mx-auto mt-3 relative">
-      <div class="relative">
-        <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名で検索" 
-               class="w-full pl-9 pr-4 py-2 bg-white text-slate-800 text-sm rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-pink-300">
-        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
-      </div>
-      <div id="searchSuggest" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-100 text-sm"></div>
-    </div>
+<!-- 検索バー ＆ サジェスト -->
+<div class="max-w-4xl mx-auto mt-3 relative">
+  <div class="relative">
+    <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名で検索" 
+           class="w-full pl-9 pr-4 py-2 bg-white text-slate-800 text-sm rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-pink-300">
+    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+  </div>
+  <div id="searchSuggest" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-100 text-sm"></div>
+</div>
   </header>
-
   <!-- Main Content Container -->
   <main class="max-w-4xl mx-auto p-4">
-    <!-- 通常タブコンテンツ -->
-    <div id="mainTabsContainer">
-      <!-- Tab 1: カレンダー -->
-      <section id="tab-calendar" class="tab-content">
-        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
-              <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
-            </h2>
-            <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-              <!-- ビュー切り替えボタン -->
-              <div class="bg-slate-100 p-0.5 rounded-lg border border-slate-200 flex text-[10px]">
-                <button id="viewListBtn" onclick="toggleCalendarView('list')" class="px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm">
-                  <i class="fa-solid fa-list mr-1"></i> リスト
-                </button>
-                <button id="viewGridBtn" onclick="toggleCalendarView('grid')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
-                  <i class="fa-solid fa-table-cells mr-1"></i> 月間
-                </button>
-              </div>
-              <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
-                <button onclick="changeMonth(-1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-left"></i></button>
-                <select id="yearSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
-                <select id="monthSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
-                <button onclick="changeMonth(1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
-          <!-- 劇場選択タブ -->
-          <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
-            <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
-            <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
-            <button onclick="filterSchedule('SKE48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">SKE48劇場</button>
-            <button onclick="filterSchedule('NMB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NMB48劇場</button>
-            <button onclick="filterSchedule('HKT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">HKT48劇場</button>
-            <button onclick="filterSchedule('NGT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NGT48劇場</button>
-            <button onclick="filterSchedule('STU48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">STU48劇場</button>
-          </div>
-          
-          <div id="calendarList" class="space-y-3"></div>
-          <div id="calendarGrid" class="hidden"></div>
-        </div>
-      </section>
-
-      <!-- Tab 2: 一覧表 -->
-      <section id="tab-positions" class="tab-content hidden space-y-4">
-        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-          <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
-          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
-            <table class="w-full text-left text-sm border-collapse min-w-max">
-              <thead><tr id="positionTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
-              <tbody id="positionTableBody" class="divide-y divide-slate-100"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tab 3: 日別表 -->
-      <section id="tab-stage-daily" class="tab-content hidden space-y-4">
-        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-          <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-table-cells text-pink-500"></i> 日別表
-          </h2>
-          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
-            <table class="w-full text-left text-sm border-collapse min-w-max">
-              <thead><tr id="dailyTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
-              <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tab 4: 予想 -->
-      <section id="tab-forecast" class="tab-content hidden space-y-4">
-        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
-          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i> ポジション予想
-          </h2>
-          <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または「・」区切りで入力してください。</label>
-            <textarea id="forecastInputText" rows="3" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう・鈴木くるみ・千葉恵里・永野芹佳・水島美結・向井地美音・村山彩希・山内瑞葵・山﨑空・秋山由奈・八木愛月..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
-            <button onclick="runForecast()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow transition">
-              予想を実行する
+<!-- 通常タブコンテンツ -->
+<div id="mainTabsContainer">
+  <!-- Tab 1: カレンダー -->
+  <section id="tab-calendar" class="tab-content">
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
+          <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
+        </h2>
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+          <!-- ビュー切り替えボタン -->
+          <div class="bg-slate-100 p-0.5 rounded-lg border border-slate-200 flex text-[10px]">
+            <button id="viewListBtn" onclick="toggleCalendarView('list')" class="px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm">
+              <i class="fa-solid fa-list mr-1"></i> リスト
+            </button>
+            <button id="viewGridBtn" onclick="toggleCalendarView('grid')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
+              <i class="fa-solid fa-table-cells mr-1"></i> 月間
             </button>
           </div>
-          <!-- 予想結果表示エリア -->
-          <div id="forecastResultArea" class="hidden space-y-4 pt-2 border-t border-slate-100">
-            <div>
-              <h3 class="text-xs font-bold text-slate-500 mb-2">【全メンバーの一覧（出演マーク付き）】</h3>
-              <div id="forecastAllMembersGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
-            </div>
-            <div>
-              <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジションの割り当て ＆ 予想理由】</h3>
-              <div id="forecastPositionsList" class="space-y-3"></div>
-            </div>
+          <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
+            <button onclick="changeMonth(-1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-left"></i></button>
+            <select id="yearSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
+            <select id="monthSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
+            <button onclick="changeMonth(1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
         </div>
-      </section>
+      </div>
+      <!-- 劇場選択タブ -->
+      <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
+        <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
+        <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
+        <button onclick="filterSchedule('SKE48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">SKE48劇場</button>
+        <button onclick="filterSchedule('NMB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NMB48劇場</button>
+        <button onclick="filterSchedule('HKT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">HKT48劇場</button>
+        <button onclick="filterSchedule('NGT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NGT48劇場</button>
+        <button onclick="filterSchedule('STU48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">STU48劇場</button>
+      </div>
+      
+      <div id="calendarList" class="space-y-3"></div>
+      <div id="calendarGrid" class="hidden"></div>
     </div>
-
-    <!-- メンバー詳細コンテンツ -->
-    <section id="memberDetailContainer" class="hidden space-y-4">
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-          <div class="avatar-box bg-pink-600 text-white text-base font-bold shadow">
-            <i class="fa-solid fa-user"></i>
-          </div>
-          <div>
-            <h2 id="detailMemberName" class="text-xl font-bold text-slate-800">メンバー名</h2>
-            <p class="text-xs text-pink-600 font-semibold">出演データ統計</p>
-          </div>
-        </div>
-        <button onclick="goHome()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-bold border border-slate-200">
-          <i class="fa-solid fa-xmark mr-1"></i> 閉じる
+  </section>
+  <!-- Tab 2: 一覧表 -->
+  <section id="tab-positions" class="tab-content hidden space-y-4">
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+      <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
+      <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+        <table class="w-full text-left text-sm border-collapse min-w-max">
+          <thead><tr id="positionTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
+          <tbody id="positionTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <!-- Tab 3: 日別表 -->
+  <section id="tab-stage-daily" class="tab-content hidden space-y-4">
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+      <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-table-cells text-pink-500"></i> 日別表
+      </h2>
+      <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+        <table class="w-full text-left text-sm border-collapse min-w-max">
+          <thead><tr id="dailyTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
+          <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <!-- Tab 4: 予想 -->
+  <section id="tab-forecast" class="tab-content hidden space-y-4">
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
+      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i> ポジション予想
+      </h2>
+      <div class="space-y-2">
+        <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または「・」区切りで入力してください。</label>
+        <textarea id="forecastInputText" rows="3" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう・鈴木くるみ・千葉恵里・永野芹佳・水島美結・向井地美音・村山彩希・山内瑞葵・山﨑空・秋山由奈・八木愛月..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
+        <button onclick="runForecast()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow transition">
+          予想を実行する
         </button>
       </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div class="flex items-center justify-between border-b pb-2 mb-3">
-          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-chart-pie text-pink-500"></i> 出演統計
-          </h3>
-          <span id="totalPerfBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-3 py-1 rounded-full">総出演回数: 0回</span>
+      <!-- 予想結果表示エリア -->
+      <div id="forecastResultArea" class="hidden space-y-4 pt-2 border-t border-slate-100">
+        <div>
+          <h3 class="text-xs font-bold text-slate-500 mb-2">【全メンバーの一覧（出演マーク付き）】</h3>
+          <div id="forecastAllMembersGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
         </div>
-        <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
-        <ul id="showsBreakdownList" class="space-y-1.5 text-xs"></ul>
+        <div>
+          <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジションの割り当て ＆ 予想理由】</h3>
+          <div id="forecastPositionsList" class="space-y-3"></div>
+        </div>
       </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴
-        </h3>
-        <div id="memberShowsHistoryList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+    </div>
+  </section>
+</div>
+<!-- メンバー詳細コンテンツ -->
+<section id="memberDetailContainer" class="hidden space-y-4">
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="avatar-box bg-pink-600 text-white text-base font-bold shadow">
+        <i class="fa-solid fa-user"></i>
       </div>
-    </section>
+      <div>
+        <h2 id="detailMemberName" class="text-xl font-bold text-slate-800">メンバー名</h2>
+        <p class="text-xs text-pink-600 font-semibold">出演データ統計</p>
+      </div>
+    </div>
+    <button onclick="goHome()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-bold border border-slate-200">
+      <i class="fa-solid fa-xmark mr-1"></i> 閉じる
+    </button>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+    <div class="flex items-center justify-between border-b pb-2 mb-3">
+      <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-chart-pie text-pink-500"></i> 出演統計
+      </h3>
+      <span id="totalPerfBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-3 py-1 rounded-full">総出演回数: 0回</span>
+    </div>
+    <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
+    <ul id="showsBreakdownList" class="space-y-1.5 text-xs"></ul>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+    <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴
+    </h3>
+    <div id="memberShowsHistoryList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+  </div>
+</section>
   </main>
-
   <!-- スケジュール詳細ポップアップ モーダル -->
   <div id="scheduleModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl max-w-lg w-full p-4 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -214,24 +208,23 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <div id="modalMembersArea" class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2">
-        <div class="font-bold text-slate-700 flex justify-between items-center">
-          <span>【出演メンバー / ポジション】</span>
-          <span id="modalPosCount" class="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200"></span>
-        </div>
-        <div id="modalMemberList" class="grid grid-cols-2 gap-1.5 pt-1"></div>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button id="modalBtnGoStage" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition text-center">
-          演目詳細を開く
-        </button>
-        <button onclick="closeScheduleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-3 rounded-lg text-xs transition">
-          閉じる
-        </button>
-      </div>
+  <div id="modalMembersArea" class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2">
+    <div class="font-bold text-slate-700 flex justify-between items-center">
+      <span>【出演メンバー / ポジション】</span>
+      <span id="modalPosCount" class="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200"></span>
     </div>
+    <div id="modalMemberList" class="grid grid-cols-2 gap-1.5 pt-1"></div>
   </div>
-
+  <div class="flex gap-2 pt-2">
+    <button id="modalBtnGoStage" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition text-center">
+      演目詳細を開く
+    </button>
+    <button onclick="closeScheduleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-3 rounded-lg text-xs transition">
+      閉じる
+    </button>
+  </div>
+</div>
+  </div>
   <!-- Bottom Navigation -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
     <div id="navNormal" class="max-w-4xl mx-auto flex justify-around">
@@ -239,27 +232,26 @@
         <i class="fa-regular fa-calendar-days text-base block mb-0.5"></i> カレンダー
       </button>
     </div>
-    <div id="navStageDetail" class="hidden max-w-4xl mx-auto flex justify-around">
-      <button onclick="switchTab('positions')" id="nav-positions" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-        <i class="fa-solid fa-users-rectangle text-base block mb-0.5"></i> 一覧表
-      </button>
-      <button onclick="switchTab('stage-daily')" id="nav-stage-daily" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-        <i class="fa-solid fa-table-cells text-base block mb-0.5"></i> 日別表
-      </button>
-      <button onclick="switchTab('forecast')" id="nav-forecast" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-        <i class="fa-solid fa-wand-magic-sparkles text-base block mb-0.5"></i> 予想
-      </button>
-      <button onclick="goHome()" id="nav-back" class="flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-        <i class="fa-solid fa-rotate-left text-base block mb-0.5"></i> 戻る
-      </button>
-    </div>
-    <div id="navMemberSearching" class="hidden max-w-4xl mx-auto flex justify-center py-3 bg-pink-50 text-pink-600 font-bold text-sm items-center gap-2 border-t-2 border-pink-500">
-      <i class="fa-solid fa-user-gear"></i>
-      <span>メンバー詳細表示中</span>
-      <button onclick="goHome()" class="text-xs bg-pink-600 text-white px-3 py-1 rounded ml-2 shadow-sm">戻る</button>
-    </div>
+<div id="navStageDetail" class="hidden max-w-4xl mx-auto flex justify-around">
+  <button onclick="switchTab('positions')" id="nav-positions" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+    <i class="fa-solid fa-users-rectangle text-base block mb-0.5"></i> 一覧表
+  </button>
+  <button onclick="switchTab('stage-daily')" id="nav-stage-daily" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+    <i class="fa-solid fa-table-cells text-base block mb-0.5"></i> 日別表
+  </button>
+  <button onclick="switchTab('forecast')" id="nav-forecast" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+    <i class="fa-solid fa-wand-magic-sparkles text-base block mb-0.5"></i> 予想
+  </button>
+  <button onclick="goHome()" id="nav-back" class="flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+    <i class="fa-solid fa-rotate-left text-base block mb-0.5"></i> 戻る
+  </button>
+</div>
+<div id="navMemberSearching" class="hidden max-w-4xl mx-auto flex justify-center py-3 bg-pink-50 text-pink-600 font-bold text-sm items-center gap-2 border-t-2 border-pink-500">
+  <i class="fa-solid fa-user-gear"></i>
+  <span>メンバー詳細表示中</span>
+  <button onclick="goHome()" class="text-xs bg-pink-600 text-white px-3 py-1 rounded ml-2 shadow-sm">戻る</button>
+</div>
   </nav>
-
   <!-- JavaScript Logic -->
   <script>
     const MASTER_MEMBER_ORDER = [
@@ -306,7 +298,6 @@
         "positions": ["福岡聖菜", "佐藤綺星", "成田香姫奈", "迫由芽実", "太田有紀", "山内瑞葵", "黒須遥香", "工藤華純"]
       }
     ];
-
     document.addEventListener("DOMContentLoaded", async () => {
       initYearMonthDropdowns();
       await loadAllYearsScheduleData(); 
@@ -317,17 +308,6 @@
         if (suggestBox && !suggestBox.contains(e.target) && e.target !== searchInput) suggestBox.classList.add('hidden');
       });
     });
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
     function initYearMonthDropdowns() {
       const yearSelect = document.getElementById("yearSelect");
       const monthSelect = document.getElementById("monthSelect");
@@ -344,7 +324,6 @@
       const dStr = now.getDate().toString().padStart(2, '0');
       todayString = `${yStr}/${mStr}/${dStr}`;
     }
-
     function changeMonth(diff) {
       const yearSelect = document.getElementById("yearSelect");
       const monthSelect = document.getElementById("monthSelect");
@@ -357,7 +336,6 @@
       monthSelect.value = (m < 10 ? "0" : "") + m;
       onDateChange();
     }
-
     async function fetchScheduleJson(groupName, year) {
       const fileName = `schedule_${groupName.toLowerCase()}_${year}.json`;
       try {
@@ -368,7 +346,6 @@
         return year == 2026 ? FALLBACK_SCHEDULE_2026 : [];
       }
     }
-
     async function loadAllYearsScheduleData() {
       let allList = [];
       const currentYear = new Date().getFullYear();
@@ -387,7 +364,6 @@
       ALL_SCHEDULE_DATA = allList;
       generateGlobalStageDatabase(); 
     }
-
     function normalizeScheduleData(rawData) {
       return rawData.map(item => {
         let rawDateStr = item.date || "";
@@ -431,7 +407,6 @@
         };
       });
     }
-
     function generateGlobalStageDatabase() {
       GLOBAL_STAGE_DATABASE = {};
       ALL_SCHEDULE_DATA.forEach(item => {
@@ -463,7 +438,6 @@
         stage.allMembers = MASTER_MEMBER_ORDER.filter(m => rawMembersSet.has(m) || MASTER_MEMBER_ORDER.includes(m));
       });
     }
-
     function generateStageDatabase() {
       STAGE_DATABASE = {};
       SCHEDULE_DATA.forEach(item => {
@@ -501,7 +475,6 @@
         stage.allMembers = MASTER_MEMBER_ORDER.filter(m => rawMembersSet.has(m) || MASTER_MEMBER_ORDER.includes(m));
       });
     }
-
     function getAllUniqueMembers() {
       const set = new Set(MASTER_MEMBER_ORDER);
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
@@ -515,7 +488,6 @@
       });
       return Array.from(set);
     }
-
     async function onDateChange() {
       const year = document.getElementById("yearSelect").value;
       const rawData = await fetchScheduleJson("akb48", year);
@@ -523,18 +495,6 @@
       generateStageDatabase();
       renderCalendar();
     }
-
-    function filterSchedule(group, btn) {
-      currentScheduleFilter = group;
-      document.querySelectorAll('.filter-btn').forEach(b => {
-        b.className = "filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200";
-      });
-      if (btn) {
-        btn.className = "filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap";
-      }
-      renderCalendar();
-    }
-
     function toggleCalendarView(mode) {
       calendarViewMode = mode;
       const listBtn = document.getElementById('viewListBtn');
@@ -554,7 +514,6 @@
       }
       renderCalendar();
     }
-
     function goHome() {
       selectedMemberName = null;
       document.getElementById('mainTabsContainer').classList.remove('hidden');
@@ -566,7 +525,6 @@
       
       switchTab('calendar');
     }
-
     function selectStage(stageKey) {
       currentStageKey = stageKey;
       let stage = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
@@ -581,7 +539,6 @@
       renderDailyTable();
       switchTab('positions');
     }
-
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById(`tab-${tabName}`).classList.remove('hidden');
@@ -598,7 +555,6 @@
         }
       }
     }
-
     function getFilteredSchedules() {
       const year = document.getElementById("yearSelect").value;
       const month = document.getElementById("monthSelect").value;
@@ -610,7 +566,6 @@
         return item.theater && item.theater.includes(currentScheduleFilter);
       });
     }
-
     function renderCalendar() {
       if (calendarViewMode === 'grid') {
         renderCalendarGrid();
@@ -618,7 +573,6 @@
         renderCalendarList();
       }
     }
-
     function renderCalendarList() {
       const listContainer = document.getElementById('calendarList');
       listContainer.innerHTML = '';
@@ -670,7 +624,6 @@
         listContainer.appendChild(card);
       });
     }
-
     function renderCalendarGrid() {
       const gridContainer = document.getElementById('calendarGrid');
       gridContainer.innerHTML = '';
@@ -725,12 +678,10 @@
       html += `</div>`;
       gridContainer.innerHTML = html;
     }
-
     function openScheduleModalById(id) {
       const item = SCHEDULE_DATA.find(s => s.id === id);
       if (item) openScheduleModal(item);
     }
-
     function openScheduleModal(item) {
       document.getElementById('modalTheater').innerText = item.theater || 'AKB48劇場';
       document.getElementById('modalTitle').innerText = item.displayTitle + (item.subTitle ? ` ${item.subTitle}` : '');
@@ -773,11 +724,9 @@
       };
       document.getElementById('scheduleModal').classList.remove('hidden');
     }
-
     function closeScheduleModal() {
       document.getElementById('scheduleModal').classList.add('hidden');
     }
-
     function jumpToSchedule(dateStr, elementId) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
@@ -802,7 +751,6 @@
         }
       }, 200);
     }
-
     function renderPositions() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -858,7 +806,6 @@
         tbody.appendChild(tr);
       });
     }
-
     function formatShortDate(dateStr) {
       if (!dateStr) return "";
       const parts = dateStr.replace(/-/g, '/').split('/');
@@ -870,7 +817,6 @@
       }
       return dateStr;
     }
-
     function renderDailyTable() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       const headerTr = document.getElementById('dailyTableHeader');
@@ -907,7 +853,6 @@
         tbody.appendChild(tr);
       });
     }
-
     function getOrderedExperiencedMembers(pIdx, stageFixed, validShows) {
       const fixedMember = stageFixed[pIdx];
       const result = [];
@@ -929,13 +874,16 @@
       });
       return result;
     }
-
+    /* =========================================================
+       予想理由用：2名の共通別ポジションを検索
+       ========================================================= */
     function findSharedOtherPosition(mem1, mem2, fixedMember, stage, validShows) {
       if (!stage || !Array.isArray(stage.fixed) || !Array.isArray(validShows)) {
         return null;
       }
       const fixedIndex = stage.fixed.indexOf(fixedMember);
       for (let pIdx = 0; pIdx < stage.fixed.length; pIdx++) {
+        // 現在被っているポジション自身は除外
         if (pIdx === fixedIndex) continue;
         let mem1HasPosition = false;
         let mem2HasPosition = false;
@@ -950,8 +898,26 @@
       }
       return null;
     }
-
-    function generateCooccurrenceReason(stageName, pos1, mem1, mem2, pos2, historyData, stage) {
+    /* =========================================================
+       2名の共演実績から配置パターンを集計
+       
+       pos1 = 現在被っているポジション
+       pos2 = 2人が共通して経験している別ポジション
+       
+       現在のデータ構造：
+       - perf.baseStageName
+       - perf.positionsArray
+       - stage.fixed
+       ========================================================= */
+    function generateCooccurrenceReason(
+      stageName,
+      pos1,
+      mem1,
+      mem2,
+      pos2,
+      historyData,
+      stage
+    ) {
       let countA = 0;
       let countB = 0;
       if (Array.isArray(historyData) && stage) {
@@ -959,13 +925,17 @@
         const pos2Index = stage.fixed.indexOf(pos2);
         if (pos1Index !== -1 && pos2Index !== -1) {
           historyData.forEach(perf => {
+            // 同じ演目のみ対象
             if (perf.baseStageName !== stageName) return;
             if (!Array.isArray(perf.positionsArray)) return;
             const mem1Pos = perf.positionsArray[pos1Index];
             const mem2Pos = perf.positionsArray[pos2Index];
+            // A = mem1がpos1、mem2がpos2
             if (mem1Pos === mem1 && mem2Pos === mem2) {
               countA++;
-            } else if (mem2Pos === mem1 && mem1Pos === mem2) {
+            }
+            // B = mem2がpos1、mem1がpos2
+            else if (mem2Pos === mem1 && mem1Pos === mem2) {
               countB++;
             }
           });
@@ -975,6 +945,7 @@
       let higherMem = '';
       let pct1 = 50;
       let pct2 = 50;
+      // 過去共演の割合を計算
       if (totalCooccurrences > 0) {
         pct1 = Math.round((countA / totalCooccurrences) * 100);
         pct2 = 100 - pct1;
@@ -984,19 +955,29 @@
           higherMem = mem2;
         }
       }
-      let reasonText = `この日の「${stageName}」公演は、${pos1}ポジでの出演経験がある${mem1}と${mem2}の出演予定がある。`;
-      reasonText += `${mem1}と${mem2}は${pos1}ポジのほかに${pos2}ポジも覚えており、どちらが${pos1}ポジに入るか${pos2}ポジに入るかは確定できないが、`;
+      let reasonText =
+        `この日の「${stageName}」公演は、${pos1}ポジでの出演経験がある${mem1}と${mem2}の出演予定がある。`;
+      reasonText +=
+        `${mem1}と${mem2}は${pos1}ポジのほかに${pos2}ポジも覚えており、` +
+        `どちらが${pos1}ポジに入るか${pos2}ポジに入るかは確定できないが、`;
       if (totalCooccurrences > 0) {
-        reasonText += `過去に${mem1}と${mem2}が「${stageName}」で共演したときは、${mem1}が${pos1}ポジ・${mem2}が${pos2}ポジで出演したケースが${countA}回、${mem2}が${pos1}ポジ・${mem1}が${pos2}ポジで出演したケースが${countB}回だったため、`;
+        reasonText +=
+          `過去に${mem1}と${mem2}が「${stageName}」で共演したときは、` +
+          `${mem1}が${pos1}ポジ・${mem2}が${pos2}ポジで出演したケースが${countA}回、` +
+          `${mem2}が${pos1}ポジ・${mem1}が${pos2}ポジで出演したケースが${countB}回だったため、`;
         if (higherMem) {
-          reasonText += `今回は${higherMem}が${pos1}ポジに入る可能性が高いと予想。`;
+          reasonText +=
+            `今回は${higherMem}が${pos1}ポジに入る可能性が高いと予想。`;
         } else {
-          reasonText += `五分五分の可能性が高いと予想。`;
+          reasonText +=
+            `五分五分の可能性が高いと予想。`;
         }
       } else {
-        reasonText += `過去に共演したケースがないため予想が難しいが、五分五分の可能性が高いと予想。`;
+        reasonText +=
+          `過去の直接共演実績がないため判断が難しいが、五分五分の可能性が高いと予想。`;
       }
-      const percentText = `${mem1} ${pct1}%　${mem2} ${pct2}%`;
+      const percentText =
+        `${mem1} ${pct1}%　${mem2} ${pct2}%`;
       return {
         reasonHtml: reasonText,
         percentText: percentText,
@@ -1005,14 +986,13 @@
         totalCooccurrences: totalCooccurrences
       };
     }
-
+    /* 汎用整形関数: 不在メンバーリストの整形 */
     function formatAbsenceMemberListText(list) {
       if (!list || list.length === 0) return "";
       if (list.length === 1) return list[0];
       if (list.length === 2) return `${list[0]}や${list[1]}`;
       return `${list[0]}や${list[1]}など`;
     }
-
     function formatAbsencePhrase(fixedMember, absenceExpList) {
       if (!absenceExpList || absenceExpList.length === 0) {
         return `初日メンバーである${fixedMember}の出演予定がない`;
@@ -1020,14 +1000,13 @@
       const expText = formatAbsenceMemberListText(absenceExpList);
       return `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${expText}の出演予定がない`;
     }
-
+    /* 汎用整形関数: 任意の人数に応じたメンバー連名表示 */
     function formatMemberListText(list) {
       if (!list || list.length === 0) return "";
       if (list.length === 1) return list[0];
       if (list.length === 2) return `${list[0]}と${list[1]}`;
       return `${list.slice(0, -1).join('や')}や${list[list.length - 1]}`;
     }
-
     function sortByInputOrder(members, inputMemberList) {
       return [...members].sort((a, b) => {
         let idxA = inputMemberList.indexOf(a);
@@ -1037,12 +1016,10 @@
         return idxA - idxB;
       });
     }
-
     function getCircleNum(num) {
       const circles = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
       return circles[num - 1] || `(${num})`;
     }
-
     function runForecast() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) {
@@ -1063,7 +1040,7 @@
       positionsList.innerHTML = '';
       const stageName = stage.name.replace(/「|」|公演/g, '').trim();
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
-
+      // ① 全メンバー一覧表示
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
@@ -1075,7 +1052,7 @@
         `;
         allMembersGrid.appendChild(div);
       });
-
+      // メンバー別・ポジ別出演回数マッピング作成
       const memberPosCounts = {};
       stage.fixed.forEach((fM, pIdx) => {
         validShows.forEach(s => {
@@ -1087,7 +1064,7 @@
           }
         });
       });
-
+      // 出演メンバーの初期経験ポジマップと不在経験者リストを作成
       const initialAttendingExpMap = {};
       const absenceExpMap = {};
       stage.fixed.forEach((fM, pIdx) => {
@@ -1104,7 +1081,7 @@
           }
         });
       });
-
+      // 複数ポジ兼務で唯一の経験者の検出（汎用Nポジ対応）
       const soloMultiPosMembers = {};
       inputMemberList.forEach(m => {
         const expPIdxs = [];
@@ -1117,7 +1094,7 @@
           soloMultiPosMembers[m] = expPIdxs;
         }
       });
-
+      // 競合解決フェーズ
       const attendingExpMap = {};
       stage.fixed.forEach((_, pIdx) => {
         attendingExpMap[pIdx] = [...initialAttendingExpMap[pIdx]];
@@ -1144,7 +1121,7 @@
           }
         });
       }
-
+      // 他ポジ重複（ポジション被り）メンバーの検出
       const duplicatePosGroups = [];
       stage.fixed.forEach((fM, pIdx) => {
         const expAttending = attendingExpMap[pIdx];
@@ -1156,11 +1133,11 @@
           });
         }
       });
-
+      // 未経験の出演メンバー（初出演）の検出
       const newMembers = inputMemberList.filter(m => {
         return !stage.fixed.some((fM, pIdx) => (initialAttendingExpMap[pIdx] || []).includes(m));
       });
-
+      // 空きポジション（受皿となるポジション）のリスト取得
       const vacantPIdxs = [];
       stage.fixed.forEach((fM, pIdx) => {
         const soloMultiMember = Object.keys(soloMultiPosMembers).find(m => soloMultiPosMembers[m].includes(pIdx));
@@ -1175,7 +1152,7 @@
         }
       });
       const vacantCount = vacantPIdxs.length || 1;
-
+      // 未確定ポジション・メンバーのシナリオシミュレーションによる正確な確率計算
       const unconfirmedPIdxs = [];
       stage.fixed.forEach((_, pIdx) => {
         if (!confirmedAssignments[pIdx]) {
@@ -1184,7 +1161,6 @@
       });
       const assignedMembersSet = new Set(Object.values(confirmedAssignments));
       const unassignedMembers = inputMemberList.filter(m => !assignedMembersSet.has(m));
-
       function getPermutations(arr) {
         if (arr.length <= 1) return [arr];
         const result = [];
@@ -1198,7 +1174,6 @@
         }
         return result;
       }
-
       const validScenarios = [];
       if (unconfirmedPIdxs.length > 0 && unconfirmedPIdxs.length === unassignedMembers.length && unassignedMembers.length <= 8) {
         const perms = getPermutations(unassignedMembers);
@@ -1222,7 +1197,6 @@
           }
         });
       }
-
       const posMemberPcts = {};
       stage.fixed.forEach((_, pIdx) => {
         posMemberPcts[pIdx] = {};
@@ -1239,7 +1213,7 @@
           });
         });
       }
-
+      // ポジションごとの予測カード生成（汎用対応）
       stage.fixed.forEach((fixedMember, pIdx) => {
         const expAttending = attendingExpMap[pIdx];
         const absenceExp = absenceExpMap[pIdx].filter(m => m !== fixedMember);
@@ -1247,9 +1221,9 @@
         let reasonHtml = "";
         let percentText = "";
         const soloMultiMember = Object.keys(soloMultiPosMembers).find(m => soloMultiPosMembers[m].includes(pIdx));
-
         if (soloMultiMember) {
           const allPIdxs = soloMultiPosMembers[soloMultiMember];
+          // 兼務ポジションの中で最も出演回数が多いメインポジションを特定
           const primaryPIdx = allPIdxs.slice().sort((a, b) => (memberPosCounts[soloMultiMember][b] || 0) - (memberPosCounts[soloMultiMember][a] || 0))[0];
           const otherPIdxs = allPIdxs.filter(idx => idx !== primaryPIdx);
           const isPrimary = (pIdx === primaryPIdx);
@@ -1257,7 +1231,6 @@
           const totalCount = allPIdxs.reduce((sum, idx) => sum + (memberPosCounts[soloMultiMember][idx] || 0), 0);
           const currentCount = memberPosCounts[soloMultiMember][pIdx] || 0;
           const countsDetailText = allPIdxs.map(idx => `${stage.fixed[idx]}ポジでの出演が${memberPosCounts[soloMultiMember][idx] || 0}回`).join('、');
-
           if (isPrimary) {
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
             const pct = totalCount > 0 ? Math.round((currentCount / totalCount) * 100) : 100;
@@ -1280,7 +1253,6 @@
               countsDetail: countsDetailText
             });
             pctMap[soloMultiMember] = lowPct;
-
             duplicatePosGroups.forEach(grp => {
               const dupText = formatMemberListText(grp.members);
               patternItems.push({
@@ -1292,7 +1264,6 @@
               const dupPct = Math.round(50 / vacantCount);
               grp.members.forEach(m => { pctMap[m] = dupPct; });
             });
-
             if (newMembers.length > 0) {
               const newMemText = formatMemberListText(newMembers);
               patternItems.push({
@@ -1304,262 +1275,442 @@
               const newPct = Math.round(100 / vacantCount);
               newMembers.forEach(m => { pctMap[m] = newPct; });
             }
-
-            let patternParts = [];
-            patternItems.forEach(item => {
-              if (item.type === 'soloMulti') {
-                patternParts.push(`・${item.member}（${item.primaryPos}メイン）：${item.countsDetail}`);
-              } else if (item.type === 'duplicate') {
-                patternParts.push(`・${item.posName}競合メンバー（${item.memText}）`);
-              } else if (item.type === 'newMembers') {
-                patternParts.push(`・初出演メンバー（${item.memText}）`);
-              }
-            });
-
-            reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジ経験者の出演予定がなく、${soloMultiMember}も${stage.fixed[primaryPIdx]}ポジに入る可能性が高いため、空いた${fixedMember}ポジには以下の候補から割り当てられると予想。<br>${patternParts.join('<br>')}`;
-
-            let pcts = [];
-            Object.keys(pctMap).forEach(m => {
-              pcts.push(`${m} ${pctMap[m]}%`);
-            });
-            percentText = pcts.join('　');
-          }
-        } else if (expAttending.length === 1) {
-          const confirmedMember = expAttending[0];
-          if (confirmedMember === fixedMember) {
-            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ 本人出演</span>`;
-            reasonHtml = `初日メンバーである${fixedMember}が出演予定のため、本人が${fixedMember}ポジで出演すると予想。`;
-            percentText = `${confirmedMember} 100%`;
-          } else {
-            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
-            reasonHtml = `${formatAbsencePhrase(fixedMember, absenceExp)}。${confirmedMember}は${fixedMember}ポジでの出演経験があるため、${confirmedMember}が${fixedMember}ポジで出演すると予想。`;
-            percentText = `${confirmedMember} 100%`;
-          }
-        } else if (expAttending.length > 1) {
-          badgeHtml = `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">ℹ 複数候補（ポジション競合）</span>`;
-          if (expAttending.length === 2) {
-            const mem1 = expAttending[0];
-            const mem2 = expAttending[1];
-            const sharedPos = findSharedOtherPosition(mem1, mem2, fixedMember, stage, validShows);
-            if (sharedPos) {
-              const coRes = generateCooccurrenceReason(stageName, fixedMember, mem1, mem2, sharedPos, ALL_SCHEDULE_DATA, stage);
-              reasonHtml = coRes.reasonHtml;
-              percentText = coRes.percentText;
+            const totalPatterns = patternItems.length;
+            if (totalPatterns === 1) {
+              const item = patternItems[0];
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。${soloMultiMember}は${item.primaryPos}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}がどのポジションで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${item.countsDetail}のため、${fixedMember}ポジで出演する可能性は低いと予想。`;
             } else {
-              const pct1 = posMemberPcts[pIdx][mem1] || 50;
-              const pct2 = posMemberPcts[pIdx][mem2] || 50;
-              reasonHtml = `${formatAbsencePhrase(fixedMember, absenceExp)}。${fixedMember}ポジでの出演経験がある${mem1}と${mem2}の双方が出演予定のため、ポジションの競合が発生。過去の出演データからポジションを予想。`;
-              percentText = `${mem1} ${pct1}%　${mem2} ${pct2}%`;
+              let patterns = [];
+              patternItems.forEach((item, idx) => {
+                const circle = getCircleNum(idx + 1);
+                if (item.type === 'soloMulti') {
+                  patterns.push(`${circle} ${soloMultiMember}は${item.primaryPos}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}がどのポジションで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${item.countsDetail}のため、${fixedMember}ポジで出演する可能性は低いと予想。`);
+                } else if (item.type === 'duplicate') {
+                  const subjectStr = item.members.length === 2 ? "どちらか" : "いずれか";
+                  patterns.push(`${circle} ${item.posName}でポジション被りとなる${item.memText}の${subjectStr}が${item.posName}、${subjectStr}が${fixedMember}ポジで出演する可能性。`);
+                } else if (item.type === 'newMembers') {
+                  if (item.isSingle) {
+                    patterns.push(`${circle} この日の「${stageName}」公演で初日を迎える${item.memText}が${fixedMember}ポジに出演する可能性。`);
+                  } else {
+                    patterns.push(`${circle} この日の「${stageName}」公演で初日を迎える${item.memText}の誰かが${fixedMember}ポジに出演する可能性。`);
+                  }
+                }
+              });
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+            }
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            }
+          }
+        } else if (expAttending.length === 0) {
+          // 経験者不在の空きポジション
+          badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ${fixedMember}ポジで初出演</span>`;
+          const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
+          let patternItems = [];
+          let pctMap = {};
+          duplicatePosGroups.forEach(grp => {
+            const memText = formatMemberListText(grp.members);
+            patternItems.push({
+              type: 'duplicate',
+              posName: grp.posName,
+              memText: memText,
+              members: grp.members
+            });
+            const dupPct = Math.round(50 / vacantCount);
+            grp.members.forEach(m => { pctMap[m] = dupPct; });
+          });
+          newMembers.forEach(m => {
+            patternItems.push({
+              type: 'newMember',
+              memberName: m
+            });
+            const newPct = Math.round(100 / vacantCount);
+            pctMap[m] = newPct;
+          });
+          const totalPatterns = patternItems.length;
+          if (totalPatterns === 0) {
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。`;
+            percentText = "予想不能";
+          } else if (totalPatterns === 1) {
+            const item = patternItems[0];
+            if (item.type === 'duplicate') {
+              const subjectStr = item.members.length === 2 ? "どちらか" : "いずれか";
+              reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、${item.posName}でポジション被りとなる${item.memText}の${subjectStr}が${fixedMember}ポジ、${subjectStr}が${item.posName}で出演すると予想。`;
+            } else if (item.type === 'newMember') {
+              reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。この日の「${stageName}」公演で初日を迎える${item.memberName}が${fixedMember}ポジで出演すると予想。`;
+            }
+            
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
             }
           } else {
-            const expText = formatMemberListText(expAttending);
-            reasonHtml = `${formatAbsencePhrase(fixedMember, absenceExp)}。${fixedMember}ポジでの出演経験がある${expText}が出演予定のため、ポジション競合が発生。`;
-            let pcts = [];
-            expAttending.forEach(m => {
-              const pct = posMemberPcts[pIdx][m] || Math.round(100 / expAttending.length);
-              pcts.push(`${m} ${pct}%`);
+            let patterns = [];
+            patternItems.forEach((item, idx) => {
+              const circle = getCircleNum(idx + 1);
+              if (item.type === 'duplicate') {
+                const subjectStr = item.members.length === 2 ? "どちらか" : "いずれか";
+                patterns.push(`${circle} ${item.posName}でポジション被りとなる${item.memText}の${subjectStr}が${fixedMember}ポジ、${subjectStr}が${item.posName}で出演する可能性。`);
+              } else if (item.type === 'newMember') {
+                patterns.push(`${circle} この日の「${stageName}」公演で初日を迎える${item.memberName}が${fixedMember}ポジで出演する可能性。`);
+              }
             });
-            percentText = pcts.join('　');
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            }
           }
         } else {
-          if (newMembers.length > 0) {
-            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ${fixedMember}ポジで初出演</span>`;
-            const newMemText = formatMemberListText(newMembers);
-            reasonHtml = `${formatAbsencePhrase(fixedMember, absenceExp)}。${fixedMember}ポジ未経験の出演メンバー（${newMemText}）からポジションが割り当てられると予想。`;
-            const newPct = Math.round(100 / newMembers.length);
-            let pcts = [];
-            newMembers.forEach(m => pcts.push(`${m} ${newPct}%`));
-            percentText = pcts.join('　');
-          } else {
-            badgeHtml = `<span class="bg-slate-100 text-slate-600 text-[11px] px-2.5 py-1 rounded font-bold border border-slate-200">❓ 未確定</span>`;
-            reasonHtml = `${formatAbsencePhrase(fixedMember, absenceExp)}。該当ポジションの適任者が未確定です。`;
-            percentText = "-";
+          // 通常の経験者ありポジション
+          if (expAttending.length === 1) {
+            const assignedMember = expAttending[0];
+            const isOriginal = (assignedMember === fixedMember);
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            percentText = `${assignedMember} 100%`;
+            const initialCandidates = initialAttendingExpMap[pIdx];
+            if (initialCandidates.length > 1) {
+              const removedMembers = initialCandidates.filter(m => m !== assignedMember);
+              
+              const removedReasons = removedMembers.map(m => {
+                const info = memberAssignedToPos[m];
+                return info ? `${m}が${info.posName}で出演する可能性` : `${m}が他ポジションで出演する可能性`;
+              });
+              let removedText = removedReasons.join('、') + 'が高いと予想されるため';
+              if (isOriginal) {
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
+              } else {
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}、${assignedMember}が${fixedMember}ポジで出演すると予想。`;
+              }
+            } else {
+              if (isOriginal) {
+                reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
+              } else {
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
+              }
+            }
+          } else if (expAttending.length === 2) {
+            /*
+             * =====================================================
+             * 経験者が2人被っている場合
+             *
+             * まず2人に共通する別ポジションを探す。
+             *
+             * 例：
+             *   岩立沙穂ポジ
+             *      岩立沙穂
+             *      鈴木くるみ
+             *
+             * 2人とも正鋳真優ポジ経験がある
+             *        ↓
+             *   岩立沙穂ポジ ⇔ 正鋳真優ポジ
+             *   の過去共演実績を集計
+             * =====================================================
+             */
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            const mem1 = expAttending[0];
+            const mem2 = expAttending[1];
+            const otherSharedPos = findSharedOtherPosition(
+              mem1,
+              mem2,
+              fixedMember,
+              stage,
+              validShows
+            );
+            if (otherSharedPos) {
+              const result = generateCooccurrenceReason(
+                stageName,
+                fixedMember,
+                mem1,
+                mem2,
+                otherSharedPos,
+                validShows,
+                stage
+              );
+              reasonHtml = result.reasonHtml;
+              percentText = result.percentText;
+            } else {
+              /*
+               * 2人が共通して経験している別ポジションがない場合は
+               * 従来のポジション被り処理へフォールバック
+               */
+              const memText = formatMemberListText(expAttending);
+              const subjectStr = "どちらか";
+              let patterns = [];
+              if (vacantPIdxs.length > 0) {
+                vacantPIdxs.forEach((vPIdx, vIdx) => {
+                  const circle = getCircleNum(vIdx + 1);
+                  const otherPosName = `${stage.fixed[vPIdx]}ポジ`;
+                  patterns.push(
+                    `${circle} ${subjectStr}が${fixedMember}ポジ、${subjectStr}が${otherPosName}で出演する可能性。`
+                  );
+                });
+              }
+              if (patterns.length === 0) {
+                reasonHtml =
+                  `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。`;
+              } else if (patterns.length === 1) {
+                const otherPosName = `${stage.fixed[vacantPIdxs[0]]}ポジ`;
+                reasonHtml =
+                  `この日の「${stageName}」公演は${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+                  `他のメンバーのポジションの兼ね合いから、${subjectStr}が${fixedMember}ポジ、${subjectStr}が${otherPosName}で出演すると予想。`;
+              } else {
+                reasonHtml =
+                  `この日の「${stageName}」公演は${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+                  `他のメンバーのポジションの兼ね合いから、次の${patterns.length}つのパターンが考えられる。` +
+                  `<br><br>${patterns.join('<br><br>')}`;
+              }
+              if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+                const sortedMembers = sortByInputOrder(
+                  Object.keys(posMemberPcts[pIdx]),
+                  inputMemberList
+                );
+                percentText = sortedMembers
+                  .map(m => `${m} ${posMemberPcts[pIdx][m]}%`)
+                  .join('　');
+              } else {
+                percentText = `${mem1} 50%　${mem2} 50%`;
+              }
+            }
+          } else if (expAttending.length > 2) {
+            // 経験者が3人以上被っている場合は既存の汎用処理を維持
+            const memText = formatMemberListText(expAttending);
+            const subjectStr = "いずれか";
+            let patterns = [];
+            if (vacantPIdxs.length > 0) {
+              vacantPIdxs.forEach((vPIdx, vIdx) => {
+                const circle = getCircleNum(vIdx + 1);
+                const otherPosName = `${stage.fixed[vPIdx]}ポジ`;
+                patterns.push(
+                  `${circle} ${subjectStr}が${fixedMember}ポジ、${subjectStr}が${otherPosName}で出演する可能性。`
+                );
+              });
+            }
+            if (patterns.length === 0) {
+              reasonHtml =
+                `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。`;
+            } else if (patterns.length === 1) {
+              const otherPosName = `${stage.fixed[vacantPIdxs[0]]}ポジ`;
+              reasonHtml =
+                `この日の「${stageName}」公演は${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+                `他のメンバーのポジションの兼ね合いから、${subjectStr}が${fixedMember}ポジ、${subjectStr}が${otherPosName}で出演すると予想。`;
+            } else {
+              reasonHtml =
+                `この日の「${stageName}」公演は${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+                `他のメンバーのポジションの兼ね合いから、次の${patterns.length}つのパターンが考えられる。` +
+                `<br><br>${patterns.join('<br><br>')}`;
+            }
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(
+                Object.keys(posMemberPcts[pIdx]),
+                inputMemberList
+              );
+              percentText = sortedMembers
+                .map(m => `${m} ${posMemberPcts[pIdx][m]}%`)
+                .join('　');
+            } else {
+              const pct = Math.round(100 / expAttending.length);
+              const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
+              percentText = sortedMembers
+                .map(m => `${m} ${pct}%`)
+                .join('　');
+            }
           }
         }
-
-        const posCard = document.createElement('div');
-        posCard.className = "bg-white border border-slate-200 rounded-lg p-3.5 shadow-sm space-y-2";
-        posCard.innerHTML = `
-          <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-slate-800 text-sm">${getCircleNum(pIdx + 1)} ${escapeHtml(fixedMember)}ポジ</span>
-            </div>
-            ${badgeHtml}
+        const card = document.createElement('div');
+        card.className = "bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2";
+        card.innerHTML = `
+          <div class="flex justify-between items-center font-bold">
+            <span class="text-slate-700 text-sm">【${escapeHtml(fixedMember)}ポジ】</span>
+            <div>${badgeHtml}</div>
           </div>
-          <p class="text-xs text-slate-600 leading-relaxed">${reasonHtml}</p>
-          ${percentText && percentText !== "-" ? `<div class="bg-slate-50 p-2 rounded text-xs font-bold text-pink-600 border border-slate-100 flex items-center justify-between"><span>予想確率</span><span>${escapeHtml(percentText)}</span></div>` : ''}
+          <div class="text-slate-600 leading-relaxed font-normal">${reasonHtml}</div>
+          ${percentText ? `<div class="text-slate-800 font-bold text-sm pt-1 border-t border-slate-200/60">${percentText}</div>` : ''}
         `;
-        positionsList.appendChild(posCard);
+        positionsList.appendChild(card);
       });
     }
-
-    /* 検索入力サジェスト処理 */
-    function onSearchInput(value) {
+    
+    function onSearchInput(val) {
       const suggestBox = document.getElementById('searchSuggest');
-      if (!value || !value.trim()) {
-        suggestBox.classList.add('hidden');
-        suggestBox.innerHTML = '';
-        return;
-      }
-      const query = value.trim().toLowerCase();
-      suggestBox.innerHTML = '';
-
-      const matchingStages = Object.keys(GLOBAL_STAGE_DATABASE).filter(key => {
-        return key.toLowerCase().includes(query) || GLOBAL_STAGE_DATABASE[key].name.toLowerCase().includes(query);
+      if (!val.trim()) { suggestBox.classList.add('hidden'); return; }
+      
+      const query = val.trim().toLowerCase();
+      let matches = [];
+      const stageSource = Object.keys(GLOBAL_STAGE_DATABASE).length > 0 ? GLOBAL_STAGE_DATABASE : STAGE_DATABASE;
+      Object.keys(stageSource).forEach(key => {
+        const stage = stageSource[key];
+        if (stage.name.toLowerCase().includes(query) || stage.id.toLowerCase().includes(query)) {
+          matches.push({ type: 'stage', label: stage.name, key: key });
+        }
       });
-
-      const allMembers = getAllUniqueMembers();
-      const matchingMembers = allMembers.filter(m => m.toLowerCase().includes(query));
-
-      if (matchingStages.length === 0 && matchingMembers.length === 0) {
-        suggestBox.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">該当する演目・メンバーが見つかりません</div>`;
-        suggestBox.classList.remove('hidden');
-        return;
-      }
-
-      if (matchingStages.length > 0) {
-        const stageHeader = document.createElement('div');
-        stageHeader.className = "px-3 py-1.5 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider";
-        stageHeader.innerText = "演目";
-        suggestBox.appendChild(stageHeader);
-
-        matchingStages.forEach(key => {
-          const stage = GLOBAL_STAGE_DATABASE[key];
-          const item = document.createElement('div');
-          item.className = "px-3 py-2 hover:bg-pink-50 cursor-pointer flex items-center justify-between text-xs";
-          item.innerHTML = `
-            <span class="font-bold text-slate-700"><i class="fa-solid fa-masks-theater text-pink-500 mr-2"></i>${escapeHtml(stage.name)}</span>
-            <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">${escapeHtml(stage.group)}</span>
-          `;
-          item.onclick = () => {
-            suggestBox.classList.add('hidden');
-            document.getElementById('searchInput').value = '';
-            selectStage(key);
-          };
-          suggestBox.appendChild(item);
-        });
-      }
-
-      if (matchingMembers.length > 0) {
-        const memberHeader = document.createElement('div');
-        memberHeader.className = "px-3 py-1.5 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider";
-        memberHeader.innerText = "メンバー";
-        suggestBox.appendChild(memberHeader);
-
-        matchingMembers.forEach(m => {
-          const item = document.createElement('div');
-          item.className = "px-3 py-2 hover:bg-pink-50 cursor-pointer flex items-center justify-between text-xs";
-          item.innerHTML = `
-            <span class="font-bold text-slate-700"><i class="fa-solid fa-user text-pink-500 mr-2"></i>${escapeHtml(m)}</span>
-            <span class="text-[10px] text-pink-600 font-semibold">詳細を見る</span>
-          `;
-          item.onclick = () => {
-            suggestBox.classList.add('hidden');
-            document.getElementById('searchInput').value = '';
-            openMemberDetail(m);
-          };
-          suggestBox.appendChild(item);
-        });
-      }
-
+      const allUniqueMembers = getAllUniqueMembers();
+      allUniqueMembers.forEach(name => {
+        if (name !== "-" && name !== "－" && name.toLowerCase().includes(query)) {
+          matches.push({ type: 'member', label: name, name: name });
+        }
+      });
+      if (matches.length === 0) { suggestBox.classList.add('hidden'); return; }
+      suggestBox.innerHTML = '';
+      matches.forEach(m => {
+        const div = document.createElement('div');
+        div.className = "p-3 hover:bg-pink-50 cursor-pointer flex justify-between items-center";
+        div.innerHTML = `
+          <span class="font-bold text-slate-800">${escapeHtml(m.label)}</span>
+          <span class="text-[10px] font-bold px-2 py-1 rounded ${m.type === 'stage' ? 'bg-pink-100 text-pink-700' : 'bg-slate-100 text-slate-600'}">
+            ${m.type === 'stage' ? '公演' : 'メンバー'}
+          </span>`;
+        div.onclick = () => {
+          suggestBox.classList.add('hidden');
+          document.getElementById('searchInput').value = '';
+          if (m.type === 'member') openMemberDetail(m.name);
+          else if (m.type === 'stage') selectStage(m.key);
+        };
+        suggestBox.appendChild(div);
+      });
       suggestBox.classList.remove('hidden');
     }
-
-    /* メンバー詳細表示・統計データ生成 */
     function openMemberDetail(memberName) {
+      if (!memberName || memberName === "-" || memberName === "－") return;
       selectedMemberName = memberName;
       document.getElementById('detailMemberName').innerText = memberName;
-
       document.getElementById('mainTabsContainer').classList.add('hidden');
       document.getElementById('memberDetailContainer').classList.remove('hidden');
-
+      
       document.getElementById('navNormal').classList.add('hidden');
       document.getElementById('navStageDetail').classList.add('hidden');
       document.getElementById('navMemberSearching').classList.remove('hidden');
-      document.getElementById('navMemberSearching').classList.add('flex');
-
+      renderMemberDetailView();
+    }
+    function formatHistoryStageTitle(item) {
+      const baseName = escapeHtml(item.baseStageName);
+      const sub = (item.subTitle || "").trim();
+      const rawTitle = (item.displayTitle || item.title || "").trim();
+      if (sub.includes("初日") || rawTitle.includes("初日")) {
+        return `「${baseName}」初日`;
+      }
+      if (sub.includes("千秋楽") || rawTitle.includes("千秋楽")) {
+        return `「${baseName}」千秋楽`;
+      }
+      if (sub.includes("生誕祭") || rawTitle.includes("生誕祭")) {
+        let name = sub.replace(/生誕祭/g, "").trim();
+        if (!name) name = selectedMemberName;
+        if (!name.startsWith("🎂")) name = "🎂" + name;
+        return `「${baseName}」 <span class="text-[0.85em] font-normal">${escapeHtml(name)}</span>`;
+      }
+      if (sub.includes("卒業公演") || rawTitle.includes("卒業公演")) {
+        let name = sub.replace(/卒業公演/g, "").trim();
+        if (!name) name = selectedMemberName;
+        if (!name.startsWith("🎓")) name = "🎓" + name;
+        return `「${baseName}」 <span class="text-[0.85em] font-normal">${escapeHtml(name)}</span>`;
+      }
+      return `「${baseName}」`;
+    }
+    function renderMemberDetailView() {
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
-      const historyList = [];
-      const showCounts = {};
-      let totalCount = 0;
-
-      dataSource.forEach(item => {
-        let played = false;
-        let posIndex = -1;
-        if (item.positionsArray && item.positionsArray.length > 0) {
-          posIndex = item.positionsArray.indexOf(memberName);
-          if (posIndex !== -1) played = true;
-        } else if (item.membersArray && item.membersArray.includes(memberName)) {
-          played = true;
-        }
-
-        if (played) {
-          totalCount++;
-          const stageName = item.baseStageName ? `「${item.baseStageName}」公演` : item.displayTitle;
-          showCounts[stageName] = (showCounts[stageName] || 0) + 1;
-
-          const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
-          let posText = "";
-          if (posIndex !== -1) {
-            const fixedPosName = (stageObj && stageObj.fixed && stageObj.fixed[posIndex]) ? `${stageObj.fixed[posIndex]}ポジ` : `Pos.${posIndex + 1}`;
-            posText = fixedPosName;
+      const memberShows = dataSource.filter(item => item.membersArray.includes(selectedMemberName));
+      document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberShows.length}回`;
+      const showCountsMap = {};
+      const posDetailMap = {};
+      memberShows.forEach(item => {
+        const baseName = item.baseStageName; 
+        showCountsMap[baseName] = (showCountsMap[baseName] || 0) + 1;
+        if (!posDetailMap[baseName]) posDetailMap[baseName] = {};
+        const stageObj = GLOBAL_STAGE_DATABASE[baseName] || STAGE_DATABASE[baseName];
+        
+        if (stageObj && stageObj.fixed && item.positionsArray) {
+          const posIdx = item.positionsArray.indexOf(selectedMemberName);
+          if (posIdx !== -1 && stageObj.fixed[posIdx]) {
+            const posName = stageObj.fixed[posIdx];
+            posDetailMap[baseName][posName] = (posDetailMap[baseName][posName] || 0) + 1;
           }
-
-          historyList.push({
-            id: item.id,
-            date: item.date,
-            time: item.time,
-            theater: item.theater,
-            title: item.displayTitle,
-            subTitle: item.subTitle,
-            posText: posText
-          });
         }
       });
-
-      document.getElementById('totalPerfBadge').innerText = `総出演回数: ${totalCount}回`;
-
-      const breakdownEl = document.getElementById('showsBreakdownList');
-      breakdownEl.innerHTML = '';
-      const sortedShows = Object.keys(showCounts).sort((a, b) => showCounts[b] - showCounts[a]);
-      if (sortedShows.length === 0) {
-        breakdownEl.innerHTML = '<li class="text-slate-400 py-1">出演データがありません。</li>';
-      } else {
-        sortedShows.forEach(showTitle => {
-          const li = document.createElement('li');
-          li.className = "flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100";
-          li.innerHTML = `
-            <span class="font-bold text-slate-700">${escapeHtml(showTitle)}</span>
-            <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded-full text-[11px]">${showCounts[showTitle]}回</span>
-          `;
-          breakdownEl.appendChild(li);
-        });
-      }
-
-      const historyEl = document.getElementById('memberShowsHistoryList');
-      historyEl.innerHTML = '';
-      historyList.sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
-
-      if (historyList.length === 0) {
-        historyEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">出演履歴がありません。</p>';
-      } else {
-        historyList.forEach(hist => {
-          const card = document.createElement('div');
-          card.className = "bg-slate-50 border border-slate-200 rounded p-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-pink-50 transition";
-          card.onclick = () => jumpToSchedule(hist.date, hist.id);
-          card.innerHTML = `
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold text-pink-600">${escapeHtml(hist.date)} ${escapeHtml(hist.time)}</span>
-                <span class="text-[10px] bg-slate-200 text-slate-600 px-1 rounded">${escapeHtml(hist.theater)}</span>
-              </div>
-              <div class="font-bold text-slate-800 mt-0.5">${escapeHtml(hist.title)}</div>
-            </div>
-            ${hist.posText ? `<span class="bg-pink-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap">${escapeHtml(hist.posText)}</span>` : ''}
-          `;
-          historyEl.appendChild(card);
-        });
-      }
+      const breakdownList = document.getElementById('showsBreakdownList');
+      breakdownList.innerHTML = '';
+      Object.entries(showCountsMap).forEach(([title, count]) => {
+        const li = document.createElement('li');
+        li.className = "bg-slate-50 p-2.5 rounded border border-slate-200 space-y-1";
+        let posTextArray = [];
+        if (posDetailMap[title]) {
+          const stageObj = GLOBAL_STAGE_DATABASE[title] || STAGE_DATABASE[title];
+          const fixedList = stageObj ? stageObj.fixed : [];
+          const sortedEntries = Object.entries(posDetailMap[title]).sort((a, b) => {
+            const idxA = fixedList.indexOf(a[0]);
+            const idxB = fixedList.indexOf(b[0]);
+            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+            if (idxA !== -1) return -1;
+            if (idxB !== -1) return 1;
+            return 0;
+          });
+          sortedEntries.forEach(([pName, pCount]) => {
+            posTextArray.push(`${pName} : ${pCount}回`);
+          });
+        }
+        
+        const subPosText = posTextArray.length > 0 ? posTextArray.join('　') : '';
+        li.innerHTML = `
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600 hover:underline" onclick="selectStage('${escapeHtml(title)}')">「${escapeHtml(title)}」公演</span> 
+            <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded">${count}回</span>
+          </div>
+          ${subPosText ? `<div class="text-[11px] text-slate-500 font-medium pl-1">${escapeHtml(subPosText)}</div>` : ''}
+        `;
+        breakdownList.appendChild(li);
+      });
+      const historyList = document.getElementById('memberShowsHistoryList');
+      historyList.innerHTML = '';
+      memberShows.slice().reverse().forEach((item, index) => {
+        const countNum = memberShows.length - index;
+        const div = document.createElement('div');
+        div.className = "p-2 bg-slate-50 border border-slate-200 rounded text-xs flex gap-3 items-center cursor-pointer hover:bg-pink-50 transition";
+        div.onclick = () => jumpToSchedule(item.date, item.id);
+        
+        let targetPositionName = selectedMemberName;
+        const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
+        if (stageObj && stageObj.fixed && item.positionsArray && item.positionsArray.length > 0) {
+          const posIndex = item.positionsArray.indexOf(selectedMemberName);
+          if (posIndex !== -1 && stageObj.fixed[posIndex]) {
+            targetPositionName = stageObj.fixed[posIndex];
+          }
+        }
+        const formattedStageLabel = formatHistoryStageTitle(item);
+        div.innerHTML = `
+          <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
+          <span class="text-slate-600">${escapeHtml(item.date)}</span>
+          <span class="font-bold text-slate-800 flex-1 truncate">${formattedStageLabel}</span>
+          <span class="text-pink-600 font-bold whitespace-nowrap">${escapeHtml(targetPositionName)}</span>
+        `;
+        historyList.appendChild(div);
+      });
+    }
+    function filterSchedule(filter, btn) {
+      currentScheduleFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.className = "filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200";
+      });
+      btn.className = "filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap";
+      renderCalendar();
+    }
+    /* エスケープ処理関数 */
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
   </script>
 </body>
