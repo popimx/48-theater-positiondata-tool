@@ -1319,7 +1319,6 @@
             reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。`;
             percentText = "予想不能";
           } else if (totalPatterns === 1) {
-            /* 【要件①対応】パターンが1つだけの場合は「〜で出演すると予想。」の文面にする */
             const item = patternItems[0];
             if (item.type === 'duplicate') {
               reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、${item.posName}でポジション被りとなる${item.memText}のどちらかが${fixedMember}ポジ、どちらかが${item.posName}で出演すると予想。`;
@@ -1351,12 +1350,7 @@
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
             percentText = `${fixedMember} 100%`;
 
-            if (absenceExp.length === 0) {
-              reasonHtml = `${fixedMember}は「${stageName}」公演の初日メンバーであり、${fixedMember}ポジでの出演経験があるメンバーが他の現役メンバーにいないため、${fixedMember}が自分のポジションで出演すると予想。`;
-            } else {
-              const formattedAbsence = formatAbsenceMemberListText(absenceExp);
-              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formattedAbsence}の出演予定がないため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
-            }
+            reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
           } else if (expAttending.length === 1) {
             const underMember = expAttending[0];
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
@@ -1371,7 +1365,6 @@
               });
               const removedText = removedReasons.join('こと、');
 
-              /* 【要件②対応】「〜ポジでの出演経験がある」の重複修飾を削除 */
               reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、${underMember}が${fixedMember}ポジで出演すると予想。`;
             } else {
               const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
