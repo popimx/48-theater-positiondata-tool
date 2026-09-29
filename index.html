@@ -1210,7 +1210,7 @@
               absenceText = `${fixedMember}ポジでの出演経験がある${formattedAbsence}の出演予定がないこと、`;
             }
 
-            reasonHtml = `この日の「${stageName}」公演は、${absenceText}${soloMultiMember}は${otherFixed}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${fixedMember}ポジか${otherFixed}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${fixedMember}ポジでの出演が${primaryCount}回、${otherFixed}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性は高いと予想。`;
+            reasonHtml = `この日の「${stageName}」公演は、${absenceText}${soloMultiMember}は${otherFixed}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${fixedMember}ポジか${otherFixed}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${fixedMember}ポジでの出演が${primaryCount}回、${otherFixed}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性が高いと予想。`;
             percentText = `${soloMultiMember} ${pct}%`;
 
           } else {
@@ -1346,29 +1346,33 @@
 
         } else {
           // 通常の経験者ありポジション
-          if (expAttending.length === 1 && expAttending[0] === fixedMember) {
-            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
-            percentText = `${fixedMember} 100%`;
+          if (expAttending.length === 1) {
+            const assignedMember = expAttending[0];
+            const isOriginal = (assignedMember === fixedMember);
 
-            reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
-          } else if (expAttending.length === 1) {
-            const underMember = expAttending[0];
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
-            percentText = `${underMember} 100%`;
+            percentText = `${assignedMember} 100%`;
 
             const initialCandidates = initialAttendingExpMap[pIdx];
             if (initialCandidates.length > 1) {
-              const removedMembers = initialCandidates.filter(m => m !== underMember);
+              const removedMembers = initialCandidates.filter(m => m !== assignedMember);
               const removedReasons = removedMembers.map(m => {
                 const info = memberAssignedToPos[m];
                 return info ? `${m}が${info.posName}で出演する可能性が高いと予想される` : `${m}が他ポジションで出演する可能性が高いと予想される`;
               });
               const removedText = removedReasons.join('こと、');
 
-              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、${underMember}が${fixedMember}ポジで出演すると予想。`;
+              if (isOriginal) {
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
+              } else {
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、${assignedMember}が${fixedMember}ポジで出演すると予想。`;
+              }
             } else {
-              const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
-              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${underMember}が${fixedMember}ポジで出演すると予想。`;
+              if (isOriginal) {
+                reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
+              } else {
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
+              }
             }
           } else {
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
