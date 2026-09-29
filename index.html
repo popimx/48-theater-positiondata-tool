@@ -1018,7 +1018,7 @@
       return circles[num - 1] || `(${num})`;
     }
 
-    function runForecast() {
+     function runForecast() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) {
         alert("先に公演を選択してください。");
@@ -1137,7 +1137,7 @@
         });
       }
 
-      // 他ポジ重複（ポジション被り）メンバーの検出（重複メンバーを個別に除外せずポジ全体で保持）
+      // 他ポジ重複（ポジション被り）メンバーの検出
       const duplicatePosGroups = [];
       stage.fixed.forEach((fM, pIdx) => {
         const expAttending = attendingExpMap[pIdx];
@@ -1277,7 +1277,6 @@
             percentText = `${soloMultiMember} ${pct}%`;
 
           } else {
-            // 従ポジション（兼務ポジの低い方のポジ）
             badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ${fixedMember}ポジで初出演</span>`;
             const lowPct = Math.round((otherCount / totalCount) * 100);
 
@@ -1455,6 +1454,39 @@
                 reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
               }
             }
+
+          } else if (expAttending.length > 1) {
+            // ★【修正箇所】経験者が複数被っている当事者ポジションの処理
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            
+            const memText = formatMemberListText(expAttending);
+            let patterns = [];
+
+            if (vacantPIdxs.length > 0) {
+              vacantPIdxs.forEach((vPIdx, vIdx) => {
+                const circle = getCircleNum(vIdx + 1);
+                const otherPosName = `${stage.fixed[vPIdx]}ポジ`;
+                patterns.push(`${circle} どちらかが${fixedMember}ポジ、どちらかが${otherPosName}で出演する可能性。`);
+              });
+            }
+
+            if (patterns.length === 0) {
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。`;
+            } else if (patterns.length === 1) {
+              const otherPosName = `${stage.fixed[vacantPIdxs[0]]}ポジ`;
+              reasonHtml = `この日の「${stageName}」公演は${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。他のメンバーのポジションの兼ね合いから、どちらかが${fixedMember}ポジ、どちらかが${otherPosName}で出演すると予想。`;
+            } else {
+              reasonHtml = `この日の「${stageName}」公演は${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。他のメンバーのポジションの兼ね合いから、次の${patterns.length}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+            }
+
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const pct = Math.round(100 / expAttending.length);
+              const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pct}%`).join('　');
+            }
           }
         }
 
@@ -1471,7 +1503,7 @@
         positionsList.appendChild(card);
       });
     }
-
+    
     function onSearchInput(val) {
       const suggestBox = document.getElementById('searchSuggest');
       if (!val.trim()) { suggestBox.classList.add('hidden'); return; }
