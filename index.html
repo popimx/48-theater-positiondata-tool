@@ -1137,21 +1137,16 @@
         });
       }
 
-      // 他ポジ重複（ポジション被り）メンバーの検出
+      // 他ポジ重複（ポジション被り）メンバーの検出（重複メンバーを個別に除外せずポジ全体で保持）
       const duplicatePosGroups = [];
-      const usedInGroups = new Set();
-
       stage.fixed.forEach((fM, pIdx) => {
         const expAttending = attendingExpMap[pIdx];
         if (expAttending.length > 1) {
-          const group = expAttending.filter(m => !usedInGroups.has(m));
-          if (group.length >= 2) {
-            group.forEach(m => usedInGroups.add(m));
-            duplicatePosGroups.push({
-              posName: `${fM}ポジ`,
-              members: group
-            });
-          }
+          duplicatePosGroups.push({
+            pIdx: pIdx,
+            posName: `${fM}ポジ`,
+            members: expAttending
+          });
         }
       });
 
@@ -1176,6 +1171,74 @@
       });
 
       const vacantCount = vacantPIdxs.length || 1;
+
+      // 未確定ポジション・メンバーのシナリオシミュレーションによる正確な確率計算
+      const unconfirmedPIdxs = [];
+      stage.fixed.forEach((_, pIdx) => {
+        if (!confirmedAssignments[pIdx]) {
+          unconfirmedPIdxs.push(pIdx);
+        }
+      });
+
+      const assignedMembersSet = new Set(Object.values(confirmedAssignments));
+      const unassignedMembers = inputMemberList.filter(m => !assignedMembersSet.has(m));
+
+      function getPermutations(arr) {
+        if (arr.length <= 1) return [arr];
+        const result = [];
+        for (let i = 0; i < arr.length; i++) {
+          const current = arr[i];
+          const remaining = arr.slice(0, i).concat(arr.slice(i + 1));
+          const permOfRemaining = getPermutations(remaining);
+          for (let perm of permOfRemaining) {
+            result.push([current].concat(perm));
+          }
+        }
+        return result;
+      }
+
+      const validScenarios = [];
+      if (unconfirmedPIdxs.length > 0 && unconfirmedPIdxs.length === unassignedMembers.length && unassignedMembers.length <= 8) {
+        const perms = getPermutations(unassignedMembers);
+        perms.forEach(perm => {
+          const assignment = {};
+          unconfirmedPIdxs.forEach((pIdx, idx) => {
+            assignment[pIdx] = perm[idx];
+          });
+
+          let isValid = true;
+          for (let pIdx of unconfirmedPIdxs) {
+            const expList = initialAttendingExpMap[pIdx] || [];
+            if (expList.length > 0) {
+              if (!expList.includes(assignment[pIdx])) {
+                isValid = false;
+                break;
+              }
+            }
+          }
+          if (isValid) {
+            validScenarios.push(assignment);
+          }
+        });
+      }
+
+      const posMemberPcts = {};
+      stage.fixed.forEach((_, pIdx) => {
+        posMemberPcts[pIdx] = {};
+      });
+
+      if (validScenarios.length > 0) {
+        unconfirmedPIdxs.forEach(pIdx => {
+          const counts = {};
+          validScenarios.forEach(scen => {
+            const m = scen[pIdx];
+            counts[m] = (counts[m] || 0) + 1;
+          });
+          Object.keys(counts).forEach(m => {
+            posMemberPcts[pIdx][m] = Math.round((counts[m] / validScenarios.length) * 100);
+          });
+        });
+      }
 
       // ポジションごとの予測カード生成
       stage.fixed.forEach((fixedMember, pIdx) => {
@@ -1279,8 +1342,13 @@
               reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
             }
 
-            const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
-            percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            }
           }
 
         } else if (expAttending.length === 0) {
@@ -1325,8 +1393,14 @@
             } else if (item.type === 'newMember') {
               reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。この日の「${stageName}」公演で初日を迎える${item.memberName}が${fixedMember}ポジで出演すると予想。`;
             }
-            const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
-            percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            }
           } else {
             let patterns = [];
             patternItems.forEach((item, idx) => {
@@ -1340,8 +1414,13 @@
 
             reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
 
-            const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
-            percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+            }
           }
 
         } else {
@@ -1378,8 +1457,14 @@
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
             const sortedExpAttending = sortByInputOrder(expAttending, inputMemberList);
             const memText = formatMemberListText(sortedExpAttending);
-            const pct = Math.floor(100 / sortedExpAttending.length);
-            percentText = sortedExpAttending.map(m => `${m} ${pct}%`).join('　');
+
+            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
+              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
+              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
+            } else {
+              const pct = Math.floor(100 / sortedExpAttending.length);
+              percentText = sortedExpAttending.map(m => `${m} ${pct}%`).join('　');
+            }
 
             reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。他のメンバーのポジションの兼ね合いから、どちらかが${fixedMember}ポジで出演すると予想。`;
           }
