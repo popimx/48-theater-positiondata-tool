@@ -1423,8 +1423,8 @@
             }
           }
 
-        } else {
-          // 通常の経験者ありポジション
+        } else {★
+                   // 通常の経験者ありポジション
           if (expAttending.length === 1) {
             const assignedMember = expAttending[0];
             const isOriginal = (assignedMember === fixedMember);
@@ -1435,16 +1435,26 @@
             const initialCandidates = initialAttendingExpMap[pIdx];
             if (initialCandidates.length > 1) {
               const removedMembers = initialCandidates.filter(m => m !== assignedMember);
+              
+              // 理由テキスト（「～の可能性が高いと予想されること」などの接続部）の生成
               const removedReasons = removedMembers.map(m => {
                 const info = memberAssignedToPos[m];
-                return info ? `${m}が${info.posName}で出演する可能性が高いと予想される` : `${m}が他ポジションで出演する可能性が高いと予想される`;
+                return info ? `${m}が${info.posName}で出演する可能性` : `${m}が他ポジションで出演する可能性`;
               });
-              const removedText = removedReasons.join('こと、');
+
+              let removedText = "";
+              if (removedReasons.length >= 2) {
+                // 3人以上の経験者がいる場合（取り除かれたメンバーが2人以上）：最後の要素手前まで「、」、最後は「が高いと予想されるため」に接続
+                removedText = removedReasons.join('、') + 'が高いと予想されるため';
+              } else {
+                // 2人の経験者がいる場合（取り除かれたメンバーが1人）：従来通り「が高いと予想されること、」で接続
+                removedText = removedReasons[0] + 'が高いと予想されること';
+              }
 
               if (isOriginal) {
-                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
               } else {
-                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、${assignedMember}が${fixedMember}ポジで出演すると予想。`;
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}、${assignedMember}が${fixedMember}ポジで出演すると予想。`;
               }
             } else {
               if (isOriginal) {
@@ -1453,23 +1463,7 @@
                 reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
               }
             }
-          } else {
-            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
-            const sortedExpAttending = sortByInputOrder(expAttending, inputMemberList);
-            const memText = formatMemberListText(sortedExpAttending);
-
-            if (posMemberPcts[pIdx] && Object.keys(posMemberPcts[pIdx]).length > 0) {
-              const sortedMembers = sortByInputOrder(Object.keys(posMemberPcts[pIdx]), inputMemberList);
-              percentText = sortedMembers.map(m => `${m} ${posMemberPcts[pIdx][m]}%`).join('　');
-            } else {
-              const pct = Math.floor(100 / sortedExpAttending.length);
-              percentText = sortedExpAttending.map(m => `${m} ${pct}%`).join('　');
-            }
-
-            reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。他のメンバーのポジションの兼ね合いから、どちらかが${fixedMember}ポジで出演すると予想。`;
-          }
-        }
-
+      
         const card = document.createElement('div');
         card.className = "bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2";
         card.innerHTML = `
