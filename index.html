@@ -1262,7 +1262,7 @@
               const removedMembers = initialCandidates.filter(m => m !== underMember);
               const removedReasons = removedMembers.map(m => {
                 const info = memberAssignedToPos[m];
-                return info ? `${m}が${info.posName}での出演となる` : `${m}が他ポジションでの出演となる`;
+                return info ? `${m}が${info.posName}で出演する可能性が高いと予想される` : `${m}が他ポジションで出演する可能性が高いと予想される`;
               });
               const removedText = removedReasons.join('こと、');
 
