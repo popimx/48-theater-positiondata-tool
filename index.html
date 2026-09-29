@@ -1135,117 +1135,156 @@
 
       stage.fixed.forEach((fixedMember, pIdx) => {
         const cands = (candidatesArrayMap[pIdx] || []).filter(m => inputSet.has(m));
-        const assignedName = bestMapping[pIdx] || (cands.length === 1 ? cands[0] : "");
-
+        
         // 過去にそのポジの経験があるメンバー（初日＋アンダー）
         const allExperienced = posExperienceMap[pIdx] || [];
-        // 今回の出演メンバーのうちそのポジ経験がある人
+        
+        // 初日メンバーが出演しているか
+        const isFixedAttending = inputSet.has(fixedMember);
+
+        // 重複・混同を防ぐためのメンバー分類 (要件①の修正)
         const attendingExp = allExperienced.filter(m => inputSet.has(m));
-        // 今回不在の経験者
+        const attendingOtherExp = attendingExp.filter(m => m !== fixedMember);
+        
         const absenceExp = allExperienced.filter(m => !inputSet.has(m));
+        const absenceOtherExp = absenceExp.filter(m => m !== fixedMember);
+
+        const assignedName = (cands.length === 1) ? cands[0] : (bestMapping[pIdx] || "");
 
         let badgeHtml = "";
         let reasonHtml = "";
         let percentText = "";
 
-        // パターン分類判定
         const isFirstTimer = (attendingExp.length === 0); // 今回の出演メンバーに経験者がいない
 
-        if (isFirstTimer) {
-          // 【パターン1 & パターン2】⚠︎︎ 〇〇ポジで初出演
-          badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
+        if (cands.length >= 2) {
+          // 【複数候補でポジ競合・兼ね合いが発生している場合 (要件②の修正)】
+          const candTextList = formatMemberListText(cands);
+          const percentVal = Math.round(100 / cands.length);
+          percentText = cands.map(m => `${m} ${percentVal}%`).join('　');
 
-          if (cands.length === 1 || assignedName) {
-            // パターン1: 単一確定（例: 森川優 100%）
-            const targetMember = assignedName || cands[0];
-            reasonHtml = `${targetMember}はこの日の「${stageName}」公演で初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジで出演すると予想。`;
-            percentText = `${targetMember} 100%`;
-          } else if (cands.length >= 2) {
-            // パターン2: ポジション被りで複数候補（例1, 例2）
-            const cand1 = cands[0];
-            const cand2 = cands[1];
+          // 他の兼ね合いポジションを探す
+          let otherPosName = "別ポジション";
+          stage.fixed.forEach((fM, otherPIdx) => {
+            if (otherPIdx !== pIdx) {
+              const otherCands = (candidatesArrayMap[otherPIdx] || []).filter(m => inputSet.has(m));
+              if (cands.some(c => otherCands.includes(c))) {
+                otherPosName = `${fM}ポジ`;
+              }
+            }
+          });
 
-            // 兼ね合いとなるもう一つのポジションを特定
-            let otherPosName = "別ポジション";
-            stage.fixed.forEach((fM, otherPIdx) => {
-              if (otherPIdx !== pIdx) {
-                const otherExp = posExperienceMap[otherPIdx] || [];
-                if (otherExp.includes(cand1) || otherExp.includes(cand2)) {
-                  otherPosName = `${fM}ポジ`;
-                }
+          // 競合のメインポジション（経験があるポジ名）を特定
+          let primaryPosName = `${fixedMember}ポジ`;
+          if (isFirstTimer) {
+            stage.fixed.forEach((fM, pI) => {
+              const exp = posExperienceMap[pI] || [];
+              if (cands.some(c => exp.includes(c))) {
+                primaryPosName = `${fM}ポジ`;
               }
             });
+          }
 
-            const absenceExpText = formatMemberListText(absenceExp);
-            const absenceExpPhrase = absenceExpText ? `${absenceExpText}の出演予定がない` : "出演予定がない";
+          if (isFirstTimer) {
+            // パターン A-1: ⚠︎︎ 初出演枠でのポジション被り
+            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
 
-            reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absenceExpPhrase}。他の出演メンバーのポジションの兼ね合いから、${otherPosName}でポジション被りとなる${cand1}と${cand2}のどちらかが${fixedMember}ポジ、どちらかが${otherPosName}で出演すると予想。`;
-            
-            percentText = `${cand1} 50%　${cand2} 50%`;
+            let absencePhrase = "";
+            if (absenceOtherExp.length > 0) {
+              const absenceOtherExpText = formatMemberListText(absenceOtherExp);
+              absencePhrase = `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定がない`;
+            } else {
+              absencePhrase = `初日メンバーである${fixedMember}の出演予定がない`;
+            }
+
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、${primaryPosName}でポジション被りとなる${candTextList}のどちらかが${fixedMember}ポジ、どちらかが${primaryPosName === fixedMember + 'ポジ' ? otherPosName : primaryPosName}で出演すると予想。`;
+
           } else {
-            reasonHtml = `この日の「${stageName}」公演は初日メンバーである${fixedMember}の出演予定がなく、他の出演メンバーからポジションを特定できませんでした。`;
-            percentText = "予想不能";
+            // パターン A-2: ☑ 出演経験あり枠でのポジション被り
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+
+            let attendingPhrase = "";
+            if (isFixedAttending && attendingOtherExp.length > 0) {
+              attendingPhrase = `初日メンバーである${fixedMember}、${fixedMember}ポジでの出演経験がある${formatMemberListText(attendingOtherExp)}の${attendingExp.length}人の出演予定がある`;
+            } else if (isFixedAttending) {
+              attendingPhrase = `初日メンバーである${fixedMember}の出演予定がある`;
+            } else {
+              attendingPhrase = `${fixedMember}ポジでの出演経験がある${formatMemberListText(attendingOtherExp)}の出演予定がある`;
+            }
+
+            reasonHtml = `この日の「${stageName}」公演は、${attendingPhrase}。他のメンバーのポジションの兼ね合いから、${fixedMember}ポジでポジション被りとなる${candTextList}のどちらかが${otherPosName}、どちらかが${fixedMember}ポジで出演すると予想。`;
           }
 
         } else {
-          // 【パターン3 & パターン4】☑ 〇〇ポジでの出演経験あり
-          badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
-          
-          // ☑マーク重複チェック
-          if (assignedName) {
-            assignedCheckMap[assignedName] = (assignedCheckMap[assignedName] || 0) + 1;
-          }
+          // 【候補が1人確定、または割り当て明確の場合】
+          if (isFirstTimer) {
+            // パターン B-1: ⚠︎︎ 〇〇ポジで初出演
+            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
 
-          percentText = `${assignedName} 100%`;
+            const targetMember = assignedName || (cands.length > 0 ? cands[0] : "メンバー");
+            percentText = targetMember ? `${targetMember} 100%` : "予想不能";
 
-          const isFixedAttending = inputSet.has(fixedMember);
-
-          if (isFixedAttending && assignedName === fixedMember) {
-            // パターン3: 初日メンバーがそのまま出演
-            const absenceExpText = formatMemberListText(absenceExp);
-
-            if (absenceExp.length === 0 && allExperienced.length <= 1) {
-              // (例3) 倉野尾成美ポジ
-              reasonHtml = `${fixedMember}は「${stageName}」公演の初日メンバーであり、${fixedMember}ポジでの出演経験があるメンバーが他の現役メンバーにいないため、${fixedMember}が自分のポジションで出演すると予想。`;
-            } else if (absenceExp.length > 0) {
-              // (例1, 例2) 大盛真歩ポジ / 向井地美音ポジ
-              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${absenceExpText}の出演予定がないため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
+            let absencePhrase = "";
+            if (absenceOtherExp.length > 0) {
+              const absenceOtherExpText = formatMemberListText(absenceOtherExp);
+              absencePhrase = `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定がない。`;
             } else {
-              reasonHtml = `初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
+              absencePhrase = `初日メンバーである${fixedMember}の出演予定がない。`;
             }
 
-          } else {
-            // パターン4: アンダーメンバーが確定、または初日メンバーが他ポジへ移動
-            const absenceExpText = formatMemberListText(absenceExp);
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}${targetMember}はこの日の「${stageName}」公演で初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジで出演すると予想。`;
 
-            if (!isFixedAttending) {
-              // 初日メンバー不在の場合
-              if (absenceExp.length > 0) {
-                // (例2, 例3) 迫由芽実や八木愛月など不在経験者がいる
-                reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}の出演予定がなく、${fixedMember}ポジでの出演経験がある${absenceExpText}の出演予定もないため、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
+          } else {
+            // パターン B-2: ☑ 〇〇ポジでの出演経験あり
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            
+            if (assignedName) {
+              assignedCheckMap[assignedName] = (assignedCheckMap[assignedName] || 0) + 1;
+            }
+
+            percentText = assignedName ? `${assignedName} 100%` : "予想不能";
+
+            if (isFixedAttending && assignedName === fixedMember) {
+              // 初日メンバーがそのまま自分のポジに出演
+              if (absenceOtherExp.length === 0 && allExperienced.length <= 1) {
+                reasonHtml = `${fixedMember}は「${stageName}」公演の初日メンバーであり、${fixedMember}ポジでの出演経験があるメンバーが他の現役メンバーにいないため、${fixedMember}が自分のポジションで出演すると予想。`;
+              } else if (absenceOtherExp.length > 0) {
+                const absenceOtherExpText = formatMemberListText(absenceOtherExp);
+                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定がないため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
               } else {
-                // (例1) 初日メンバーのみ不在
-                reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}の出演予定がないため、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
+                reasonHtml = `初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
               }
+
             } else {
-              // 初日メンバーまたは他の経験者も出演しているが兼ね合いで動くケース (例4, 例5)
-              if (assignedName !== fixedMember) {
-                // 初日メンバーが別ポジに回る (例5)
-                let fixedMemberNewPos = "別";
-                stage.fixed.forEach((fM, otherPIdx) => {
-                  if (bestMapping[otherPIdx] === fixedMember) fixedMemberNewPos = fM;
-                });
-                reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}も出演予定だが、他のメンバーのポジションの兼ね合いから、${fixedMember}は${fixedMemberNewPos}ポジで出演する可能性が高いと予想し、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
-              } else {
-                // (例4) 他の経験者が別ポジに回る
-                let otherExpMember = attendingExp.find(m => m !== assignedName);
-                let otherMemberNewPos = "小栗有以";
-                if (otherExpMember) {
-                  stage.fixed.forEach((fM, otherPIdx) => {
-                    if (bestMapping[otherPIdx] === otherExpMember) otherMemberNewPos = fM;
-                  });
+              // アンダーメンバーが出演、または初日メンバーが他ポジへ移動
+              if (!isFixedAttending) {
+                // 初日メンバー不在の場合
+                if (absenceOtherExp.length > 0) {
+                  const absenceOtherExpText = formatMemberListText(absenceOtherExp);
+                  reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}の出演予定がなく、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定もないため、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
+                } else {
+                  reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}の出演予定がないため、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
                 }
-                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${otherExpMember || '他のメンバー'}も出演予定だが、他の出演メンバーのポジションの兼ね合いから、${otherExpMember || 'そのメンバー'}は${otherMemberNewPos}ポジで出演する可能性が高いと予想し、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
+              } else {
+                // 初日メンバーまたは他の経験者も出演しているが兼ね合いで動くケース
+                if (assignedName !== fixedMember) {
+                  // 初日メンバーが別ポジに回る
+                  let fixedMemberNewPos = "別";
+                  stage.fixed.forEach((fM, otherPIdx) => {
+                    if (bestMapping[otherPIdx] === fixedMember) fixedMemberNewPos = fM;
+                  });
+                  reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}も出演予定だが、他のメンバーのポジションの兼ね合いから、${fixedMember}は${fixedMemberNewPos}ポジで出演する可能性が高いと予想し、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
+                } else {
+                  // 他の経験者が別ポジに回る
+                  let otherExpMember = attendingOtherExp[0];
+                  let otherMemberNewPos = "別";
+                  if (otherExpMember) {
+                    stage.fixed.forEach((fM, otherPIdx) => {
+                      if (bestMapping[otherPIdx] === otherExpMember) otherMemberNewPos = fM;
+                    });
+                  }
+                  reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${otherExpMember || '他のメンバー'}も出演予定だが、他の出演メンバーのポジションの兼ね合いから、${otherExpMember || 'そのメンバー'}は${otherMemberNewPos}ポジで出演する可能性が高いと予想し、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
+                }
               }
             }
           }
