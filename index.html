@@ -982,7 +982,6 @@
       return result;
     }
 
-    /* 【要件①対応】不在アンダーメンバーの表記（1名: 名前 / 2名以上: 名前や名前など） */
     function formatAbsenceMemberListText(list) {
       if (!list || list.length === 0) return "";
       if (list.length === 1) return list[0];
@@ -1019,7 +1018,6 @@
       return circles[num - 1] || `(${num})`;
     }
 
-    /* 【要件①＆要件②対応】予想像ロジックの修正 */
     function runForecast() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) {
@@ -1092,7 +1090,7 @@
         });
       });
 
-      // 複数ポジ兼務で唯一の経験者（倉野尾、長友等）の検出
+      // 複数ポジ兼務で唯一の経験者の検出
       const soloMultiPosMembers = {};
       inputMemberList.forEach(m => {
         const expPIdxs = [];
@@ -1220,37 +1218,66 @@
             badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
             const lowPct = Math.round((otherCount / totalCount) * 100);
 
-            let patterns = [];
+            let patternItems = [];
             let pctMap = {};
 
-            patterns.push(`① ${soloMultiMember}は${stage.fixed[primaryPIdx]}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${stage.fixed[primaryPIdx]}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${stage.fixed[primaryPIdx]}ポジでの出演が${primaryCount}回、${fixedMember}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。`);
+            patternItems.push({
+              type: 'soloMulti',
+              member: soloMultiMember,
+              primaryPos: stage.fixed[primaryPIdx],
+              primaryCount: primaryCount,
+              otherCount: otherCount
+            });
             pctMap[soloMultiMember] = lowPct;
-
-            let patternIdx = 2;
 
             duplicatePosGroups.forEach(grp => {
               const dupText = formatMemberListText(grp.members);
-              patterns.push(`${getCircleNum(patternIdx)} 他の出演メンバーのポジションの兼ね合いから、${grp.posName}でポジション被りとなる${dupText}のどちらかが${grp.posName}、どちらかが${fixedMember}ポジで出演する可能性。`);
-              patternIdx++;
-
+              patternItems.push({
+                type: 'duplicate',
+                posName: grp.posName,
+                memText: dupText,
+                members: grp.members
+              });
               const dupPct = Math.round(50 / vacantCount);
               grp.members.forEach(m => { pctMap[m] = dupPct; });
             });
 
             if (newMembers.length > 0) {
               const newMemText = formatMemberListText(newMembers);
-              if (newMembers.length === 1) {
-                patterns.push(`${getCircleNum(patternIdx)} この日の「${stageName}」公演で初日を迎える${newMemText}が${fixedMember}ポジに出演する可能性。`);
-              } else {
-                patterns.push(`${getCircleNum(patternIdx)} この日の「${stageName}」公演で初日を迎える${newMemText}の誰かが${fixedMember}ポジに出演する可能性。`);
-              }
-
+              patternItems.push({
+                type: 'newMembers',
+                memText: newMemText,
+                isSingle: newMembers.length === 1,
+                members: newMembers
+              });
               const newPct = Math.round(100 / vacantCount);
               newMembers.forEach(m => { pctMap[m] = newPct; });
             }
 
-            const totalPatterns = patterns.length;
-            reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+            const totalPatterns = patternItems.length;
+
+            if (totalPatterns === 1) {
+              const item = patternItems[0];
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。${soloMultiMember}は${item.primaryPos}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${item.primaryPos}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${item.primaryPos}ポジでの出演が${item.primaryCount}回、${fixedMember}ポジでの出演が${item.otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。`;
+            } else {
+              let patterns = [];
+              patternItems.forEach((item, idx) => {
+                const circle = getCircleNum(idx + 1);
+                if (item.type === 'soloMulti') {
+                  patterns.push(`${circle} ${soloMultiMember}は${item.primaryPos}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${item.primaryPos}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${item.primaryPos}ポジでの出演が${item.primaryCount}回、${fixedMember}ポジでの出演が${item.otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。`);
+                } else if (item.type === 'duplicate') {
+                  patterns.push(`${circle} 他の出演メンバーのポジションの兼ね合いから、${item.posName}でポジション被りとなる${item.memText}のどちらかが${item.posName}、どちらかが${fixedMember}ポジで出演する可能性。`);
+                } else if (item.type === 'newMembers') {
+                  if (item.isSingle) {
+                    patterns.push(`${circle} この日の「${stageName}」公演で初日を迎える${item.memText}が${fixedMember}ポジに出演する可能性。`);
+                  } else {
+                    patterns.push(`${circle} この日の「${stageName}」公演で初日を迎える${item.memText}の誰かが${fixedMember}ポジに出演する可能性。`);
+                  }
+                }
+              });
+
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+            }
 
             const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
             percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
@@ -1262,33 +1289,56 @@
 
           const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
 
-          let patterns = [];
+          let patternItems = [];
           let pctMap = {};
-          let patternIdx = 1;
 
           duplicatePosGroups.forEach(grp => {
             const memText = formatMemberListText(grp.members);
-            patterns.push(`${getCircleNum(patternIdx)} ${grp.posName}でポジション被りとなる${memText}のどちらかが${fixedMember}ポジ、どちらかが${grp.posName}で出演する可能性。`);
-            patternIdx++;
-
+            patternItems.push({
+              type: 'duplicate',
+              posName: grp.posName,
+              memText: memText,
+              members: grp.members
+            });
             const dupPct = Math.round(50 / vacantCount);
             grp.members.forEach(m => { pctMap[m] = dupPct; });
           });
 
           newMembers.forEach(m => {
-            patterns.push(`${getCircleNum(patternIdx)} この日の「${stageName}」公演で初日を迎える${m}が${fixedMember}ポジで出演する可能性。`);
-            patternIdx++;
-
+            patternItems.push({
+              type: 'newMember',
+              memberName: m
+            });
             const newPct = Math.round(100 / vacantCount);
             pctMap[m] = newPct;
           });
 
-          const totalPatterns = patterns.length;
+          const totalPatterns = patternItems.length;
 
           if (totalPatterns === 0) {
             reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。`;
             percentText = "予想不能";
+          } else if (totalPatterns === 1) {
+            /* 【要件①対応】パターンが1つだけの場合は「〜で出演すると予想。」の文面にする */
+            const item = patternItems[0];
+            if (item.type === 'duplicate') {
+              reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、${item.posName}でポジション被りとなる${item.memText}のどちらかが${fixedMember}ポジ、どちらかが${item.posName}で出演すると予想。`;
+            } else if (item.type === 'newMember') {
+              reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。この日の「${stageName}」公演で初日を迎える${item.memberName}が${fixedMember}ポジで出演すると予想。`;
+            }
+            const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
+            percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
           } else {
+            let patterns = [];
+            patternItems.forEach((item, idx) => {
+              const circle = getCircleNum(idx + 1);
+              if (item.type === 'duplicate') {
+                patterns.push(`${circle} ${item.posName}でポジション被りとなる${item.memText}のどちらかが${fixedMember}ポジ、どちらかが${item.posName}で出演する可能性。`);
+              } else if (item.type === 'newMember') {
+                patterns.push(`${circle} この日の「${stageName}」公演で初日を迎える${item.memberName}が${fixedMember}ポジで出演する可能性。`);
+              }
+            });
+
             reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
 
             const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
@@ -1304,7 +1354,6 @@
             if (absenceExp.length === 0) {
               reasonHtml = `${fixedMember}は「${stageName}」公演の初日メンバーであり、${fixedMember}ポジでの出演経験があるメンバーが他の現役メンバーにいないため、${fixedMember}が自分のポジションで出演すると予想。`;
             } else {
-              /* 【要件①対応】2人以上のアンダー不在を「〜など」に整形 */
               const formattedAbsence = formatAbsenceMemberListText(absenceExp);
               reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formattedAbsence}の出演予定がないため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
             }
@@ -1322,10 +1371,11 @@
               });
               const removedText = removedReasons.join('こと、');
 
-              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、${fixedMember}ポジでの出演経験がある${underMember}が${fixedMember}ポジで出演すると予想。`;
+              /* 【要件②対応】「〜ポジでの出演経験がある」の重複修飾を削除 */
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${formatMemberListText(initialCandidates)}の出演予定があるが、${removedText}ため、${underMember}が${fixedMember}ポジで出演すると予想。`;
             } else {
               const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
-              reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}ため、${fixedMember}ポジでの出演経験がある${underMember}が${fixedMember}ポジで出演すると予想。`;
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${underMember}が${fixedMember}ポジで出演すると予想。`;
             }
           } else {
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
