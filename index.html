@@ -957,117 +957,50 @@
       });
     }
 
-    function getAllOptimalAssignments(inputMemberList, stageFixed, validShows) {
-      const numPos = stageFixed.length;
+    // 【改善点①追加関数】ポジション経験者（アンダー）を「一覧表の順」→「日別表での登場順」で抽出
+    function getOrderedExperiencedMembers(pIdx, stageFixed, validShows) {
+      const fixedMember = stageFixed[pIdx];
+      const result = [];
+      const seen = new Set();
 
-      if (!inputMemberList.length || !numPos) {
-        return {
-          bestMapping: {},
-          candidatesArrayMap: {},
-          assignedMembers: new Set()
-        };
-      }
-
-      const inputSet = new Set(inputMemberList);
-      const experiencedCandidates = {};
-
-      for (let pIdx = 0; pIdx < numPos; pIdx++) {
-        const fixedMember = stageFixed[pIdx];
-        const set = new Set();
-
-        validShows.forEach(show => {
-          const member = show.positionsArray?.[pIdx];
-          if (!member || member === "-" || member === "－") return;
-          const name = member.trim();
-          if (!inputSet.has(name)) return;
-          set.add(name);
-        });
-
-        if (fixedMember && inputSet.has(fixedMember)) {
-          set.add(fixedMember);
+      // 1. 一覧表（初日ポジ表）に記載のあるアンダーメンバー（MASTER_MEMBER_ORDER順）
+      MASTER_MEMBER_ORDER.forEach(m => {
+        if (m === fixedMember) return;
+        const hasPerf = validShows.some(s => s.positionsArray?.[pIdx] === m);
+        if (hasPerf && !seen.has(m)) {
+          seen.add(m);
+          result.push(m);
         }
+      });
 
-        experiencedCandidates[pIdx] = MASTER_MEMBER_ORDER.filter(name => set.has(name));
-
-        inputMemberList.forEach(name => {
-          if (set.has(name) && !experiencedCandidates[pIdx].includes(name)) {
-            experiencedCandidates[pIdx].push(name);
-          }
-        });
-      }
-
-      const workingCandidates = {};
-      for (let pIdx = 0; pIdx < numPos; pIdx++) {
-        workingCandidates[pIdx] = [...experiencedCandidates[pIdx]];
-      }
-
-      const bestMapping = {};
-      const assignedMembers = new Set();
-      const assignedPositions = new Set();
-
-      let changed = true;
-      while (changed) {
-        changed = false;
-        for (let pIdx = 0; pIdx < numPos; pIdx++) {
-          if (assignedPositions.has(pIdx)) continue;
-          const candidates = workingCandidates[pIdx].filter(name => !assignedMembers.has(name));
-          workingCandidates[pIdx] = candidates;
-
-          if (candidates.length === 1) {
-            const member = candidates[0];
-            bestMapping[pIdx] = member;
-            assignedMembers.add(member);
-            assignedPositions.add(pIdx);
-
-            for (let otherIdx = 0; otherIdx < numPos; otherIdx++) {
-              if (otherIdx !== pIdx && workingCandidates[otherIdx]) {
-                workingCandidates[otherIdx] = workingCandidates[otherIdx].filter(m => m !== member);
-              }
-            }
-            changed = true;
-          }
+      // 2. 一覧表にはないが日別表（出演履歴）に登場するメンバー（出現順）
+      validShows.forEach(s => {
+        const m = s.positionsArray?.[pIdx];
+        if (m && m !== "-" && m !== "－" && m !== fixedMember && !seen.has(m)) {
+          seen.add(m);
+          result.push(m);
         }
+      });
+
+      return result;
+    }
+
+    // 【改善点①追加関数】人数表現（1人/2人/3人以上）の切り替え文章生成
+    function formatAbsencePhrase(fixedMember, absenceExpList) {
+      if (!absenceExpList || absenceExpList.length === 0) {
+        return `初日メンバーである${fixedMember}の出演予定がない`;
+      }
+      
+      let expText = "";
+      if (absenceExpList.length === 1) {
+        expText = `${absenceExpList[0]}`;
+      } else if (absenceExpList.length === 2) {
+        expText = `${absenceExpList[0]}や${absenceExpList[1]}`;
+      } else {
+        expText = `${absenceExpList[0]}や${absenceExpList[1]}など`;
       }
 
-      const candidatesArrayMap = {};
-
-      for (let pIdx = 0; pIdx < numPos; pIdx++) {
-        if (assignedPositions.has(pIdx)) {
-          candidatesArrayMap[pIdx] = [bestMapping[pIdx]];
-          continue;
-        }
-
-        const candidates = (workingCandidates[pIdx] || []).filter(name => inputSet.has(name) && !assignedMembers.has(name));
-        candidatesArrayMap[pIdx] = candidates;
-
-        if (candidates.length === 1) {
-          bestMapping[pIdx] = candidates[0];
-          assignedMembers.add(candidates[0]);
-          assignedPositions.add(pIdx);
-        }
-      }
-
-      // 未割り当てのメンバーを初出演ポジションへ自動補完
-      const unassignedMembers = inputMemberList.filter(m => !assignedMembers.has(m));
-      for (let pIdx = 0; pIdx < numPos; pIdx++) {
-        if (!assignedPositions.has(pIdx) && (!candidatesArrayMap[pIdx] || candidatesArrayMap[pIdx].length === 0)) {
-          if (unassignedMembers.length === 1) {
-            const m = unassignedMembers[0];
-            bestMapping[pIdx] = m;
-            candidatesArrayMap[pIdx] = [m];
-            assignedMembers.add(m);
-            assignedPositions.add(pIdx);
-          } else {
-            candidatesArrayMap[pIdx] = [...unassignedMembers];
-          }
-        }
-      }
-
-      return {
-        bestMapping,
-        candidatesArrayMap,
-        assignedMembers
-      };
+      return `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${expText}の出演予定がない`;
     }
 
     function formatMemberListText(list) {
@@ -1102,7 +1035,7 @@
       const stageName = stage.name.replace(/「|」|公演/g, '').trim();
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
 
-      // ① 貼られた出演メンバー全員の名前があるかチェック＆表示
+      // ① 全メンバー一覧表示
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
@@ -1115,182 +1048,207 @@
         allMembersGrid.appendChild(div);
       });
 
-      // ② ポジションの割り当てアルゴリズム実行
-      const { bestMapping, candidatesArrayMap } = getAllOptimalAssignments(inputMemberList, stage.fixed, validShows);
-
-      // ポジション経験者一覧の事前作成（全日程のデータより抽出）
-      const posExperienceMap = {};
-      stage.fixed.forEach((fixedMember, pIdx) => {
-        const expSet = new Set();
-        if (fixedMember) expSet.add(fixedMember);
+      // メンバー別・ポジ別出演回数マッピング作成
+      const memberPosCounts = {};
+      stage.fixed.forEach((fM, pIdx) => {
         validShows.forEach(s => {
           const m = s.positionsArray?.[pIdx];
-          if (m && m !== "-" && m !== "－") expSet.add(m.trim());
+          if (m && m !== "-" && m !== "－") {
+            const name = m.trim();
+            if (!memberPosCounts[name]) memberPosCounts[name] = {};
+            memberPosCounts[name][pIdx] = (memberPosCounts[name][pIdx] || 0) + 1;
+          }
         });
-        posExperienceMap[pIdx] = Array.from(expSet);
       });
 
-      // 重複チェック用トラッカー
-      const assignedCheckMap = {};
+      // 出演メンバーの経験ポジマップと不在経験者リストを作成
+      const attendingExpMap = {};
+      const absenceExpMap = {};
 
+      stage.fixed.forEach((fM, pIdx) => {
+        const orderedUnders = getOrderedExperiencedMembers(pIdx, stage.fixed, validShows);
+        attendingExpMap[pIdx] = [];
+        absenceExpMap[pIdx] = [];
+
+        if (inputSet.has(fM)) attendingExpMap[pIdx].push(fM);
+        else absenceExpMap[pIdx].push(fM);
+
+        orderedUnders.forEach(m => {
+          if (inputSet.has(m)) {
+            if (!attendingExpMap[pIdx].includes(m)) attendingExpMap[pIdx].push(m);
+          } else {
+            if (!absenceExpMap[pIdx].includes(m)) absenceExpMap[pIdx].push(m);
+          }
+        });
+      });
+
+      // 他ポジ重複（ポジション被り）メンバーの検出
+      const duplicatePosGroups = [];
+      const usedInGroups = new Set();
+
+      stage.fixed.forEach((fM, pIdx) => {
+        const expAttending = attendingExpMap[pIdx];
+        if (expAttending.length > 1) {
+          const group = expAttending.filter(m => !usedInGroups.has(m));
+          if (group.length >= 2) {
+            group.forEach(m => usedInGroups.add(m));
+            duplicatePosGroups.push({
+              posName: `${fM}ポジ`,
+              members: group
+            });
+          }
+        }
+      });
+
+      // 未経験の出演メンバー（初出演）の検出
+      const newMembers = inputMemberList.filter(m => {
+        return !stage.fixed.some((fM, pIdx) => (attendingExpMap[pIdx] || []).includes(m));
+      });
+
+      // 複数ポジ兼務で唯一の経験者（倉野尾パターン等）を検出
+      const soloMultiPosMembers = {};
+      inputMemberList.forEach(m => {
+        const expPIdxs = [];
+        stage.fixed.forEach((fM, pIdx) => {
+          if ((attendingExpMap[pIdx] || []).includes(m) && attendingExpMap[pIdx].length === 1) {
+            expPIdxs.push(pIdx);
+          }
+        });
+        if (expPIdxs.length >= 2) {
+          soloMultiPosMembers[m] = expPIdxs;
+        }
+      });
+
+      // ポジションごとの予測カード生成
       stage.fixed.forEach((fixedMember, pIdx) => {
-        const cands = (candidatesArrayMap[pIdx] || []).filter(m => inputSet.has(m));
-        
-        // 過去にそのポジの経験があるメンバー（初日＋アンダー）
-        const allExperienced = posExperienceMap[pIdx] || [];
-        
-        // 初日メンバーが出演しているか
-        const isFixedAttending = inputSet.has(fixedMember);
-
-        // 重複・混同を防ぐためのメンバー分類 (要件①の修正)
-        const attendingExp = allExperienced.filter(m => inputSet.has(m));
-        const attendingOtherExp = attendingExp.filter(m => m !== fixedMember);
-        
-        const absenceExp = allExperienced.filter(m => !inputSet.has(m));
-        const absenceOtherExp = absenceExp.filter(m => m !== fixedMember);
-
-        const assignedName = (cands.length === 1) ? cands[0] : (bestMapping[pIdx] || "");
+        const expAttending = attendingExpMap[pIdx];
+        const absenceExp = absenceExpMap[pIdx].filter(m => m !== fixedMember);
 
         let badgeHtml = "";
         let reasonHtml = "";
         let percentText = "";
 
-        const isFirstTimer = (attendingExp.length === 0); // 今回の出演メンバーに経験者がいない
+        // 判定 logic: soloMultiPosMember (要件③・④)
+        const soloMultiMember = Object.keys(soloMultiPosMembers).find(m => soloMultiPosMembers[m].includes(pIdx));
 
-        if (cands.length >= 2) {
-          // 【複数候補でポジ競合・兼ね合いが発生している場合 (要件②の修正)】
-          const candTextList = formatMemberListText(cands);
-          const percentVal = Math.round(100 / cands.length);
-          percentText = cands.map(m => `${m} ${percentVal}%`).join('　');
+        if (soloMultiMember) {
+          const allPIdxs = soloMultiPosMembers[soloMultiMember];
+          const primaryPIdx = allPIdxs.slice().sort((a, b) => (memberPosCounts[soloMultiMember][b] || 0) - (memberPosCounts[soloMultiMember][a] || 0))[0];
+          const otherPIdx = allPIdxs.find(idx => idx !== primaryPIdx);
 
-          // 他の兼ね合いポジションを探す
-          let otherPosName = "別ポジション";
-          stage.fixed.forEach((fM, otherPIdx) => {
-            if (otherPIdx !== pIdx) {
-              const otherCands = (candidatesArrayMap[otherPIdx] || []).filter(m => inputSet.has(m));
-              if (cands.some(c => otherCands.includes(c))) {
-                otherPosName = `${fM}ポジ`;
-              }
-            }
-          });
+          const isPrimary = (pIdx === primaryPIdx);
+          const otherFixed = stage.fixed[otherPIdx];
 
-          // 競合のメインポジション（経験があるポジ名）を特定
-          let primaryPosName = `${fixedMember}ポジ`;
-          if (isFirstTimer) {
-            stage.fixed.forEach((fM, pI) => {
-              const exp = posExperienceMap[pI] || [];
-              if (cands.some(c => exp.includes(c))) {
-                primaryPosName = `${fM}ポジ`;
-              }
-            });
-          }
+          const primaryCount = memberPosCounts[soloMultiMember][primaryPIdx] || 0;
+          const otherCount = memberPosCounts[soloMultiMember][otherPIdx] || 0;
+          const totalCount = primaryCount + otherCount;
 
-          if (isFirstTimer) {
-            // パターン A-1: ⚠︎︎ 初出演枠でのポジション被り
-            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
+          if (isPrimary) {
+            // 【改善点③】最多出演ポジ側
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            const pct = Math.round((primaryCount / totalCount) * 100);
 
-            let absencePhrase = "";
-            if (absenceOtherExp.length > 0) {
-              const absenceOtherExpText = formatMemberListText(absenceOtherExp);
-              absencePhrase = `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定がない`;
-            } else {
-              absencePhrase = `初日メンバーである${fixedMember}の出演予定がない`;
-            }
-
-            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、${primaryPosName}でポジション被りとなる${candTextList}のどちらかが${fixedMember}ポジ、どちらかが${primaryPosName === fixedMember + 'ポジ' ? otherPosName : primaryPosName}で出演すると予想。`;
+            reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。${soloMultiMember}は${otherFixed}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${fixedMember}ポジか${otherFixed}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${fixedMember}ポジでの出演が${primaryCount}回、${otherFixed}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性は高いと予想。`;
+            percentText = `${soloMultiMember} ${pct}%`;
 
           } else {
-            // パターン A-2: ☑ 出演経験あり枠でのポジション被り
-            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            // 【改善点④】最少出演ポジ側
+            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
+            const lowPct = Math.round((otherCount / totalCount) * 100);
 
-            let attendingPhrase = "";
-            if (isFixedAttending && attendingOtherExp.length > 0) {
-              attendingPhrase = `初日メンバーである${fixedMember}、${fixedMember}ポジでの出演経験がある${formatMemberListText(attendingOtherExp)}の${attendingExp.length}人の出演予定がある`;
-            } else if (isFixedAttending) {
-              attendingPhrase = `初日メンバーである${fixedMember}の出演予定がある`;
-            } else {
-              attendingPhrase = `${fixedMember}ポジでの出演経験がある${formatMemberListText(attendingOtherExp)}の出演予定がある`;
-            }
+            let patternCount = 1 + duplicatePosGroups.length;
+            reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${soloMultiMember}の出演予定がある。他の出演メンバーのポジションの兼ね合いから、次の${patternCount}つのパターンが考えられる。<br><br>`;
 
-            reasonHtml = `この日の「${stageName}」公演は、${attendingPhrase}。他のメンバーのポジションの兼ね合いから、${fixedMember}ポジでポジション被りとなる${candTextList}のどちらかが${otherPosName}、どちらかが${fixedMember}ポジで出演すると予想。`;
+            // パターン ①
+            reasonHtml += `① ${soloMultiMember}は${stage.fixed[primaryPIdx]}ポジでの出演経験もあること、他の出演メンバーのポジションの兼ね合いから、この日の「${stageName}」公演で${soloMultiMember}が${stage.fixed[primaryPIdx]}ポジか${fixedMember}ポジのどちらで出演になるか断定はできないが、過去に${soloMultiMember}が「${stageName}」公演に出演した際、${stage.fixed[primaryPIdx]}ポジでの出演が${primaryCount}回、${fixedMember}ポジでの出演が${otherCount}回のため、${fixedMember}ポジで出演する可能性は低いと予想。<br>`;
+            reasonHtml += `<span class="font-bold text-slate-800">${soloMultiMember} ${lowPct}%</span><br><br>`;
+
+            // パターン ② 以降 (ポジション被りグループ)
+            let pIdxCount = 2;
+            let groupPctTexts = [];
+            duplicatePosGroups.forEach(grp => {
+              const dupText = formatMemberListText(grp.members);
+              reasonHtml += `${getCircleNum(pIdxCount)} 他の出演メンバーのポジションの兼ね合いから、${grp.posName}でポジション被りとなる${dupText}のどちらかが${grp.posName}、どちらかが${fixedMember}ポジで出演する可能性。<br>`;
+
+              const grpPct = 25; // 均等割り指定
+              const grpPctStr = grp.members.map(m => `${m} ${grpPct}%`).join('　');
+              reasonHtml += `<span class="font-bold text-slate-800">${grpPctStr}</span><br><br>`;
+              pIdxCount++;
+            });
+
+            percentText = ""; // パターン内に埋め込み済み
+          }
+
+        } else if (expAttending.length === 0) {
+          // 【改善点② & ⑤】初日・経験者不在パターン / スライド予測
+          badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
+
+          const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
+
+          // 候補者の収集（ポジ被りグループ + 初日メンバー）
+          const candidateGroups = [];
+          duplicatePosGroups.forEach(grp => candidateGroups.push({ type: 'group', ...grp }));
+          newMembers.forEach(m => candidateGroups.push({ type: 'new', name: m }));
+
+          const totalPatterns = candidateGroups.length;
+
+          if (totalPatterns > 0) {
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>`;
+
+            let allCandidates = [];
+            candidateGroups.forEach((cand, idx) => {
+              const circleNumber = getCircleNum(idx + 1);
+              if (cand.type === 'group') {
+                const memText = formatMemberListText(cand.members);
+                reasonHtml += `${circleNumber} ${cand.posName}でポジション被りとなる${memText}のどちらかが${fixedMember}ポジ、どちらかが${cand.posName}で出演する可能性。<br><br>`;
+                allCandidates.push(...cand.members);
+              } else {
+                reasonHtml += `${circleNumber} この日の「${stageName}」公演で初日を迎える${cand.name}が${fixedMember}ポジで出演する可能性。<br><br>`;
+                allCandidates.push(cand.name);
+              }
+            });
+
+            // 確率均等割
+            const uniqCandidates = Array.from(new Set(allCandidates));
+            const equalPct = Math.floor(100 / uniqCandidates.length);
+            percentText = uniqCandidates.map(m => `${m} ${equalPct}%`).join('　');
+
+          } else {
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。`;
+            percentText = "予想不能";
           }
 
         } else {
-          // 【候補が1人確定、または割り当て明確の場合】
-          if (isFirstTimer) {
-            // パターン B-1: ⚠︎︎ 〇〇ポジで初出演
-            badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎︎ ${fixedMember}ポジで初出演</span>`;
-
-            const targetMember = assignedName || (cands.length > 0 ? cands[0] : "メンバー");
-            percentText = targetMember ? `${targetMember} 100%` : "予想不能";
-
-            let absencePhrase = "";
-            if (absenceOtherExp.length > 0) {
-              const absenceOtherExpText = formatMemberListText(absenceOtherExp);
-              absencePhrase = `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定がない。`;
-            } else {
-              absencePhrase = `初日メンバーである${fixedMember}の出演予定がない。`;
-            }
-
-            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}${targetMember}はこの日の「${stageName}」公演で初日を迎える予定だが、他の出演メンバーのポジションの兼ね合いから、${fixedMember}ポジで出演すると予想。`;
-
-          } else {
-            // パターン B-2: ☑ 〇〇ポジでの出演経験あり
+          // 通常の1人確定または単純重複ケース
+          if (expAttending.length === 1 && expAttending[0] === fixedMember) {
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
-            
-            if (assignedName) {
-              assignedCheckMap[assignedName] = (assignedCheckMap[assignedName] || 0) + 1;
-            }
+            percentText = `${fixedMember} 100%`;
 
-            percentText = assignedName ? `${assignedName} 100%` : "予想不能";
-
-            if (isFixedAttending && assignedName === fixedMember) {
-              // 初日メンバーがそのまま自分のポジに出演
-              if (absenceOtherExp.length === 0 && allExperienced.length <= 1) {
-                reasonHtml = `${fixedMember}は「${stageName}」公演の初日メンバーであり、${fixedMember}ポジでの出演経験があるメンバーが他の現役メンバーにいないため、${fixedMember}が自分のポジションで出演すると予想。`;
-              } else if (absenceOtherExp.length > 0) {
-                const absenceOtherExpText = formatMemberListText(absenceOtherExp);
-                reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定がないため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
-              } else {
-                reasonHtml = `初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
-              }
-
+            if (absenceExp.length === 0) {
+              reasonHtml = `${fixedMember}は「${stageName}」公演の初日メンバーであり、${fixedMember}ポジでの出演経験があるメンバーが他の現役メンバーにいないため、${fixedMember}が自分のポジションで出演すると予想。`;
             } else {
-              // アンダーメンバーが出演、または初日メンバーが他ポジへ移動
-              if (!isFixedAttending) {
-                // 初日メンバー不在の場合
-                if (absenceOtherExp.length > 0) {
-                  const absenceOtherExpText = formatMemberListText(absenceOtherExp);
-                  reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}の出演予定がなく、${fixedMember}ポジでの出演経験がある${absenceOtherExpText}の出演予定もないため、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
-                } else {
-                  reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}の出演予定がないため、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
-                }
-              } else {
-                // 初日メンバーまたは他の経験者も出演しているが兼ね合いで動くケース
-                if (assignedName !== fixedMember) {
-                  // 初日メンバーが別ポジに回る
-                  let fixedMemberNewPos = "別";
-                  stage.fixed.forEach((fM, otherPIdx) => {
-                    if (bestMapping[otherPIdx] === fixedMember) fixedMemberNewPos = fM;
-                  });
-                  reasonHtml = `この日の「${stageName}」公演は、初日メンバーである${fixedMember}も出演予定だが、他のメンバーのポジションの兼ね合いから、${fixedMember}は${fixedMemberNewPos}ポジで出演する可能性が高いと予想し、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
-                } else {
-                  // 他の経験者が別ポジに回る
-                  let otherExpMember = attendingOtherExp[0];
-                  let otherMemberNewPos = "別";
-                  if (otherExpMember) {
-                    stage.fixed.forEach((fM, otherPIdx) => {
-                      if (bestMapping[otherPIdx] === otherExpMember) otherMemberNewPos = fM;
-                    });
-                  }
-                  reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${otherExpMember || '他のメンバー'}も出演予定だが、他の出演メンバーのポジションの兼ね合いから、${otherExpMember || 'そのメンバー'}は${otherMemberNewPos}ポジで出演する可能性が高いと予想し、${fixedMember}ポジでの出演経験がある${assignedName}が${fixedMember}ポジで出演すると予想。`;
-                }
-              }
+              const absenceText = formatMemberListText(absenceExp);
+              reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${absenceText}の出演予定がないため、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`;
             }
+          } else if (expAttending.length === 1) {
+            const underMember = expAttending[0];
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            percentText = `${underMember} 100%`;
+
+            const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
+            reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}ため、${fixedMember}ポジでの出演経験がある${underMember}が${fixedMember}ポジで出演すると予想。`;
+          } else {
+            // 複数経験者（単純ポジション被り）
+            badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+            const memText = formatMemberListText(expAttending);
+            const pct = Math.floor(100 / expAttending.length);
+            percentText = expAttending.map(m => `${m} ${pct}%`).join('　');
+
+            reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。他のメンバーのポジションの兼ね合いから、どちらかが${fixedMember}ポジで出演すると予想。`;
           }
         }
 
-        // HTMLカード構築
+        // カードのレンダリング
         const card = document.createElement('div');
         card.className = "bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2";
         card.innerHTML = `
@@ -1299,17 +1257,15 @@
             <div>${badgeHtml}</div>
           </div>
           <div class="text-slate-600 leading-relaxed font-normal">${reasonHtml}</div>
-          <div class="text-slate-800 font-bold text-sm pt-1 border-t border-slate-200/60">${percentText}</div>
+          ${percentText ? `<div class="text-slate-800 font-bold text-sm pt-1 border-t border-slate-200/60">${percentText}</div>` : ''}
         `;
         positionsList.appendChild(card);
       });
+    }
 
-      // 最終表示チェック: ☑マークの重複確認
-      Object.keys(assignedCheckMap).forEach(mName => {
-        if (assignedCheckMap[mName] > 1) {
-          console.warn(`警告: ${mName} が複数の☑ポジションに重複して割り当てられています。`);
-        }
-      });
+    function getCircleNum(num) {
+      const circles = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
+      return circles[num - 1] || `(${num})`;
     }
 
     function onSearchInput(val) {
@@ -1399,6 +1355,7 @@
       return `「${baseName}」`;
     }
 
+    // 【改善点①】演目ごとの出演回数でポジション別の出演回数を一覧表の順番通りにソートして表示
     function renderMemberDetailView() {
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
       const memberShows = dataSource.filter(item => item.membersArray.includes(selectedMemberName));
@@ -1431,11 +1388,24 @@
 
         let posTextArray = [];
         if (posDetailMap[title]) {
-          Object.entries(posDetailMap[title]).forEach(([pName, pCount]) => {
-            posTextArray.push(`${pName}ポジ: ${pCount}回`);
+          const stageObj = GLOBAL_STAGE_DATABASE[title] || STAGE_DATABASE[title];
+          const fixedList = stageObj ? stageObj.fixed : [];
+
+          // 一覧表の定義順（初日ポジ順）に従ってソート
+          const sortedEntries = Object.entries(posDetailMap[title]).sort((a, b) => {
+            const idxA = fixedList.indexOf(a[0]);
+            const idxB = fixedList.indexOf(b[0]);
+            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+            if (idxA !== -1) return -1;
+            if (idxB !== -1) return 1;
+            return 0;
+          });
+
+          sortedEntries.forEach(([pName, pCount]) => {
+            posTextArray.push(`${pName} : ${pCount}回`);
           });
         }
-        const subPosText = posTextArray.length > 0 ? posTextArray.join(' / ') : '';
+        const subPosText = posTextArray.length > 0 ? posTextArray.join('  /  ') : '';
 
         li.innerHTML = `
           <div class="flex justify-between items-center">
