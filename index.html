@@ -1830,25 +1830,136 @@ function runForecast() {
         percentText = `${confirmedMember} 100%`;
       }
 
-    // -------------------------------------------------------------
-    // 【分岐3】同じポジションの経験者が2人以上いてポジション被りしている場合（例: 田口愛佳ポジ）
+     // -------------------------------------------------------------
+    // 【分岐3】同じポジションの経験者が2人以上いてポジション被りしている場合（2人・3人以上共通汎用ロジック）
     // -------------------------------------------------------------
     } else if (expAttending.length >= 2) {
       const memText = formatMemberListText(expAttending);
+      const memberCount = expAttending.length;
 
       badgeHtml =
         `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
 
-      reasonHtml =
-        `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
-        `他の出演メンバーのポジションの兼ね合いから、${memText}のどちらが${fixedMember}ポジで出演するかは断定できないが、` +
-        `過去に${memText}が「${stageName}」公演で共演したときのデータを照らし合わせた結果、五分五分の可能性になると予想。`;
+      // 1. expAttendingのメンバー全員が経験している「共有ポジション群」を抽出
+      const sharedPosIndices = [pIdx];
+      const sharedPosNames = [fixedMember];
 
-      const equalPct = Math.floor(100 / expAttending.length);
-      const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
-      percentText = sortedMembers.map(m => `${m} ${equalPct}%`).join('　');
+      stage.fixed.forEach((otherFm, otherPIdx) => {
+        if (otherPIdx === pIdx) return;
+        const expList = (initialAttendingExpMap[otherPIdx] || []);
+        // 全員がこのポジションの経験者に入っているか確認
+        if (expAttending.every(m => expList.includes(m))) {
+          sharedPosIndices.push(otherPIdx);
+          sharedPosNames.push(otherFm);
+        }
+      });
 
-        // -------------------------------------------------------------
+      // 2. 過去の共演データから、全員が共演した際の本ポジション(pIdx)での出演回数をカウント
+      const counts = {};
+      expAttending.forEach(m => counts[m] = 0);
+      let totalCooccurrences = 0;
+
+      if (sharedPosIndices.length > 1) {
+        validShows.forEach(perf => {
+          if (!Array.isArray(perf.positionsArray)) return;
+
+          // 対象メンバー全員が出演しているか確認
+          const allPresent = expAttending.every(m => perf.positionsArray.includes(m));
+          if (!allPresent) return;
+
+          // 対象メンバー全員が共有ポジション群のいずれかに入っているか確認
+          const inSharedPos = expAttending.every(m => {
+            const posIdx = perf.positionsArray.indexOf(m);
+            return sharedPosIndices.includes(posIdx);
+          });
+
+          if (inSharedPos) {
+            const assignedMem = perf.positionsArray[pIdx];
+            if (counts[assignedMem] !== undefined) {
+              counts[assignedMem]++;
+              totalCooccurrences++;
+            }
+          }
+        });
+      }
+
+      const hasNoCooccurrenceData = (totalCooccurrences === 0);
+      const subjectWord = memberCount === 2 ? "どちら" : "誰";
+      const equalWord = memberCount === 2 ? "五分五分" : "均等";
+
+      // ---------------------------------------------------------
+      // ★ 共演実績がない場合（合計0回）：五分五分 / 均等テキストを出力
+      // ---------------------------------------------------------
+      if (hasNoCooccurrenceData) {
+        reasonHtml =
+          `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+          `他の出演メンバーのポジションの兼ね合いから、${memText}の${subjectWord}が${fixedMember}ポジで出演するかは断定できないが、` +
+          `過去に${memText}が「${stageName}」公演で共演したときのデータを照らし合わせた結果、${equalWord}の可能性になると予想。`;
+
+        const equalPct = Math.floor(100 / memberCount);
+        const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
+        percentText = sortedMembers.map(m => `${m} ${equalPct}%`).join('　');
+
+      // ---------------------------------------------------------
+      // ★ 過去に共演実績（1回以上）が存在する場合：比率から確率算出
+      // ---------------------------------------------------------
+      } else {
+        // 最多出演回数のメンバーを特定
+        let maxCount = -1;
+        let higherMem = "";
+        let tieForMax = false;
+
+        expAttending.forEach(m => {
+          if (counts[m] > maxCount) {
+            maxCount = counts[m];
+            higherMem = m;
+            tieForMax = false;
+          } else if (counts[m] === maxCount && maxCount > 0) {
+            tieForMax = true;
+          }
+        });
+
+        // 確率（％）の計算と端数調整
+        const pctMap = {};
+        let sumPct = 0;
+
+        expAttending.forEach((m, idx) => {
+          if (idx === memberCount - 1) {
+            pctMap[m] = 100 - sumPct; // 最後の1人で100%になるよう端数合わせ
+          } else {
+            const pct = Math.round((counts[m] / totalCooccurrences) * 100);
+            pctMap[m] = pct;
+            sumPct += pct;
+          }
+        });
+
+        // 実績回数の詳細テキスト生成
+        let detailText = "";
+        if (memberCount === 2 && sharedPosIndices.length === 2) {
+          const m1 = expAttending[0];
+          const m2 = expAttending[1];
+          const otherFixedMember = sharedPosNames[1];
+          detailText = `${m1}が${fixedMember}ポジ・${m2}が${otherFixedMember}ポジで${counts[m1]}回、` +
+                       `${m2}が${fixedMember}ポジ・${m1}が${otherFixedMember}ポジで${counts[m2]}回出演しているため、`;
+        } else {
+          const countDetails = expAttending.map(m => `${m}が${counts[m]}回`).join('、');
+          detailText = `${fixedMember}ポジでの出演が${countDetails}だったため、`;
+        }
+
+        const conclusionText = (!tieForMax && higherMem)
+          ? `今回は${higherMem}が${fixedMember}ポジで出演する可能性が高いと予想。`
+          : `${equalWord}の可能性が高いと予想。`;
+
+        reasonHtml =
+          `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+          `過去に${memText}が「${stageName}」公演で共演した際、` +
+          `${detailText}${conclusionText}`;
+
+        const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
+        percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
+      }
+
+    // -------------------------------------------------------------
     // 【分岐4】経験者がおらず、完全初出演・その他パターンの場合
     // -------------------------------------------------------------
     } else {
