@@ -1772,24 +1772,64 @@ while (changed) {
               m !== assignedMember
           );
 
-
         const removedReasons =
           removedMembers.map(m => {
 
             const info =
               memberAssignedToPos[m];
 
-            if (info) {
+            if (info && info.posName) {
               return (
                 `${m}が${info.posName}で出演する可能性`
               );
             }
 
+            /*
+             * memberAssignedToPos にまだ登録されていない場合は、
+             * 現在の候補状況から、そのメンバーが入れる
+             * 別ポジションを探す。
+             */
+            let alternativePosName = null;
+
+            stage.fixed.forEach((otherFixedMember, otherPIdx) => {
+
+              if (alternativePosName) return;
+
+              if (
+                otherPIdx === pIdx ||
+                confirmedAssignments[otherPIdx]
+              ) {
+                return;
+              }
+
+              const otherCandidates =
+                (attendingExpMap[otherPIdx] || [])
+                  .filter(
+                    candidate =>
+                      candidate &&
+                      candidate !== "-" &&
+                      candidate !== "－"
+                  );
+
+              if (
+                otherCandidates.includes(m)
+              ) {
+                alternativePosName =
+                  `${otherFixedMember}ポジ`;
+              }
+            });
+
+            if (alternativePosName) {
+              return (
+                `${m}が${alternativePosName}で出演する可能性`
+              );
+            }
+
             return (
-              `${m}が他ポジションで出演する可能性`
+              `${m}が別のポジションで出演する可能性`
             );
           });
-
+        
 
         let removedText = "";
 
