@@ -1261,6 +1261,13 @@ function runForecast() {
   while (changed) {
     changed = false;
 
+    // 他に経験者0人の「空きポジション」が存在するかチェック
+    const hasVacantPosition = stage.fixed.some((_, idx) => {
+      if (confirmedAssignments[idx]) return false;
+      const c = (attendingExpMap[idx] || []).filter(m => m && m !== "-" && m !== "－");
+      return c.length === 0;
+    });
+
     stage.fixed.forEach((fM, pIdx) => {
       if (confirmedAssignments[pIdx]) return;
 
@@ -1290,6 +1297,12 @@ function runForecast() {
 
       if (exclusiveCandidates.length === 1) {
         const confirmedMember = exclusiveCandidates[0];
+
+        // 空きポジがあり、かつ対象メンバーが複数ポジション経験者の場合は即時固定を保留する
+        const isMultiPos = (memberCandidatePositions[confirmedMember] || []).length > 1;
+        if (hasVacantPosition && isMultiPos) {
+          return;
+        }
 
         confirmedAssignments[pIdx] = confirmedMember;
         memberAssignedToPos[confirmedMember] = {
@@ -1322,6 +1335,12 @@ function runForecast() {
       if (candidates.length !== 1) return;
 
       const confirmedMember = candidates[0];
+
+      // 単一候補の場合も同様に、他ポジにスライド可能なら保留
+      const isMultiPos = (memberCandidatePositions[confirmedMember] || []).length > 1;
+      if (hasVacantPosition && isMultiPos) {
+        return;
+      }
 
       confirmedAssignments[pIdx] = confirmedMember;
       memberAssignedToPos[confirmedMember] = {
