@@ -1582,7 +1582,7 @@ function runForecast() {
         }
       }
 
-    } else if (expAttending.length === 0) {
+      } else if (expAttending.length === 0) {
       badgeHtml =
         `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ${fixedMember}ポジで初出演</span>`;
 
@@ -1626,6 +1626,21 @@ function runForecast() {
         pctMap[m] = newPct;
       });
 
+      // 【追加】他ポジと兼任可能で、スライドして初出演（武藤ポジ等）に入る候補メンバーを抽出
+      inputMemberList.forEach(m => {
+        const posList = memberCandidatePositions[m] || [];
+        // 2つ以上のポジができる ＆ まだパターンに追加されていないメンバー
+        if (posList.length >= 1 && !pctMap[m]) {
+          patternItems.push({
+            type: 'slideMember',
+            memberName: m
+          });
+
+          const slidePct = Math.round(100 / (inputMemberList.length - Object.keys(confirmedAssignments).length));
+          pctMap[m] = slidePct || 50;
+        }
+      });
+
       const totalPatterns = patternItems.length;
 
       if (totalPatterns === 0) {
@@ -1642,6 +1657,10 @@ function runForecast() {
             `他の出演メンバーのポジションの兼ね合いから、` +
             `${item.posName}でポジション被りとなる${item.memText}の${subjectStr}が${fixedMember}ポジ、` +
             `${subjectStr}が${item.posName}で出演すると予想。`;
+        } else if (item.type === 'slideMember') {
+          reasonHtml =
+            `この日の「${stageName}」公演は、${absencePhrase}。` +
+            `他のポジションも担当可能な${item.memberName}が${fixedMember}ポジにスライドして初出演すると予想。`;
         } else {
           reasonHtml =
             `この日の「${stageName}」公演は、${absencePhrase}。` +
@@ -1663,6 +1682,10 @@ function runForecast() {
             patterns.push(
               `${circle} ${item.posName}でポジション被りとなる${item.memText}の${subjectStr}が${fixedMember}ポジ、${subjectStr}が${item.posName}で出演する可能性。`
             );
+          } else if (item.type === 'slideMember') {
+            patterns.push(
+              `${circle} 他ポジションも担当可能な${item.memberName}が${fixedMember}ポジにスライドして初出演する可能性。`
+            );
           } else {
             patterns.push(
               `${circle} この日の「${stageName}」公演で初日を迎える${item.memberName}が${fixedMember}ポジで出演する可能性。`
@@ -1682,6 +1705,7 @@ function runForecast() {
       }
 
     } else if (expAttending.length === 1) {
+
       const assignedMember = expAttending[0];
 
       badgeHtml =
