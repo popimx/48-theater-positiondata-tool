@@ -1437,12 +1437,13 @@ function runForecast() {
 
 
         /*
-         * このメンバーを他のポジション候補から削除。
+         * 確定したポジションの候補を確定メンバーのみにし、
+         * 確定メンバーを他のポジション候補から削除。
          */
         stage.fixed.forEach((_, otherPIdx) => {
-
-          if (otherPIdx !== pIdx) {
-
+          if (otherPIdx === pIdx) {
+            attendingExpMap[otherPIdx] = [confirmedMember];
+          } else {
             attendingExpMap[otherPIdx] =
               attendingExpMap[otherPIdx].filter(
                 m => m !== confirmedMember
@@ -1493,12 +1494,13 @@ function runForecast() {
 
 
         /*
-         * 確定したメンバーを他ポジションから削除。
+         * 確定したポジションの候補を確定メンバーのみにし、
+         * 確定メンバーを他のポジション候補から削除。
          */
         stage.fixed.forEach((_, otherPIdx) => {
-
-          if (otherPIdx !== pIdx) {
-
+          if (otherPIdx === pIdx) {
+            attendingExpMap[otherPIdx] = [confirmedMember];
+          } else {
             attendingExpMap[otherPIdx] =
               attendingExpMap[otherPIdx].filter(
                 m => m !== confirmedMember
