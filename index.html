@@ -1250,29 +1250,96 @@ function runForecast() {
   });
 
 
-  /* =========================================================
+/* =========================================================
      1人で複数ポジションの候補になっているメンバー
+     
+     さらに、
+     「出演予定メンバーの中で1つのポジションしか
+      経験していないメンバー」を単独経験メンバーとして判定。
+     
+     例：
+       岩立沙穂ポジ
+       → 太田有紀・長友彩海
+       
+       大盛真歩ポジ
+       → 長友彩海・山﨑空
+       
+       太田有紀
+       → 岩立沙穂ポジしか経験していない
+       
+       山﨑空
+       → 大盛真歩ポジしか経験していない
+       
+       この場合、
+       太田有紀 → 岩立沙穂ポジ 100%
+       山﨑空 → 大盛真歩ポジ 100%
+       
+       として先に確定する。
   ========================================================= */
 
   const soloMultiPosMembers = {};
 
+  /*
+   * 各出演予定メンバーが、
+   * 現在の出演メンバーの中で何ポジションの候補になっているかを調べる。
+   */
+  const memberCandidatePositions = {};
+
   inputMemberList.forEach(m => {
-    const expPIdxs = [];
+    memberCandidatePositions[m] = [];
 
     stage.fixed.forEach((fM, pIdx) => {
       if (
-        (initialAttendingExpMap[pIdx] || []).includes(m) &&
-        initialAttendingExpMap[pIdx].length === 1
+        (initialAttendingExpMap[pIdx] || []).includes(m)
       ) {
-        expPIdxs.push(pIdx);
+        memberCandidatePositions[m].push(pIdx);
       }
     });
+  });
+
+
+  /*
+   * 1人で複数ポジションの候補になっているメンバー
+   */
+  inputMemberList.forEach(m => {
+
+    const expPIdxs =
+      memberCandidatePositions[m] || [];
 
     if (expPIdxs.length >= 2) {
       soloMultiPosMembers[m] = expPIdxs;
     }
   });
 
+
+  /*
+   * 1つのポジションしか経験していないメンバー
+   *
+   * これが今回の重要な追加処理。
+   *
+   * 例えば、
+   *
+   * 太田有紀
+   * → 岩立沙穂ポジのみ
+   *
+   * 山﨑空
+   * → 大盛真歩ポジのみ
+   *
+   * なら、そのポジションを100%で確定できる。
+   */
+  const singlePosExperiencedMembers = {};
+
+  inputMemberList.forEach(m => {
+
+    const expPIdxs =
+      memberCandidatePositions[m] || [];
+
+    if (expPIdxs.length === 1) {
+      singlePosExperiencedMembers[m] =
+        expPIdxs[0];
+    }
+  });
+  
 
   /* =========================================================
      候補者マップをコピー
@@ -1286,13 +1353,20 @@ function runForecast() {
   });
 
 
-  /* =========================================================
+   /* =========================================================
      確定ポジション
      
-     候補が1人しかいない場合は、そのメンバーを確定。
+     優先順位：
      
-     ただし soloMulti のメンバーは、
-     複数ポジションを担当できるため、この段階では確定しない。
+     ① そのポジションしか経験していないメンバー
+        → そのポジションを100%で確定
+     
+     ② 候補が1人しかいないポジション
+        → そのメンバーを確定
+     
+     ただし、
+     1人で複数ポジションを覚えているメンバー
+     （soloMultiPosMembers）は、その段階では確定しない。
   ========================================================= */
 
   const confirmedAssignments = {};
@@ -1303,21 +1377,53 @@ function runForecast() {
   while (changed) {
     changed = false;
 
+
+    /* =======================================================
+       ① 1つのポジションしか経験していないメンバーを
+          最優先で確定
+       
+       例：
+       太田有紀 → 岩立沙穂ポジしか経験していない
+       山﨑空 → 大盛真歩ポジしか経験していない
+       
+       → それぞれ100%で確定
+    ======================================================= */
+
     stage.fixed.forEach((fM, pIdx) => {
+
       if (confirmedAssignments[pIdx]) return;
 
       const candidates =
-        attendingExpMap[pIdx];
+        attendingExpMap[pIdx] || [];
 
-      if (candidates.length === 1) {
+      if (candidates.length === 0) return;
+
+
+      /*
+       * 現在の候補者の中から、
+       * このポジションしか経験していないメンバーを探す。
+       */
+      const exclusiveMembers =
+        candidates.filter(m => {
+
+          return (
+            singlePosExperiencedMembers[m] === pIdx
+          );
+        });
+
+
+      /*
+       * 1人だけがこのポジション専用なら確定。
+       *
+       * 複数人いる場合は、
+       * 「このポジションしか経験していない」
+       * という条件だけではどちらか決められないので
+       * ここでは確定しない。
+       */
+      if (exclusiveMembers.length === 1) {
+
         const confirmedMember =
-          candidates[0];
-
-        if (
-          soloMultiPosMembers[confirmedMember]
-        ) {
-          return;
-        }
+          exclusiveMembers[0];
 
         confirmedAssignments[pIdx] =
           confirmedMember;
@@ -1329,8 +1435,70 @@ function runForecast() {
 
         changed = true;
 
+
+        /*
+         * このメンバーを他のポジション候補から削除。
+         */
         stage.fixed.forEach((_, otherPIdx) => {
+
           if (otherPIdx !== pIdx) {
+
+            attendingExpMap[otherPIdx] =
+              attendingExpMap[otherPIdx].filter(
+                m => m !== confirmedMember
+              );
+          }
+        });
+      }
+    });
+
+
+    /* =======================================================
+       ② 通常の「候補者1人」も確定
+    ======================================================= */
+
+    stage.fixed.forEach((fM, pIdx) => {
+
+      if (confirmedAssignments[pIdx]) return;
+
+      const candidates =
+        attendingExpMap[pIdx] || [];
+
+      if (candidates.length === 1) {
+
+        const confirmedMember =
+          candidates[0];
+
+
+        /*
+         * 複数ポジションを覚えているメンバーは
+         * まだ確定しない。
+         */
+        if (
+          soloMultiPosMembers[confirmedMember]
+        ) {
+          return;
+        }
+
+
+        confirmedAssignments[pIdx] =
+          confirmedMember;
+
+        memberAssignedToPos[confirmedMember] = {
+          pIdx: pIdx,
+          posName: `${fM}ポジ`
+        };
+
+        changed = true;
+
+
+        /*
+         * 確定したメンバーを他ポジションから削除。
+         */
+        stage.fixed.forEach((_, otherPIdx) => {
+
+          if (otherPIdx !== pIdx) {
+
             attendingExpMap[otherPIdx] =
               attendingExpMap[otherPIdx].filter(
                 m => m !== confirmedMember
@@ -1340,7 +1508,6 @@ function runForecast() {
       }
     });
   }
-
 
   /* =========================================================
      ポジション被りグループ
