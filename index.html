@@ -1258,15 +1258,37 @@ function runForecast() {
   const memberAssignedToPos = {};
   let changed = true;
 
+  // 対象メンバーが「唯一の経験者となっているポジ」や「経験者0人の空きポジの救世主候補」など、
+  // 複数ポジションで鍵を握っているかクロスチェックする関数
+  function isKeyMemberForMultipleVacantPositions(member) {
+    let neededCount = 0;
+
+    stage.fixed.forEach((_, pIdx) => {
+      if (confirmedAssignments[pIdx]) return;
+
+      const candidates = (attendingExpMap[pIdx] || []).filter(
+        m => m && m !== "-" && m !== "－"
+      );
+
+      // パターンA: このポジションで唯一の経験者になっている場合
+      if (candidates.length === 1 && candidates[0] === member) {
+        neededCount++;
+      } 
+      // パターンB: このポジションが経験者0人で、自分は複数ポジ対応可能な兼任メンバー（スライド救世主）の場合
+      else if (candidates.length === 0) {
+        const isMultiPos = (memberCandidatePositions[member] || []).length > 1;
+        if (isMultiPos) {
+          neededCount++;
+        }
+      }
+    });
+
+    // 2つ以上のポジションで「必要なキーマン」になっている場合は即時固定してはいけない（true）
+    return neededCount >= 2;
+  }
+
   while (changed) {
     changed = false;
-
-    // 他に経験者0人の「空きポジション」が存在するかチェック
-    const hasVacantPosition = stage.fixed.some((_, idx) => {
-      if (confirmedAssignments[idx]) return false;
-      const c = (attendingExpMap[idx] || []).filter(m => m && m !== "-" && m !== "－");
-      return c.length === 0;
-    });
 
     stage.fixed.forEach((fM, pIdx) => {
       if (confirmedAssignments[pIdx]) return;
@@ -1298,9 +1320,8 @@ function runForecast() {
       if (exclusiveCandidates.length === 1) {
         const confirmedMember = exclusiveCandidates[0];
 
-        // 空きポジがあり、かつ対象メンバーが複数ポジション経験者の場合は即時固定を保留する
-        const isMultiPos = (memberCandidatePositions[confirmedMember] || []).length > 1;
-        if (hasVacantPosition && isMultiPos) {
+        // 複数ポジションでキーマンになっているメンバーは100%固定を保留してパスする
+        if (isKeyMemberForMultipleVacantPositions(confirmedMember)) {
           return;
         }
 
@@ -1336,9 +1357,8 @@ function runForecast() {
 
       const confirmedMember = candidates[0];
 
-      // 単一候補の場合も同様に、他ポジにスライド可能なら保留
-      const isMultiPos = (memberCandidatePositions[confirmedMember] || []).length > 1;
-      if (hasVacantPosition && isMultiPos) {
+      // 単一候補の場合も同様に、キーマンになっている場合は固定を保留
+      if (isKeyMemberForMultipleVacantPositions(confirmedMember)) {
         return;
       }
 
