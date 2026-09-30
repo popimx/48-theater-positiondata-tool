@@ -21,29 +21,29 @@
     }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-.member-first { color: #db2777; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
-.member-first:hover { opacity: 0.7; }
-.member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
-.member-under:hover { opacity: 0.7; }
-/* カレンダーグリッド用スタイル */
-.cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
-  background-color: #e2e8f0;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-.cal-cell {
-  background-color: #ffffff;
-  min-height: 70px;
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-}
-.cal-cell.other-month { background-color: #f8fafc; color: #94a3b8; }
-.cal-cell.today { background-color: #fdf2f8; }
+    .member-first { color: #db2777; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
+    .member-first:hover { opacity: 0.7; }
+    .member-under { color: #b45309; font-weight: 700; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
+    .member-under:hover { opacity: 0.7; }
+    /* カレンダーグリッド用スタイル */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 2px;
+      background-color: #e2e8f0;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .cal-cell {
+      background-color: #ffffff;
+      min-height: 70px;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+    }
+    .cal-cell.other-month { background-color: #f8fafc; color: #94a3b8; }
+    .cal-cell.today { background-color: #fdf2f8; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans">
@@ -54,169 +54,169 @@
         <i class="fa-solid fa-masks-theater"></i> 劇場公演 データサイト
       </h1>
     </div>
-<!-- 検索バー ＆ サジェスト -->
-<div class="max-w-4xl mx-auto mt-3 relative">
-  <div class="relative">
-    <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名で検索" 
-           class="w-full pl-9 pr-4 py-2 bg-white text-slate-800 text-sm rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-pink-300">
-    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
-  </div>
-  <div id="searchSuggest" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-100 text-sm"></div>
-</div>
+    <!-- 検索バー ＆ サジェスト -->
+    <div class="max-w-4xl mx-auto mt-3 relative">
+      <div class="relative">
+        <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名で検索" 
+               class="w-full pl-9 pr-4 py-2 bg-white text-slate-800 text-sm rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-pink-300">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+      </div>
+      <div id="searchSuggest" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-100 text-sm"></div>
+    </div>
   </header>
   <!-- Main Content Container -->
   <main class="max-w-4xl mx-auto p-4">
-<!-- 通常タブコンテンツ -->
-<div id="mainTabsContainer">
-  <!-- Tab 1: カレンダー -->
-  <section id="tab-calendar" class="tab-content">
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
-          <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
-        </h2>
-        <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <!-- ビュー切り替えボタン -->
-          <div class="bg-slate-100 p-0.5 rounded-lg border border-slate-200 flex text-[10px]">
-            <button id="viewListBtn" onclick="toggleCalendarView('list')" class="px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm">
-              <i class="fa-solid fa-list mr-1"></i> リスト
-            </button>
-            <button id="viewGridBtn" onclick="toggleCalendarView('grid')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
-              <i class="fa-solid fa-table-cells mr-1"></i> 月間
-            </button>
+    <!-- 通常タブコンテンツ -->
+    <div id="mainTabsContainer">
+      <!-- Tab 1: カレンダー -->
+      <section id="tab-calendar" class="tab-content">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
+              <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
+            </h2>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+              <!-- ビュー切り替えボタン -->
+              <div class="bg-slate-100 p-0.5 rounded-lg border border-slate-200 flex text-[10px]">
+                <button id="viewListBtn" onclick="toggleCalendarView('list')" class="px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm">
+                  <i class="fa-solid fa-list mr-1"></i> リスト
+                </button>
+                <button id="viewGridBtn" onclick="toggleCalendarView('grid')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
+                  <i class="fa-solid fa-table-cells mr-1"></i> 月間
+                </button>
+              </div>
+              <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                <button onclick="changeMonth(-1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-left"></i></button>
+                <select id="yearSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
+                <select id="monthSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
+                <button onclick="changeMonth(1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+            </div>
           </div>
-          <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
-            <button onclick="changeMonth(-1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-left"></i></button>
-            <select id="yearSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
-            <select id="monthSelect" onchange="onDateChange()" class="bg-transparent text-slate-700 text-sm font-bold px-1 py-1 focus:outline-none cursor-pointer"></select>
-            <button onclick="changeMonth(1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-right"></i></button>
+          <!-- 劇場選択タブ -->
+          <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
+            <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
+            <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
+            <button onclick="filterSchedule('SKE48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">SKE48劇場</button>
+            <button onclick="filterSchedule('NMB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NMB48劇場</button>
+            <button onclick="filterSchedule('HKT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">HKT48劇場</button>
+            <button onclick="filterSchedule('NGT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NGT48劇場</button>
+            <button onclick="filterSchedule('STU48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">STU48劇場</button>
+          </div>
+          
+          <div id="calendarList" class="space-y-3"></div>
+          <div id="calendarGrid" class="hidden"></div>
+        </div>
+      </section>
+      <!-- Tab 2: 一覧表 -->
+      <section id="tab-positions" class="tab-content hidden space-y-4">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+          <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+            <table class="w-full text-left text-sm border-collapse min-w-max">
+              <thead><tr id="positionTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
+              <tbody id="positionTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
           </div>
         </div>
-      </div>
-      <!-- 劇場選択タブ -->
-      <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
-        <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
-        <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
-        <button onclick="filterSchedule('SKE48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">SKE48劇場</button>
-        <button onclick="filterSchedule('NMB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NMB48劇場</button>
-        <button onclick="filterSchedule('HKT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">HKT48劇場</button>
-        <button onclick="filterSchedule('NGT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NGT48劇場</button>
-        <button onclick="filterSchedule('STU48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">STU48劇場</button>
-      </div>
-      
-      <div id="calendarList" class="space-y-3"></div>
-      <div id="calendarGrid" class="hidden"></div>
+      </section>
+      <!-- Tab 3: 日別表 -->
+      <section id="tab-stage-daily" class="tab-content hidden space-y-4">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+          <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-table-cells text-pink-500"></i> 日別表
+          </h2>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+            <table class="w-full text-left text-sm border-collapse min-w-max">
+              <thead><tr id="dailyTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
+              <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <!-- Tab 4: 予想 -->
+      <section id="tab-forecast" class="tab-content hidden space-y-4">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i> ポジション予想
+          </h2>
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または「・」区切りで入力してください。</label>
+            <textarea id="forecastInputText" rows="3" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう・鈴木くるみ・千葉恵里・永野芹佳・水島美結・向井地美音・村山彩希・山内瑞葵・山﨑空・秋山由奈・八木愛月..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
+            <button onclick="runForecast()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow transition">
+              予想を実行する
+            </button>
+          </div>
+          <!-- 予想結果表示エリア -->
+          <div id="forecastResultArea" class="hidden space-y-4 pt-2 border-t border-slate-100">
+            <div>
+              <h3 class="text-xs font-bold text-slate-500 mb-2">【全メンバーの一覧（出演マーク付き）】</h3>
+              <div id="forecastAllMembersGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジションの割り当て ＆ 予想理由】</h3>
+              <div id="forecastPositionsList" class="space-y-3"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-  </section>
-  <!-- Tab 2: 一覧表 -->
-  <section id="tab-positions" class="tab-content hidden space-y-4">
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-      <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
-        <table class="w-full text-left text-sm border-collapse min-w-max">
-          <thead><tr id="positionTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
-          <tbody id="positionTableBody" class="divide-y divide-slate-100"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-  <!-- Tab 3: 日別表 -->
-  <section id="tab-stage-daily" class="tab-content hidden space-y-4">
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-      <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
-        <i class="fa-solid fa-table-cells text-pink-500"></i> 日別表
-      </h2>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
-        <table class="w-full text-left text-sm border-collapse min-w-max">
-          <thead><tr id="dailyTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
-          <tbody id="dailyTableBody" class="divide-y divide-slate-100"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-  <!-- Tab 4: 予想 -->
-  <section id="tab-forecast" class="tab-content hidden space-y-4">
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
-      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-        <i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i> ポジション予想
-      </h2>
-      <div class="space-y-2">
-        <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または「・」区切りで入力してください。</label>
-        <textarea id="forecastInputText" rows="3" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう・鈴木くるみ・千葉恵里・永野芹佳・水島美結・向井地美音・村山彩希・山内瑞葵・山﨑空・秋山由奈・八木愛月..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
-        <button onclick="runForecast()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow transition">
-          予想を実行する
+    <!-- メンバー詳細コンテンツ -->
+    <section id="memberDetailContainer" class="hidden space-y-4">
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="avatar-box bg-pink-600 text-white text-base font-bold shadow">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div>
+            <h2 id="detailMemberName" class="text-xl font-bold text-slate-800">メンバー名</h2>
+            <p class="text-xs text-pink-600 font-semibold">出演データ統計</p>
+          </div>
+        </div>
+        <button onclick="goHome()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-bold border border-slate-200">
+          <i class="fa-solid fa-xmark mr-1"></i> 閉じる
         </button>
       </div>
-      <!-- 予想結果表示エリア -->
-      <div id="forecastResultArea" class="hidden space-y-4 pt-2 border-t border-slate-100">
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b pb-2 mb-3">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-pink-500"></i> 出演統計
+          </h3>
+          <span id="totalPerfBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-3 py-1 rounded-full">総出演回数: 0回</span>
+        </div>
+        <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
+        <ul id="showsBreakdownList" class="space-y-1.5 text-xs"></ul>
+      </div>
+
+      <!-- 年別出演回数・ランキング・共演トップ10の表示エリア -->
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
         <div>
-          <h3 class="text-xs font-bold text-slate-500 mb-2">【全メンバーの一覧（出演マーク付き）】</h3>
-          <div id="forecastAllMembersGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
+          <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-calendar text-pink-500"></i> 年別出演回数
+          </h3>
+          <div id="yearlyBreakdownList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
         </div>
         <div>
-          <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジションの割り当て ＆ 予想理由】</h3>
-          <div id="forecastPositionsList" class="space-y-3"></div>
+          <h3 id="rankingSectionTitle" class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-pink-500"></i> 出演回数ランキング（上位10名）
+          </h3>
+          <ol id="memberRankingList" class="space-y-1 text-xs list-decimal list-inside"></ol>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-users text-pink-500"></i> 共演回数トップ10
+          </h3>
+          <ol id="coappearanceTopList" class="space-y-1 text-xs list-decimal list-inside"></ol>
         </div>
       </div>
-    </div>
-  </section>
-</div>
-<!-- メンバー詳細コンテンツ -->
-<section id="memberDetailContainer" class="hidden space-y-4">
-  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex justify-between items-center">
-    <div class="flex items-center gap-3">
-      <div class="avatar-box bg-pink-600 text-white text-base font-bold shadow">
-        <i class="fa-solid fa-user"></i>
-      </div>
-      <div>
-        <h2 id="detailMemberName" class="text-xl font-bold text-slate-800">メンバー名</h2>
-        <p class="text-xs text-pink-600 font-semibold">出演データ統計</p>
-      </div>
-    </div>
-    <button onclick="goHome()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-bold border border-slate-200">
-      <i class="fa-solid fa-xmark mr-1"></i> 閉じる
-    </button>
-  </div>
-  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-    <div class="flex items-center justify-between border-b pb-2 mb-3">
-      <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-        <i class="fa-solid fa-chart-pie text-pink-500"></i> 出演統計
-      </h3>
-      <span id="totalPerfBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-3 py-1 rounded-full">総出演回数: 0回</span>
-    </div>
-    <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
-    <ul id="showsBreakdownList" class="space-y-1.5 text-xs"></ul>
-  </div>
 
-  <!-- 追加：年別出演回数・グループ内ランキング・共演トップ10の表示エリア -->
-  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
-    <div>
-      <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
-        <i class="fa-solid fa-calendar text-pink-500"></i> 年別出演回数
-      </h3>
-      <div id="yearlyBreakdownList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
-    </div>
-    <div>
-      <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
-        <i class="fa-solid fa-trophy text-pink-500"></i> グループ内メンバー出演ランキング（上位10名）
-      </h3>
-      <ol id="memberRankingList" class="space-y-1 text-xs list-decimal list-inside"></ol>
-    </div>
-    <div>
-      <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
-        <i class="fa-solid fa-users text-pink-500"></i> 共演回数トップ10
-      </h3>
-      <ol id="coappearanceTopList" class="space-y-1 text-xs list-decimal list-inside"></ol>
-    </div>
-  </div>
-
-  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-    <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
-      <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴
-    </h3>
-    <div id="memberShowsHistoryList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
-  </div>
-</section>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴
+        </h3>
+        <div id="memberShowsHistoryList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+      </div>
+    </section>
   </main>
   <!-- スケジュール詳細ポップアップ モーダル -->
   <div id="scheduleModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -231,22 +231,22 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-  <div id="modalMembersArea" class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2">
-    <div class="font-bold text-slate-700 flex justify-between items-center">
-      <span>【出演メンバー / ポジション】</span>
-      <span id="modalPosCount" class="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200"></span>
+      <div id="modalMembersArea" class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2">
+        <div class="font-bold text-slate-700 flex justify-between items-center">
+          <span>【出演メンバー / ポジション】</span>
+          <span id="modalPosCount" class="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200"></span>
+        </div>
+        <div id="modalMemberList" class="grid grid-cols-2 gap-1.5 pt-1"></div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button id="modalBtnGoStage" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition text-center">
+          演目詳細を開く
+        </button>
+        <button onclick="closeScheduleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-3 rounded-lg text-xs transition">
+          閉じる
+        </button>
+      </div>
     </div>
-    <div id="modalMemberList" class="grid grid-cols-2 gap-1.5 pt-1"></div>
-  </div>
-  <div class="flex gap-2 pt-2">
-    <button id="modalBtnGoStage" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition text-center">
-      演目詳細を開く
-    </button>
-    <button onclick="closeScheduleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-3 rounded-lg text-xs transition">
-      閉じる
-    </button>
-  </div>
-</div>
   </div>
   <!-- Bottom Navigation -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
@@ -255,25 +255,25 @@
         <i class="fa-regular fa-calendar-days text-base block mb-0.5"></i> カレンダー
       </button>
     </div>
-<div id="navStageDetail" class="hidden max-w-4xl mx-auto flex justify-around">
-  <button onclick="switchTab('positions')" id="nav-positions" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-    <i class="fa-solid fa-users-rectangle text-base block mb-0.5"></i> 一覧表
-  </button>
-  <button onclick="switchTab('stage-daily')" id="nav-stage-daily" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-    <i class="fa-solid fa-table-cells text-base block mb-0.5"></i> 日別表
-  </button>
-  <button onclick="switchTab('forecast')" id="nav-forecast" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-    <i class="fa-solid fa-wand-magic-sparkles text-base block mb-0.5"></i> 予想
-  </button>
-  <button onclick="goHome()" id="nav-back" class="flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
-    <i class="fa-solid fa-rotate-left text-base block mb-0.5"></i> 戻る
-  </button>
-</div>
-<div id="navMemberSearching" class="hidden max-w-4xl mx-auto flex justify-center py-3 bg-pink-50 text-pink-600 font-bold text-sm items-center gap-2 border-t-2 border-pink-500">
-  <i class="fa-solid fa-user-gear"></i>
-  <span>メンバー詳細表示中</span>
-  <button onclick="goHome()" class="text-xs bg-pink-600 text-white px-3 py-1 rounded ml-2 shadow-sm">戻る</button>
-</div>
+    <div id="navStageDetail" class="hidden max-w-4xl mx-auto flex justify-around">
+      <button onclick="switchTab('positions')" id="nav-positions" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+        <i class="fa-solid fa-users-rectangle text-base block mb-0.5"></i> 一覧表
+      </button>
+      <button onclick="switchTab('stage-daily')" id="nav-stage-daily" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+        <i class="fa-solid fa-table-cells text-base block mb-0.5"></i> 日別表
+      </button>
+      <button onclick="switchTab('forecast')" id="nav-forecast" class="nav-btn-stage flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+        <i class="fa-solid fa-wand-magic-sparkles text-base block mb-0.5"></i> 予想
+      </button>
+      <button onclick="goHome()" id="nav-back" class="flex-1 py-3 text-center text-xs font-semibold text-slate-400 transition hover:bg-pink-50">
+        <i class="fa-solid fa-rotate-left text-base block mb-0.5"></i> 戻る
+      </button>
+    </div>
+    <div id="navMemberSearching" class="hidden max-w-4xl mx-auto flex justify-center py-3 bg-pink-50 text-pink-600 font-bold text-sm items-center gap-2 border-t-2 border-pink-500">
+      <i class="fa-solid fa-user-gear"></i>
+      <span>メンバー詳細表示中</span>
+      <button onclick="goHome()" class="text-xs bg-pink-600 text-white px-3 py-1 rounded ml-2 shadow-sm">戻る</button>
+    </div>
   </nav>
   <!-- JavaScript Logic -->
   <script>
@@ -291,6 +291,7 @@
     let currentStageKey = null;
     let currentScheduleFilter = "ALL";
     let selectedMemberName = null;
+    let selectedRankingYear = new Date().getFullYear().toString();
     let todayString = "";
     let calendarViewMode = 'list';
     const FALLBACK_SCHEDULE_2026 = [
@@ -686,8 +687,8 @@
         `;
         dayShows.forEach(s => {
           html += `
-            <div onclick="openScheduleModalById('${s.id}')" class="bg-pink-100 hover:bg-pink-200 text-pink-800 text-[9px] p-0.5 rounded leading-tight cursor-pointer truncate" title="${escapeHtml(s.displayTitle)}">
-              ${s.time ? s.time + ' ' : ''}${escapeHtml(s.baseStageName)}
+            <div onclick="openScheduleModalById('${s.id}')" class="bg-pink-100 hover:bg-pink-200 text-pink-800 text-[9px] p-0.5 rounded leading-tight cursor-pointer truncate" title="${escapeHtml(s.baseStageName)}">
+              ${escapeHtml(s.baseStageName)}
             </div>
           `;
         });
@@ -897,16 +898,12 @@
       });
       return result;
     }
-    /* =========================================================
-       予想理由用：2名の共通別ポジションを検索
-       ========================================================= */
     function findSharedOtherPosition(mem1, mem2, fixedMember, stage, validShows) {
       if (!stage || !Array.isArray(stage.fixed) || !Array.isArray(validShows)) {
         return null;
       }
       const fixedIndex = stage.fixed.indexOf(fixedMember);
       for (let pIdx = 0; pIdx < stage.fixed.length; pIdx++) {
-        // 現在被っているポジション自身は除外
         if (pIdx === fixedIndex) continue;
         let mem1HasPosition = false;
         let mem2HasPosition = false;
@@ -921,17 +918,6 @@
       }
       return null;
     }
-    /* =========================================================
-       2名の共演実績から配置パターンを集計
-       
-       pos1 = 現在被っているポジション
-       pos2 = 2人が共通して経験している別ポジション
-       
-       現在のデータ構造：
-       - perf.baseStageName
-       - perf.positionsArray
-       - stage.fixed
-       ========================================================= */
     function generateCooccurrenceReason(
       stageName,
       pos1,
@@ -948,17 +934,13 @@
         const pos2Index = stage.fixed.indexOf(pos2);
         if (pos1Index !== -1 && pos2Index !== -1) {
           historyData.forEach(perf => {
-            // 同じ演目のみ対象
             if (perf.baseStageName !== stageName) return;
             if (!Array.isArray(perf.positionsArray)) return;
             const mem1Pos = perf.positionsArray[pos1Index];
             const mem2Pos = perf.positionsArray[pos2Index];
-            // A = mem1がpos1、mem2がpos2
             if (mem1Pos === mem1 && mem2Pos === mem2) {
               countA++;
-            }
-            // B = mem2がpos1、mem1がpos2
-            else if (mem2Pos === mem1 && mem1Pos === mem2) {
+            } else if (mem2Pos === mem1 && mem1Pos === mem2) {
               countB++;
             }
           });
@@ -968,7 +950,6 @@
       let higherMem = '';
       let pct1 = 50;
       let pct2 = 50;
-      // 過去共演の割合を計算
       if (totalCooccurrences > 0) {
         pct1 = Math.round((countA / totalCooccurrences) * 100);
         pct2 = 100 - pct1;
@@ -1009,7 +990,6 @@
         totalCooccurrences: totalCooccurrences
       };
     }
-    /* 汎用整形関数: 不在メンバーリストの整形 */
     function formatAbsenceMemberListText(list) {
       if (!list || list.length === 0) return "";
       if (list.length === 1) return list[0];
@@ -1023,7 +1003,6 @@
       const expText = formatAbsenceMemberListText(absenceExpList);
       return `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${expText}の出演予定がない`;
     }
-    /* 汎用整形関数: 任意の人数に応じたメンバー連名表示 */
     function formatMemberListText(list) {
       if (!list || list.length === 0) return "";
       if (list.length === 1) return list[0];
@@ -1063,7 +1042,6 @@
       positionsList.innerHTML = '';
       const stageName = stage.name.replace(/「|」|公演/g, '').trim();
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
-      // ① 全メンバー一覧表示
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
@@ -1075,7 +1053,6 @@
         `;
         allMembersGrid.appendChild(div);
       });
-      // メンバー別・ポジ別出演回数マッピング作成
       const memberPosCounts = {};
       stage.fixed.forEach((fM, pIdx) => {
         validShows.forEach(s => {
@@ -1087,7 +1064,6 @@
           }
         });
       });
-      // 出演メンバーの初期経験ポジマップと不在経験者リストを作成
       const initialAttendingExpMap = {};
       const absenceExpMap = {};
       stage.fixed.forEach((fM, pIdx) => {
@@ -1104,7 +1080,6 @@
           }
         });
       });
-      // 複数ポジ兼務で唯一の経験者の検出（汎用Nポジ対応）
       const soloMultiPosMembers = {};
       inputMemberList.forEach(m => {
         const expPIdxs = [];
@@ -1117,7 +1092,6 @@
           soloMultiPosMembers[m] = expPIdxs;
         }
       });
-      // 競合解決フェーズ
       const attendingExpMap = {};
       stage.fixed.forEach((_, pIdx) => {
         attendingExpMap[pIdx] = [...initialAttendingExpMap[pIdx]];
@@ -1144,7 +1118,6 @@
           }
         });
       }
-      // 他ポジ重複（ポジション被り）メンバーの検出
       const duplicatePosGroups = [];
       stage.fixed.forEach((fM, pIdx) => {
         const expAttending = attendingExpMap[pIdx];
@@ -1156,11 +1129,9 @@
           });
         }
       });
-      // 未経験の出演メンバー（初出演）の検出
       const newMembers = inputMemberList.filter(m => {
         return !stage.fixed.some((fM, pIdx) => (initialAttendingExpMap[pIdx] || []).includes(m));
       });
-      // 空きポジション（受皿となるポジション）のリスト取得
       const vacantPIdxs = [];
       stage.fixed.forEach((fM, pIdx) => {
         const soloMultiMember = Object.keys(soloMultiPosMembers).find(m => soloMultiPosMembers[m].includes(pIdx));
@@ -1175,7 +1146,6 @@
         }
       });
       const vacantCount = vacantPIdxs.length || 1;
-      // 未確定ポジション・メンバーのシナリオシミュレーションによる正確な確率計算
       const unconfirmedPIdxs = [];
       stage.fixed.forEach((_, pIdx) => {
         if (!confirmedAssignments[pIdx]) {
@@ -1236,7 +1206,6 @@
           });
         });
       }
-      // ポジションごとの予測カード生成（汎用対応）
       stage.fixed.forEach((fixedMember, pIdx) => {
         const expAttending = attendingExpMap[pIdx];
         const absenceExp = absenceExpMap[pIdx].filter(m => m !== fixedMember);
@@ -1246,7 +1215,6 @@
         const soloMultiMember = Object.keys(soloMultiPosMembers).find(m => soloMultiPosMembers[m].includes(pIdx));
         if (soloMultiMember) {
           const allPIdxs = soloMultiPosMembers[soloMultiMember];
-          // 兼務ポジションの中で最も出演回数が多いメインポジションを特定
           const primaryPIdx = allPIdxs.slice().sort((a, b) => (memberPosCounts[soloMultiMember][b] || 0) - (memberPosCounts[soloMultiMember][a] || 0))[0];
           const otherPIdxs = allPIdxs.filter(idx => idx !== primaryPIdx);
           const isPrimary = (pIdx === primaryPIdx);
@@ -1330,7 +1298,6 @@
             }
           }
         } else if (expAttending.length === 0) {
-          // 経験者不在の空きポジション
           badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ${fixedMember}ポジで初出演</span>`;
           const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
           let patternItems = [];
@@ -1395,7 +1362,6 @@
             }
           }
         } else {
-          // 通常の経験者ありポジション
           if (expAttending.length === 1) {
             const assignedMember = expAttending[0];
             const isOriginal = (assignedMember === fixedMember);
@@ -1404,7 +1370,6 @@
             const initialCandidates = initialAttendingExpMap[pIdx];
             if (initialCandidates.length > 1) {
               const removedMembers = initialCandidates.filter(m => m !== assignedMember);
-              
               const removedReasons = removedMembers.map(m => {
                 const info = memberAssignedToPos[m];
                 return info ? `${m}が${info.posName}で出演する可能性` : `${m}が他ポジションで出演する可能性`;
@@ -1423,23 +1388,6 @@
               }
             }
           } else if (expAttending.length === 2) {
-            /*
-             * =====================================================
-             * 経験者が2人被っている場合
-             *
-             * まず2人に共通する別ポジションを探す。
-             *
-             * 例：
-             *   岩立沙穂ポジ
-             *      岩立沙穂
-             *      鈴木くるみ
-             *
-             * 2人とも正鋳真優ポジ経験がある
-             *        ↓
-             *   岩立沙穂ポジ ⇔ 正鋳真優ポジ
-             *   の過去共演実績を集計
-             * =====================================================
-             */
             badgeHtml = `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
             const mem1 = expAttending[0];
             const mem2 = expAttending[1];
@@ -1463,10 +1411,6 @@
               reasonHtml = result.reasonHtml;
               percentText = result.percentText;
             } else {
-              /*
-               * 2人が共通して経験している別ポジションがない場合は
-               * 従来のポジション被り処理へフォールバック
-               */
               const memText = formatMemberListText(expAttending);
               const subjectStr = "どちらか";
               let patterns = [];
@@ -1506,7 +1450,6 @@
               }
             }
           } else if (expAttending.length > 2) {
-            // 経験者が3人以上被っている場合は既存の汎用処理を維持
             const memText = formatMemberListText(expAttending);
             const subjectStr = "いずれか";
             let patterns = [];
@@ -1606,6 +1549,7 @@
     function openMemberDetail(memberName) {
       if (!memberName || memberName === "-" || memberName === "－") return;
       selectedMemberName = memberName;
+      selectedRankingYear = new Date().getFullYear().toString();
       document.getElementById('detailMemberName').innerText = memberName;
       document.getElementById('mainTabsContainer').classList.add('hidden');
       document.getElementById('memberDetailContainer').classList.remove('hidden');
@@ -1637,9 +1581,21 @@
       document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberShows.length}回`;
       
       const breakdown = {};
+      const posBreakdown = {};
       memberShows.forEach(s => {
         const stageName = s.baseStageName || 'その他';
         breakdown[stageName] = (breakdown[stageName] || 0) + 1;
+
+        if (s.positionsArray && s.positionsArray.length > 0) {
+          const stageObj = GLOBAL_STAGE_DATABASE[stageName] || STAGE_DATABASE[stageName];
+          s.positionsArray.forEach((m, idx) => {
+            if (m === selectedMemberName) {
+              const posName = (stageObj && stageObj.fixed && stageObj.fixed[idx]) ? stageObj.fixed[idx] : `Pos.${idx+1}`;
+              if (!posBreakdown[stageName]) posBreakdown[stageName] = {};
+              posBreakdown[stageName][posName] = (posBreakdown[stageName][posName] || 0) + 1;
+            }
+          });
+        }
       });
       const breakdownListEl = document.getElementById('showsBreakdownList');
       breakdownListEl.innerHTML = '';
@@ -1649,7 +1605,21 @@
         Object.keys(breakdown).sort((a,b) => breakdown[b] - breakdown[a]).forEach(stageName => {
           const li = document.createElement('li');
           li.className = "flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100";
-          li.innerHTML = `<span class="font-bold text-slate-700">「${escapeHtml(stageName)}」公演</span><span class="font-bold text-pink-600">${breakdown[stageName]}回</span>`;
+          
+          let posTextHtml = "";
+          if (posBreakdown[stageName]) {
+            const posDetails = Object.keys(posBreakdown[stageName]).map(pName => `${escapeHtml(pName)}ポジ ${posBreakdown[stageName][pName]}回`).join(' ');
+            if (posDetails) {
+              posTextHtml = `<span class="text-[10px] text-slate-500 ml-2 font-normal">${posDetails}</span>`;
+            }
+          }
+          li.innerHTML = `
+            <div class="flex items-center flex-wrap">
+              <span class="font-bold text-slate-700">「${escapeHtml(stageName)}」公演</span>
+              ${posTextHtml}
+            </div>
+            <span class="font-bold text-pink-600 whitespace-nowrap">${breakdown[stageName]}回</span>
+          `;
           breakdownListEl.appendChild(li);
         });
       }
@@ -1671,54 +1641,73 @@
         yearlyListEl.innerHTML = `<div class="text-slate-400 col-span-full">データなし</div>`;
       } else {
         sortedYears.forEach(y => {
+          const isSelectedYear = (y === selectedRankingYear);
           const div = document.createElement('div');
-          div.className = "flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100";
+          div.className = `flex justify-between items-center p-2 rounded border cursor-pointer transition ${isSelectedYear ? 'bg-pink-50 border-pink-300 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`;
+          div.onclick = () => {
+            selectedRankingYear = y;
+            renderMemberDetailView();
+          };
           div.innerHTML = `<span class="font-bold text-slate-700">${escapeHtml(y)}年</span><span class="font-bold text-pink-600">${yearlyCounts[y]}回</span>`;
           yearlyListEl.appendChild(div);
         });
       }
 
-      // 2. グループ内メンバー出演ランキングのロジック＆描画
-      const memberCounts = {};
+      // 2. 年別グループ内メンバー出演ランキングの作成 (Request ③)
+      document.getElementById('rankingSectionTitle').innerHTML = `<i class="fa-solid fa-trophy text-pink-500"></i> ${escapeHtml(selectedRankingYear)}年 出演回数ランキング（上位10名）`;
+      
+      const memberYearCounts = {};
       dataSource.forEach(s => {
-        const members = new Set([...(s.membersArray || []), ...(s.positionsArray || [])]);
-        members.forEach(m => {
-          if (m && m !== "-" && m !== "－") {
-            memberCounts[m] = (memberCounts[m] || 0) + 1;
+        if (s.date) {
+          const sYear = s.date.split('/')[0] || s.date.slice(0, 4);
+          if (sYear === selectedRankingYear) {
+            const members = new Set([...(s.membersArray || []), ...(s.positionsArray || [])]);
+            members.forEach(m => {
+              if (m && m !== "-" && m !== "－") {
+                memberYearCounts[m] = (memberYearCounts[m] || 0) + 1;
+              }
+            });
           }
-        });
+        }
       });
-      const sortedRanking = Object.keys(memberCounts).sort((a, b) => memberCounts[b] - memberCounts[a]);
+      const sortedRanking = Object.keys(memberYearCounts).sort((a, b) => memberYearCounts[b] - memberYearCounts[a]);
       const rankingListEl = document.getElementById('memberRankingList');
       rankingListEl.innerHTML = '';
-      sortedRanking.slice(0, 10).forEach(m => {
-        const li = document.createElement('li');
-        li.className = "py-1 px-2 rounded hover:bg-slate-50 flex justify-between items-center font-medium";
-        li.innerHTML = `<span class="text-slate-700">${escapeHtml(m)}</span><span class="font-bold text-pink-600">${memberCounts[m]}回</span>`;
-        rankingListEl.appendChild(li);
-      });
+      if (sortedRanking.length === 0) {
+        rankingListEl.innerHTML = `<li class="text-slate-400 py-1 px-2">${escapeHtml(selectedRankingYear)}年の出演データはありません。</li>`;
+      } else {
+        sortedRanking.slice(0, 10).forEach(m => {
+          const li = document.createElement('li');
+          li.className = "py-1 px-2 rounded hover:bg-slate-50 flex justify-between items-center font-medium cursor-pointer";
+          li.onclick = () => openMemberDetail(m);
+          li.innerHTML = `<span class="text-slate-700">${escapeHtml(m)}</span><span class="font-bold text-pink-600">${memberYearCounts[m]}回</span>`;
+          rankingListEl.appendChild(li);
+        });
+      }
 
-      // 3. 共演回数トップ10のロジック＆描画
+      // 3. そのメンバーと他のメンバーの共演回数トップ10の作成 (Request ④)
       const coappCounts = {};
       dataSource.forEach(s => {
         const members = Array.from(new Set([...(s.membersArray || []), ...(s.positionsArray || [])])).filter(m => m && m !== "-" && m !== "－");
-        for (let i = 0; i < members.length; i++) {
-          for (let j = i + 1; j < members.length; j++) {
-            const pair = [members[i], members[j]].sort().join(' & ');
-            coappCounts[pair] = (coappCounts[pair] || 0) + 1;
-          }
+        if (members.includes(selectedMemberName)) {
+          members.forEach(m => {
+            if (m !== selectedMemberName) {
+              coappCounts[m] = (coappCounts[m] || 0) + 1;
+            }
+          });
         }
       });
       const sortedCoapp = Object.keys(coappCounts).sort((a, b) => coappCounts[b] - coappCounts[a]);
       const coappTopListEl = document.getElementById('coappearanceTopList');
       coappTopListEl.innerHTML = '';
       if (sortedCoapp.length === 0) {
-        coappTopListEl.innerHTML = `<li class="text-slate-400">共演データなし</li>`;
+        coappTopListEl.innerHTML = `<li class="text-slate-400 py-1 px-2">共演データなし</li>`;
       } else {
-        sortedCoapp.slice(0, 10).forEach(pair => {
+        sortedCoapp.slice(0, 10).forEach(otherName => {
           const li = document.createElement('li');
-          li.className = "py-1 px-2 rounded hover:bg-slate-50 flex justify-between items-center font-medium";
-          li.innerHTML = `<span class="text-slate-700">${escapeHtml(pair)}</span><span class="font-bold text-pink-600">${coappCounts[pair]}回</span>`;
+          li.className = "py-1 px-2 rounded hover:bg-slate-50 flex justify-between items-center font-medium cursor-pointer";
+          li.onclick = () => openMemberDetail(otherName);
+          li.innerHTML = `<span class="text-slate-700">${escapeHtml(otherName)}</span><span class="font-bold text-pink-600">${coappCounts[otherName]}回</span>`;
           coappTopListEl.appendChild(li);
         });
       }
@@ -1730,6 +1719,16 @@
       } else {
         memberShows.sort((a, b) => (b.date + " " + (b.time || "")).localeCompare(a.date + " " + (a.time || "")));
         memberShows.forEach(item => {
+          let posNameForMember = "";
+          if (item.positionsArray && item.positionsArray.length > 0) {
+            const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
+            item.positionsArray.forEach((m, idx) => {
+              if (m === selectedMemberName) {
+                posNameForMember = (stageObj && stageObj.fixed && stageObj.fixed[idx]) ? `${stageObj.fixed[idx]}ポジ` : `Pos.${idx+1}`;
+              }
+            });
+          }
+
           const div = document.createElement('div');
           div.className = "p-2.5 rounded border border-slate-200 bg-slate-50 flex justify-between items-center text-xs";
           div.innerHTML = `
@@ -1738,8 +1737,11 @@
                 <span class="font-bold text-slate-500">${escapeHtml(item.date)}</span>
                 <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater || 'AKB48劇場')}</span>
               </div>
-              <div class="font-bold text-slate-800 mt-1 cursor-pointer hover:text-pink-600" onclick="jumpToSchedule('${escapeHtml(item.date)}', '${escapeHtml(item.id)}')">
-                ${formatHistoryStageTitle(item)}
+              <div class="flex items-center gap-2 mt-1">
+                <span class="font-bold text-slate-800 cursor-pointer hover:text-pink-600" onclick="jumpToSchedule('${escapeHtml(item.date)}', '${escapeHtml(item.id)}')">
+                  ${formatHistoryStageTitle(item)}
+                </span>
+                ${posNameForMember ? `<span class="text-[10px] text-pink-600 bg-pink-50 border border-pink-200 px-1.5 py-0.5 rounded font-bold">${escapeHtml(posNameForMember)}</span>` : ''}
               </div>
             </div>
             <button onclick="jumpToSchedule('${escapeHtml(item.date)}', '${escapeHtml(item.id)}')" class="bg-white border border-slate-200 text-slate-600 hover:bg-pink-50 hover:text-pink-600 font-bold px-2.5 py-1 rounded shadow-sm text-[10px]">
