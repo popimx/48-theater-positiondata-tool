@@ -1811,7 +1811,7 @@ function runForecast() {
 
         reasonHtml =
           `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${confirmedMember}の出演予定がある。` +
-          `他の出演メンバーのポジションの兼ね合いから、次の2つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+          `他の出演メンバーのポジションの兼ね合いから、次の${totalPatterns}つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
 
         const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
         percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
@@ -1859,9 +1859,9 @@ function runForecast() {
 
       reasonHtml =
         `この日の「${stageName}」公演は、` +
-        `${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+        `${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。`+
         `他の出演メンバーのポジションの兼ね合いから、` +
-        `このポジションに入るメンバーを断定できないため、複数の可能性が考えられる。`;
+        `次の${totalPatterns}つの可能性が考えられる。`;
 
       const equalPct = Math.floor(100 / (expAttending.length || 1));
       const pctMap = {};
