@@ -2104,21 +2104,9 @@ while (changed) {
 
     /* =======================================================
        ④ 候補者2人
-       
-       ここからが本当の競合処理。
-       
-       例：
-       
-       徳永羚永ポジ
-       → 徳永羚永・長友彩海
-       
-       長友彩海ポジ
-       → 徳永羚永・長友彩海
-       
-       のようなケース。
     ======================================================= */
 
-    } else if (
+      } else if (
       expAttending.length === 2
     ) {
 
@@ -2127,6 +2115,10 @@ while (changed) {
 
       const mem2 =
         expAttending[1];
+
+
+      badgeHtml =
+        `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
 
 
       const otherSharedPos =
