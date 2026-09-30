@@ -1660,7 +1660,7 @@ function runForecast() {
         } else if (item.type === 'slideMember') {
           reasonHtml =
             `この日の「${stageName}」公演は、${absencePhrase}。` +
-            `他のポジションも担当可能な${item.memberName}が${fixedMember}ポジにスライドして初出演すると予想。`;
+            `他の出演メンバーのポジションの兼ね合いから、${item.memberName}が${fixedMember}ポジで出演すると予想。`;
         } else {
           reasonHtml =
             `この日の「${stageName}」公演は、${absencePhrase}。` +
@@ -1684,7 +1684,7 @@ function runForecast() {
             );
           } else if (item.type === 'slideMember') {
             patterns.push(
-              `${circle} 他ポジションも担当可能な${item.memberName}が${fixedMember}ポジにスライドして初出演する可能性。`
+              `${circle} ${item.memberName}が${fixedMember}ポジで出演する可能性。`
             );
           } else {
             patterns.push(
