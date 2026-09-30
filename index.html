@@ -1330,11 +1330,11 @@ function runForecast() {
   });
 
 
-  /* =========================================================
-     確定ポジション
-  ========================================================= */
+ ★ /* =========================================================
+   確定ポジション
+========================================================= */
 
- const confirmedAssignments = {};
+const confirmedAssignments = {};
 
 const memberAssignedToPos = {};
 
@@ -1342,19 +1342,18 @@ let changed = true;
 
 while (changed) {
 
+  // ==========================================
+  // ここは現在のコードをそのまま
+  // ==========================================
+
   changed = false;
 
-  /* =======================================================
-     現在まだ確定していないポジションを調べる
-  ======================================================= */
-
   stage.fixed.forEach((fM, pIdx) => {
-    if (
-      confirmedAssignments[pIdx]
-    ) {
+
+    if (confirmedAssignments[pIdx]) {
       return;
     }
-    
+
     const candidates =
       (attendingExpMap[pIdx] || [])
         .filter(
@@ -1363,72 +1362,41 @@ while (changed) {
             m !== "-" &&
             m !== "－"
         );
-    
-    if (
-      candidates.length === 0
-    ) {
+
+    if (candidates.length === 0) {
       return;
     }
 
-    /* =====================================================
-       この候補者が、現在未確定の何ポジションに候補として残っているかを調べる
-    ===================================================== */
-
     const exclusiveCandidates =
- 
       candidates.filter(member => {
 
         let candidatePositionCount = 0;
 
         stage.fixed.forEach((_, otherPIdx) => {
 
-          if (
-
-            confirmedAssignments[otherPIdx]
-
-          ) {
-
+          if (confirmedAssignments[otherPIdx]) {
             return;
-
           }
 
           const otherCandidates =
-
             (attendingExpMap[otherPIdx] || [])
-
               .filter(
-
                 m =>
                   m &&
                   m !== "-" &&
                   m !== "－"
-
               );
 
-          if (
-            otherCandidates.includes(member)
-          ) {
+          if (otherCandidates.includes(member)) {
             candidatePositionCount++;
           }
         });
 
-        
-        /*
-
-         * 未確定ポジションのうち、このポジションにしか候補として存在していないメンバー。
-
-         */
-        
         return candidatePositionCount === 1;
       });
 
-    /* =====================================================
-       ① 専用候補が1人だけなら確定
-    ===================================================== */
+    if (exclusiveCandidates.length === 1) {
 
-    if (
-      exclusiveCandidates.length === 1
-    ) {
       const confirmedMember =
         exclusiveCandidates[0];
 
@@ -1445,58 +1413,37 @@ while (changed) {
 
       changed = true;
 
-      /*
+      stage.fixed.forEach((_, otherPIdx) => {
 
-       * 確定したメンバーを、他の未確定ポジションから削除
+        if (otherPIdx === pIdx) {
+          return;
+        }
 
-       */
+        if (confirmedAssignments[otherPIdx]) {
+          return;
+        }
 
-      stage.fixed.forEach(
-        (_, otherPIdx) => {
-          
-          if (
-            otherPIdx === pIdx
-
-          ) {
-            return;
-          }
-
-          if (
-            confirmedAssignments[otherPIdx]
-          ) {
-            return;
-          }
-          attendingExpMap[otherPIdx] =
-
-            (
-              attendingExpMap[otherPIdx] || []
-
-            ).filter(
+        attendingExpMap[otherPIdx] =
+          (attendingExpMap[otherPIdx] || [])
+            .filter(
               m =>
                 m !== confirmedMember
-
             );
-        }
-      );
+      });
+
       return;
     }
   });
 
-  /* =======================================================
-     ② 専用候補確定後、候補が1人になったポジションを確定
-  ======================================================= */
 
   stage.fixed.forEach((fM, pIdx) => {
 
-    if (
-      confirmedAssignments[pIdx]
-    ) {
+    if (confirmedAssignments[pIdx]) {
       return;
     }
 
     const candidates =
       (attendingExpMap[pIdx] || [])
-
         .filter(
           m =>
             m &&
@@ -1504,9 +1451,7 @@ while (changed) {
             m !== "－"
         );
 
-    if (
-      candidates.length !== 1
-    ) {
+    if (candidates.length !== 1) {
       return;
     }
 
@@ -1523,42 +1468,217 @@ while (changed) {
 
     attendingExpMap[pIdx] =
       [confirmedMember];
+
     changed = true;
 
-    /*
+    stage.fixed.forEach((_, otherPIdx) => {
 
-     * 確定メンバーを他ポジションから削除
+      if (otherPIdx === pIdx) {
+        return;
+      }
 
-     */
+      if (confirmedAssignments[otherPIdx]) {
+        return;
+      }
 
-    stage.fixed.forEach(
-      (_, otherPIdx) => {
-        if (
-          otherPIdx === pIdx
-        ) {
-          return;
-        }
-
-        if (
-          confirmedAssignments[otherPIdx]
-        ) {
-          return;
-        }
-
-        attendingExpMap[otherPIdx] =
-          (
-            attendingExpMap[otherPIdx] || []
-          ).filter(
+      attendingExpMap[otherPIdx] =
+        (attendingExpMap[otherPIdx] || [])
+          .filter(
             m =>
               m !== confirmedMember
-
           );
-      }
-    );
+    });
   });
 }
 
-  /* =========================================================
+
+/* =========================================================
+   ここから追加
+   2ポジション間の過去実績から
+   メンバーの予想ポジションを判定
+========================================================= */
+
+function getLikelyPositionForMember(member, excludePIdx) {
+
+  /*
+   * まず、2人の候補が同時に残っているポジションを探す。
+   *
+   * 例：
+   *
+   * 徳永羚海ポジ
+   * → 徳永羚海・長友彩海
+   *
+   * 長友彩海ポジ
+   * → 徳永羚海・長友彩海
+   *
+   * のような相互競合を対象にする。
+   */
+
+  for (let pIdx = 0; pIdx < stage.fixed.length; pIdx++) {
+
+    if (pIdx === excludePIdx) {
+      continue;
+    }
+
+    if (confirmedAssignments[pIdx]) {
+      continue;
+    }
+
+    const candidates =
+      (attendingExpMap[pIdx] || [])
+        .filter(
+          m =>
+            m &&
+            m !== "-" &&
+            m !== "－"
+        );
+
+    if (!candidates.includes(member)) {
+      continue;
+    }
+
+    /*
+     * このメンバーと同じポジションを
+     * 争っている別メンバーを探す。
+     */
+    const otherMembers =
+      candidates.filter(
+        m => m !== member
+      );
+
+    if (otherMembers.length !== 1) {
+      continue;
+    }
+
+    const otherMember =
+      otherMembers[0];
+
+    /*
+     * 相手メンバーが別ポジションにも
+     * 候補として存在するか確認。
+     */
+    for (
+      let otherPIdx = 0;
+      otherPIdx < stage.fixed.length;
+      otherPIdx++
+    ) {
+
+      if (
+        otherPIdx === pIdx ||
+        otherPIdx === excludePIdx
+      ) {
+        continue;
+      }
+
+      if (
+        confirmedAssignments[otherPIdx]
+      ) {
+        continue;
+      }
+
+      const otherCandidates =
+        (attendingExpMap[otherPIdx] || [])
+          .filter(
+            m =>
+              m &&
+              m !== "-" &&
+              m !== "－"
+          );
+
+      if (
+        !otherCandidates.includes(otherMember)
+      ) {
+        continue;
+      }
+
+      /*
+       * ここまで来たら、
+       *
+       * member
+       * otherMember
+       *
+       * が2つのポジションを
+       * 入れ替えて担当できる競合。
+       */
+
+      let countA = 0;
+      let countB = 0;
+
+      const pos1Index =
+        stage.fixed.indexOf(
+          stage.fixed[pIdx]
+        );
+
+      const pos2Index =
+        stage.fixed.indexOf(
+          stage.fixed[otherPIdx]
+        );
+
+      validShows.forEach(perf => {
+
+        if (
+          !Array.isArray(
+            perf.positionsArray
+          )
+        ) {
+          return;
+        }
+
+        const memberPos =
+          perf.positionsArray[pos1Index];
+
+        const otherMemberPos =
+          perf.positionsArray[pos2Index];
+
+        if (
+          memberPos === member &&
+          otherMemberPos === otherMember
+        ) {
+          countA++;
+        }
+
+        if (
+          memberPos === otherMember &&
+          otherMemberPos === member
+        ) {
+          countB++;
+        }
+      });
+
+      /*
+       * 過去実績がある場合は、
+       * その比率が高いポジションを
+       * このメンバーの予想ポジションとする。
+       */
+      if (countA + countB > 0) {
+
+        if (countA >= countB) {
+          return `${stage.fixed[pIdx]}ポジ`;
+        }
+
+        return `${stage.fixed[otherPIdx]}ポジ`;
+      }
+    }
+  }
+
+  /*
+   * 相互競合から判断できなかった場合は、
+   * 既存の確定情報を利用。
+   */
+  const info =
+    memberAssignedToPos[member];
+
+  if (
+    info &&
+    info.posName
+  ) {
+    return info.posName;
+  }
+
+  return null;
+}
+
+/* =========================================================
      確定後に残ったポジション候補
      
      ここが「本当に競合しているポジション」。
