@@ -460,7 +460,8 @@
         let mainTitle = rawTitle;
         let subTitle = item.event || item.subTitle || "";
         if (!subTitle) {
-          const match = rawTitle.match(/^(「.*?」公演)(?:\s+(.*))?$/);
+          const match = rawTitle.match(/^(「.*?」(?:公演)?)\s*(.*)$/);
+
           if (match) {
             mainTitle = match[1];
             subTitle = match[2] || "";
