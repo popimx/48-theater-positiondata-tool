@@ -187,6 +187,29 @@
     <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
     <ul id="showsBreakdownList" class="space-y-1.5 text-xs"></ul>
   </div>
+
+  <!-- 追加：年別出演回数・グループ内ランキング・共演トップ10の表示エリア -->
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
+    <div>
+      <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
+        <i class="fa-solid fa-calendar text-pink-500"></i> 年別出演回数
+      </h3>
+      <div id="yearlyBreakdownList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
+    </div>
+    <div>
+      <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
+        <i class="fa-solid fa-trophy text-pink-500"></i> グループ内メンバー出演ランキング（上位10名）
+      </h3>
+      <ol id="memberRankingList" class="space-y-1 text-xs list-decimal list-inside"></ol>
+    </div>
+    <div>
+      <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
+        <i class="fa-solid fa-users text-pink-500"></i> 共演回数トップ10
+      </h3>
+      <ol id="coappearanceTopList" class="space-y-1 text-xs list-decimal list-inside"></ol>
+    </div>
+  </div>
+
   <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
     <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
       <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴
@@ -1596,121 +1619,149 @@
       const baseName = escapeHtml(item.baseStageName);
       const sub = (item.subTitle || "").trim();
       const rawTitle = (item.displayTitle || item.title || "").trim();
-      if (sub.includes("初日") || rawTitle.includes("初日")) {
-        return `「${baseName}」初日`;
+      if (sub) {
+        return `「${baseName}」公演 ${escapeHtml(sub)}`;
       }
-      if (sub.includes("千秋楽") || rawTitle.includes("千秋楽")) {
-        return `「${baseName}」千秋楽`;
-      }
-      if (sub.includes("生誕祭") || rawTitle.includes("生誕祭")) {
-        let name = sub.replace(/生誕祭/g, "").trim();
-        if (!name) name = selectedMemberName;
-        if (!name.startsWith("🎂")) name = "🎂" + name;
-        return `「${baseName}」 <span class="text-[0.85em] font-normal">${escapeHtml(name)}</span>`;
-      }
-      if (sub.includes("卒業公演") || rawTitle.includes("卒業公演")) {
-        let name = sub.replace(/卒業公演/g, "").trim();
-        if (!name) name = selectedMemberName;
-        if (!name.startsWith("🎓")) name = "🎓" + name;
-        return `「${baseName}」 <span class="text-[0.85em] font-normal">${escapeHtml(name)}</span>`;
-      }
-      return `「${baseName}」`;
+      return escapeHtml(rawTitle || `「${baseName}」公演`);
     }
     function renderMemberDetailView() {
+      if (!selectedMemberName) return;
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
-      const memberShows = dataSource.filter(item => item.membersArray.includes(selectedMemberName));
+      const memberShows = [];
+      dataSource.forEach(item => {
+        let isMatched = false;
+        if (item.membersArray && item.membersArray.includes(selectedMemberName)) isMatched = true;
+        if (!isMatched && item.positionsArray && item.positionsArray.includes(selectedMemberName)) isMatched = true;
+        if (isMatched) memberShows.push(item);
+      });
       document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberShows.length}回`;
-      const showCountsMap = {};
-      const posDetailMap = {};
-      memberShows.forEach(item => {
-        const baseName = item.baseStageName; 
-        showCountsMap[baseName] = (showCountsMap[baseName] || 0) + 1;
-        if (!posDetailMap[baseName]) posDetailMap[baseName] = {};
-        const stageObj = GLOBAL_STAGE_DATABASE[baseName] || STAGE_DATABASE[baseName];
-        
-        if (stageObj && stageObj.fixed && item.positionsArray) {
-          const posIdx = item.positionsArray.indexOf(selectedMemberName);
-          if (posIdx !== -1 && stageObj.fixed[posIdx]) {
-            const posName = stageObj.fixed[posIdx];
-            posDetailMap[baseName][posName] = (posDetailMap[baseName][posName] || 0) + 1;
+      
+      const breakdown = {};
+      memberShows.forEach(s => {
+        const stageName = s.baseStageName || 'その他';
+        breakdown[stageName] = (breakdown[stageName] || 0) + 1;
+      });
+      const breakdownListEl = document.getElementById('showsBreakdownList');
+      breakdownListEl.innerHTML = '';
+      if (Object.keys(breakdown).length === 0) {
+        breakdownListEl.innerHTML = `<li class="text-slate-400">出演データはありません。</li>`;
+      } else {
+        Object.keys(breakdown).sort((a,b) => breakdown[b] - breakdown[a]).forEach(stageName => {
+          const li = document.createElement('li');
+          li.className = "flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100";
+          li.innerHTML = `<span class="font-bold text-slate-700">「${escapeHtml(stageName)}」公演</span><span class="font-bold text-pink-600">${breakdown[stageName]}回</span>`;
+          breakdownListEl.appendChild(li);
+        });
+      }
+
+      // 1. 年別出演回数のロジック＆描画
+      const yearlyCounts = {};
+      memberShows.forEach(s => {
+        if (s.date) {
+          const year = s.date.split('/')[0] || s.date.slice(0, 4);
+          if (year) {
+            yearlyCounts[year] = (yearlyCounts[year] || 0) + 1;
           }
         }
       });
-      const breakdownList = document.getElementById('showsBreakdownList');
-      breakdownList.innerHTML = '';
-      Object.entries(showCountsMap).forEach(([title, count]) => {
+      const yearlyListEl = document.getElementById('yearlyBreakdownList');
+      yearlyListEl.innerHTML = '';
+      const sortedYears = Object.keys(yearlyCounts).sort((a, b) => b.localeCompare(a));
+      if (sortedYears.length === 0) {
+        yearlyListEl.innerHTML = `<div class="text-slate-400 col-span-full">データなし</div>`;
+      } else {
+        sortedYears.forEach(y => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100";
+          div.innerHTML = `<span class="font-bold text-slate-700">${escapeHtml(y)}年</span><span class="font-bold text-pink-600">${yearlyCounts[y]}回</span>`;
+          yearlyListEl.appendChild(div);
+        });
+      }
+
+      // 2. グループ内メンバー出演ランキングのロジック＆描画
+      const memberCounts = {};
+      dataSource.forEach(s => {
+        const members = new Set([...(s.membersArray || []), ...(s.positionsArray || [])]);
+        members.forEach(m => {
+          if (m && m !== "-" && m !== "－") {
+            memberCounts[m] = (memberCounts[m] || 0) + 1;
+          }
+        });
+      });
+      const sortedRanking = Object.keys(memberCounts).sort((a, b) => memberCounts[b] - memberCounts[a]);
+      const rankingListEl = document.getElementById('memberRankingList');
+      rankingListEl.innerHTML = '';
+      sortedRanking.slice(0, 10).forEach(m => {
         const li = document.createElement('li');
-        li.className = "bg-slate-50 p-2.5 rounded border border-slate-200 space-y-1";
-        let posTextArray = [];
-        if (posDetailMap[title]) {
-          const stageObj = GLOBAL_STAGE_DATABASE[title] || STAGE_DATABASE[title];
-          const fixedList = stageObj ? stageObj.fixed : [];
-          const sortedEntries = Object.entries(posDetailMap[title]).sort((a, b) => {
-            const idxA = fixedList.indexOf(a[0]);
-            const idxB = fixedList.indexOf(b[0]);
-            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-            if (idxA !== -1) return -1;
-            if (idxB !== -1) return 1;
-            return 0;
-          });
-          sortedEntries.forEach(([pName, pCount]) => {
-            posTextArray.push(`${pName} : ${pCount}回`);
-          });
-        }
-        
-        const subPosText = posTextArray.length > 0 ? posTextArray.join('　') : '';
-        li.innerHTML = `
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600 hover:underline" onclick="selectStage('${escapeHtml(title)}')">「${escapeHtml(title)}」公演</span> 
-            <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded">${count}回</span>
-          </div>
-          ${subPosText ? `<div class="text-[11px] text-slate-500 font-medium pl-1">${escapeHtml(subPosText)}</div>` : ''}
-        `;
-        breakdownList.appendChild(li);
+        li.className = "py-1 px-2 rounded hover:bg-slate-50 flex justify-between items-center font-medium";
+        li.innerHTML = `<span class="text-slate-700">${escapeHtml(m)}</span><span class="font-bold text-pink-600">${memberCounts[m]}回</span>`;
+        rankingListEl.appendChild(li);
       });
-      const historyList = document.getElementById('memberShowsHistoryList');
-      historyList.innerHTML = '';
-      memberShows.slice().reverse().forEach((item, index) => {
-        const countNum = memberShows.length - index;
-        const div = document.createElement('div');
-        div.className = "p-2 bg-slate-50 border border-slate-200 rounded text-xs flex gap-3 items-center cursor-pointer hover:bg-pink-50 transition";
-        div.onclick = () => jumpToSchedule(item.date, item.id);
-        
-        let targetPositionName = selectedMemberName;
-        const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
-        if (stageObj && stageObj.fixed && item.positionsArray && item.positionsArray.length > 0) {
-          const posIndex = item.positionsArray.indexOf(selectedMemberName);
-          if (posIndex !== -1 && stageObj.fixed[posIndex]) {
-            targetPositionName = stageObj.fixed[posIndex];
+
+      // 3. 共演回数トップ10のロジック＆描画
+      const coappCounts = {};
+      dataSource.forEach(s => {
+        const members = Array.from(new Set([...(s.membersArray || []), ...(s.positionsArray || [])])).filter(m => m && m !== "-" && m !== "－");
+        for (let i = 0; i < members.length; i++) {
+          for (let j = i + 1; j < members.length; j++) {
+            const pair = [members[i], members[j]].sort().join(' & ');
+            coappCounts[pair] = (coappCounts[pair] || 0) + 1;
           }
         }
-        const formattedStageLabel = formatHistoryStageTitle(item);
-        div.innerHTML = `
-          <span class="font-bold text-slate-400 w-4 text-right">${countNum}</span>
-          <span class="text-slate-600">${escapeHtml(item.date)}</span>
-          <span class="font-bold text-slate-800 flex-1 truncate">${formattedStageLabel}</span>
-          <span class="text-pink-600 font-bold whitespace-nowrap">${escapeHtml(targetPositionName)}</span>
-        `;
-        historyList.appendChild(div);
       });
+      const sortedCoapp = Object.keys(coappCounts).sort((a, b) => coappCounts[b] - coappCounts[a]);
+      const coappTopListEl = document.getElementById('coappearanceTopList');
+      coappTopListEl.innerHTML = '';
+      if (sortedCoapp.length === 0) {
+        coappTopListEl.innerHTML = `<li class="text-slate-400">共演データなし</li>`;
+      } else {
+        sortedCoapp.slice(0, 10).forEach(pair => {
+          const li = document.createElement('li');
+          li.className = "py-1 px-2 rounded hover:bg-slate-50 flex justify-between items-center font-medium";
+          li.innerHTML = `<span class="text-slate-700">${escapeHtml(pair)}</span><span class="font-bold text-pink-600">${coappCounts[pair]}回</span>`;
+          coappTopListEl.appendChild(li);
+        });
+      }
+
+      const historyListEl = document.getElementById('memberShowsHistoryList');
+      historyListEl.innerHTML = '';
+      if (memberShows.length === 0) {
+        historyListEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">出演履歴はありません。</p>`;
+      } else {
+        memberShows.sort((a, b) => (b.date + " " + (b.time || "")).localeCompare(a.date + " " + (a.time || "")));
+        memberShows.forEach(item => {
+          const div = document.createElement('div');
+          div.className = "p-2.5 rounded border border-slate-200 bg-slate-50 flex justify-between items-center text-xs";
+          div.innerHTML = `
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-500">${escapeHtml(item.date)}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater || 'AKB48劇場')}</span>
+              </div>
+              <div class="font-bold text-slate-800 mt-1 cursor-pointer hover:text-pink-600" onclick="jumpToSchedule('${escapeHtml(item.date)}', '${escapeHtml(item.id)}')">
+                ${formatHistoryStageTitle(item)}
+              </div>
+            </div>
+            <button onclick="jumpToSchedule('${escapeHtml(item.date)}', '${escapeHtml(item.id)}')" class="bg-white border border-slate-200 text-slate-600 hover:bg-pink-50 hover:text-pink-600 font-bold px-2.5 py-1 rounded shadow-sm text-[10px]">
+              詳細
+            </button>
+          `;
+          historyListEl.appendChild(div);
+        });
+      }
     }
-    function filterSchedule(filter, btn) {
-      currentScheduleFilter = filter;
-      document.querySelectorAll('.filter-btn').forEach(b => {
-        b.className = "filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200";
-      });
-      btn.className = "filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap";
-      renderCalendar();
-    }
-    /* エスケープ処理関数 */
     function escapeHtml(str) {
-      if (str === null || str === undefined) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+      if (!str) return '';
+      return str.replace(/[&'`"<>]/g, function(match) {
+        return {
+          '&': '&amp;',
+          "'": '&#x27;',
+          '`': '&#x60;',
+          '"': '&quot;',
+          '<': '&lt;',
+          '>': '&gt;',
+        }[match];
+      });
     }
   </script>
 </body>
