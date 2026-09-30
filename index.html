@@ -1893,16 +1893,24 @@ function getLikelyPositionForMember(member, excludePIdx) {
           );
 
         const removedReasons =
-          removedMembers.map(m => {
+  removedMembers.map(m => {
 
-            const info =
-              memberAssignedToPos[m];
+    const likelyPos =
+      getLikelyPositionForMember(
+        m,
+        pIdx
+      );
 
-            if (info && info.posName) {
-              return (
-                `${m}が${info.posName}で出演する可能性`
-              );
-            }
+    if (likelyPos) {
+      return (
+        `${m}が${likelyPos}で出演する可能性`
+      );
+    }
+
+    return (
+      `${m}が他ポジションで出演する可能性`
+    );
+  });
 
             /*
              * memberAssignedToPos にまだ登録されていない場合は、
