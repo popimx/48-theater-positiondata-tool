@@ -1016,7 +1016,7 @@
       : `五分五分の可能性が高いと予想。`;
   } else {
     reasonText +=
-      `過去の直接共演実績がないため判断が難しいが、五分五分の可能性が高いと予想。`;
+      `過去に「${stageName}」で共演したデータがないため判断が難しいが、五分五分の可能性が高いと予想。`;
   }
 
   return {
@@ -1635,17 +1635,25 @@ function runForecast() {
     let percentText = "";
 
 
-    /* =======================================================
+   /* =======================================================
        SOLO MULTI
        
        1人のメンバーが複数ポジションで単独候補
+       ※ただし、既に他のメンバー（太田・山﨑等）でポジションが確定している場合はスキップ
     ======================================================= */
 
-    const soloMultiMember =
-      Object.keys(soloMultiPosMembers).find(
-        m =>
-          soloMultiPosMembers[m].includes(pIdx)
-      );
+    const isConfirmedByOther =
+      confirmedAssignments[pIdx] &&
+      !soloMultiPosMembers[confirmedAssignments[pIdx]];
+
+    const soloMultiMember = isConfirmedByOther
+      ? null
+      : Object.keys(soloMultiPosMembers).find(
+          m =>
+            soloMultiPosMembers[m].includes(pIdx) &&
+            // 確定メンバーが自分自身であるか、まだ未確定の場合のみ適用
+            (!confirmedAssignments[pIdx] || confirmedAssignments[pIdx] === m)
+        );
 
     if (soloMultiMember) {
 
