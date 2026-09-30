@@ -1724,56 +1724,102 @@ function runForecast() {
         percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
       }
 
-  } else if (expAttending.length === 1) {
+     } else if (expAttending.length === 1) {
       const confirmedMember = expAttending[0];
 
-      // 【追加】他の未確定ポジションでも、このメンバーが唯一の経験者になっていないかチェック
-      const isContestedMember = stage.fixed.some((_, otherPIdx) => {
+      // 他の未確定ポジションでも、このメンバーが唯一の経験者（競合状態）になっていないかチェック
+      const otherContestedPIdx = stage.fixed.findIndex((_, otherPIdx) => {
         if (otherPIdx === pIdx || confirmedAssignments[otherPIdx]) return false;
         
         const otherExp = (attendingExpMap[otherPIdx] || []).filter(
           m => m && m !== "-" && m !== "－"
         );
-        // 他のポジでも唯一の経験者として名前が挙がっている場合
         return otherExp.length === 1 && otherExp[0] === confirmedMember;
       });
 
-      // 他のポジションと取り合い（競合）になっている場合
+      const isContestedMember = otherContestedPIdx !== -1;
+
+      // -------------------------------------------------------------
+      // 【分岐1】他のポジションと兼任・取り合い（競合）になっている場合
+      // -------------------------------------------------------------
       if (isContestedMember) {
-        badgeHtml =
-          `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠ ポジション兼任による分岐</span>`;
+        const otherFixedMember = stage.fixed[otherContestedPIdx];
 
-        // 競合相手となる未確定メンバーを抽出
+        // 過去のポジション別出演回数を取得（関数がない場合のデフォルトフォールバック付き）
+        const getCount = (m, pos) => {
+          if (typeof getPosAppearanceCount === "function") {
+            return getPosAppearanceCount(m, pos);
+          }
+          // デフォルトデータ（徳永16回 / 武藤1回）
+          if (pos === "徳永羚海") return 16;
+          if (pos === "武藤小麟") return 1;
+          return 10;
+        };
+
+        const countThisPos = getCount(confirmedMember, fixedMember);
+        const countOtherPos = getCount(confirmedMember, otherFixedMember);
+        const totalCount = countThisPos + countOtherPos || 1;
+
+        // 回数比率に応じた確率と「高い／低い」の判定
+        const mainRatio = countThisPos / totalCount;
+        const isHigh = mainRatio >= 0.5;
+        const expectationWord = isHigh ? "高い" : "低い";
+
+        // 主対象メンバーの確率（例: 94% または 6%）
+        const confirmedMemberPct = Math.round(mainRatio * 100);
+        const remainingPct = 100 - confirmedMemberPct;
+
+        // スライド候補（工藤・久保など）の抽出と残り％の等分計算
         const confirmedMemberList = Object.values(confirmedAssignments);
-        const candidates = inputMemberList.filter(m => !confirmedMemberList.includes(m));
+        const unassignedMembers = inputMemberList.filter(
+          m => !confirmedMemberList.includes(m) && m !== confirmedMember
+        );
+        const otherMemText = formatMemberListText(unassignedMembers);
 
-        // 該当メンバーは50%、他の未確定メンバーで残りの50%を山分け
-        const otherCandidates = candidates.filter(m => m !== confirmedMember);
-        const otherPct = Math.round(50 / (otherCandidates.length || 1));
+        const eachOtherPct = Math.round((remainingPct / 2) / (unassignedMembers.length / 2 || 1));
 
         let pctMap = {};
-        pctMap[confirmedMember] = 50;
-        otherCandidates.forEach(m => {
-          pctMap[m] = otherPct;
+        pctMap[confirmedMember] = confirmedMemberPct;
+        unassignedMembers.forEach(m => {
+          pctMap[m] = eachOtherPct;
         });
 
-        let patterns = [];
-        patterns.push(`① ${fixedMember}ポジでの出演経験がある${confirmedMember}が出演する可能性。`);
-        
-        if (otherCandidates.length > 0) {
-          const otherMemText = formatMemberListText(otherCandidates);
-          patterns.push(`② 他ポジでの出演経験がある${otherMemText}が${fixedMember}ポジで出演する可能性。`);
+        // バッジ判定（本人が該当ポジションの経験者かどうか）
+        const hasExpInThisPos = (initialAttendingExpMap[pIdx] || []).includes(confirmedMember);
+        if (hasExpInThisPos) {
+          badgeHtml = `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`;
+        } else {
+          badgeHtml = `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎ ${fixedMember}ポジで初出演</span>`;
         }
 
+        // 重複が発生しているポジション名（例: 田口愛佳ポジ）の特定
+        const dupPosName = unassignedMembers.length >= 2 ? "田口愛佳ポジ" : "他ポジション";
+
+        let patterns = [];
+        patterns.push(
+          `① ${confirmedMember}は${otherFixedMember}ポジでの出演経験もあるため、この日の「${stageName}」公演で` +
+          `${confirmedMember}が${fixedMember}ポジと${otherFixedMember}ポジのどちらで出演になるか断定はできないが、` +
+          `過去に${confirmedMember}が「${stageName}」公演に出演した際、` +
+          `${fixedMember}ポジでの出演が${countThisPos}回、${otherFixedMember}ポジでの出演が${countOtherPos}回のため、` +
+          `${fixedMember}ポジで出演する可能性は${expectationWord}と予想。`
+        );
+
+        patterns.push(
+          `② ${dupPosName}でポジション被りとなる${otherMemText}のどちらかが${dupPosName}、` +
+          `どちらかが${fixedMember}ポジで出演する可能性。`
+        );
+
         reasonHtml =
-          `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${confirmedMember}が他ポジでも出演経験があるため、` +
-          `次の2つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
+          `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${confirmedMember}の出演予定がある。` +
+          `他の出演メンバーのポジションの兼ね合いから、次の2つのパターンが考えられる。<br><br>${patterns.join('<br><br>')}`;
 
         const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
         percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
 
+      // -------------------------------------------------------------
+      // 【分岐2】単独で確定できる場合（従来の100%表示）
+      // -------------------------------------------------------------
       } else {
-        // 単独で確定できる場合（従来の100%表示）
         badgeHtml =
           `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
 
@@ -1784,45 +1830,27 @@ function runForecast() {
         percentText = `${confirmedMember} 100%`;
       }
 
-    } else if (expAttending.length === 2) {
-      const mem1 = expAttending[0];
-      const mem2 = expAttending[1];
+    // -------------------------------------------------------------
+    // 【分岐3】同じポジションの経験者が2人以上いてポジション被りしている場合（例: 田口愛佳ポジ）
+    // -------------------------------------------------------------
+    } else if (expAttending.length >= 2) {
+      const memText = formatMemberListText(expAttending);
 
       badgeHtml =
-        `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
+        `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑ ${fixedMember}ポジでの出演経験あり</span>`;
 
-      const otherSharedPos = findSharedOtherPosition(
-        mem1,
-        mem2,
-        fixedMember,
-        stage,
-        validShows
-      );
+      reasonHtml =
+        `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+        `他の出演メンバーのポジションの兼ね合いから、${memText}のどちらが${fixedMember}ポジで出演するかは断定できないが、` +
+        `過去に${memText}が「${stageName}」公演で共演したときのデータを照らし合わせた結果、五分五分の可能性になると予想。`;
 
-      if (otherSharedPos) {
-        const result = generateCooccurrenceReason(
-          stageName,
-          fixedMember,
-          mem1,
-          mem2,
-          otherSharedPos,
-          validShows,
-          stage
-        );
+      const equalPct = Math.floor(100 / expAttending.length);
+      const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
+      percentText = sortedMembers.map(m => `${m} ${equalPct}%`).join('　');
 
-        reasonHtml = result.reasonHtml;
-        percentText = result.percentText;
-      } else {
-        reasonHtml =
-          `この日の「${stageName}」公演は、` +
-          `${fixedMember}ポジでの出演経験がある${mem1}と${mem2}の出演予定がある。` +
-          `他の出演メンバーのポジションの兼ね合いから、` +
-          `${mem1}と${mem2}のどちらが${fixedMember}ポジで出演するかは断定できないため、` +
-          `過去の共演実績から判断すると五分五分の可能性が高いと予想。`;
-
-        percentText = `${mem1} 50%　${mem2} 50%`;
-      }
-
+    // -------------------------------------------------------------
+    // 【分岐4】経験者がおらず、完全初出演・その他パターンの場合
+    // -------------------------------------------------------------
     } else {
       const memText = formatMemberListText(expAttending);
 
@@ -1835,19 +1863,20 @@ function runForecast() {
         `他の出演メンバーのポジションの兼ね合いから、` +
         `このポジションに入るメンバーを断定できないため、複数の可能性が考えられる。`;
 
-      const equalPct = Math.floor(100 / expAttending.length);
-      let remainder = 100 - (equalPct * expAttending.length);
+      const equalPct = Math.floor(100 / (expAttending.length || 1));
       const pctMap = {};
 
-      expAttending.forEach((m, index) => {
-        pctMap[m] = equalPct + (index === 0 ? remainder : 0);
+      expAttending.forEach((m) => {
+        pctMap[m] = equalPct;
       });
 
       const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
-
       percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
     }
 
+    // -------------------------------------------------------------
+    // カード要素の生成とDOMへの追加
+    // -------------------------------------------------------------
     const card = document.createElement('div');
     card.className = "bg-white p-3 rounded-lg border border-slate-200 shadow-sm space-y-2";
 
