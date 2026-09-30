@@ -2812,7 +2812,7 @@ function runForecast() {
     function renderMemberRankings() {
       const targetYear = currentRankingYear;
       const titleEl = document.getElementById('rankingSectionTitle');
-      titleEl.innerHTML = `<i class="fa-solid fa-trophy text-pink-500"></i> 出演回数ランキング（${targetYear === 'ALL' ? '全期間' : `${targetYear}年`}）`;
+      titleEl.innerHTML = `<i class="fa-solid fa-trophy text-pink-500"></i> 出演回数ランキング`;
 
       const yearPerfs = targetYear === 'ALL' 
         ? ALL_SCHEDULE_DATA 
