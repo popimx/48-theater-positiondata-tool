@@ -1093,7 +1093,7 @@ function runForecast() {
       if (isConfirmed) {
         return `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`;
       } else {
-        return `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑︎︎ ${fixedMember}ポジでの出演経験あり</span>`;
+        return `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`;
       }
     }
 
@@ -1125,7 +1125,6 @@ function runForecast() {
   while (changed) {
     changed = false;
 
-    // パス1: 候補者が1人しかいないポジションを優先確定
     stage.fixed.forEach((fM, pIdx) => {
       if (confirmedAssignments[pIdx]) return;
       const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
@@ -1146,7 +1145,6 @@ function runForecast() {
 
     if (changed) continue;
 
-    // パス2: 専任メンバー（他ポジの選択肢がないメンバー）の判定
     stage.fixed.forEach((fM, pIdx) => {
       if (confirmedAssignments[pIdx]) return;
       const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
@@ -1196,7 +1194,7 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【新ロジック】全パターン割り当て（一対一対応）計算エンジン
+  // 【改善版】全パターン割り当て（シェア加算モデル）計算エンジン
   // =============================================================
   const unassignedPIdxs = stage.fixed
     .map((_, idx) => idx)
@@ -1207,7 +1205,6 @@ function runForecast() {
     m => !confirmedMemberList.includes(m)
   );
 
-  // 各ポジション×メンバーの経験回数と計算用スコア（重み）を設定
   const scoreMatrix = {};
   const appearanceCountMap = {};
 
@@ -1215,25 +1212,28 @@ function runForecast() {
     scoreMatrix[pIdx] = {};
     appearanceCountMap[pIdx] = {};
 
+    let totalCountInPos = 0;
     unassignedMembers.forEach(m => {
       const count = validShows.filter(show => 
         show.positionsArray && show.positionsArray[pIdx] === m
       ).length;
-
       appearanceCountMap[pIdx][m] = count;
+      totalCountInPos += count;
+    });
 
+    unassignedMembers.forEach(m => {
+      const count = appearanceCountMap[pIdx][m];
       const isExpInInitial = (initialAttendingExpMap[pIdx] || []).includes(m);
-      if (count > 0) {
-        scoreMatrix[pIdx][m] = count;
-      } else if (isExpInInitial) {
-        scoreMatrix[pIdx][m] = 0.5; // 経験はあるが出演履歴データが少ない場合
-      } else {
-        scoreMatrix[pIdx][m] = 0.01; // 初出演（完全余りメンバー）の基本重み
-      }
+      
+      // 各ポジション内での適性度（シェア）を算出
+      let ratio = totalCountInPos > 0 ? (count / totalCountInPos) : 0;
+      if (ratio === 0 && isExpInInitial) ratio = 0.1;
+      if (ratio === 0) ratio = 0.01;
+
+      scoreMatrix[pIdx][m] = ratio;
     });
   });
 
-  // 全成立パターンの探索（バックトラック）
   const validPatterns = [];
 
   function searchPatterns(pIdxIndex, currentAssignment, currentScore) {
@@ -1253,16 +1253,16 @@ function runForecast() {
 
       const weight = scoreMatrix[pIdx][m] || 0.01;
       currentAssignment[pIdx] = m;
-      searchPatterns(pIdxIndex + 1, currentAssignment, currentScore * weight);
+      // 加算モデルでパターンスコアをなめらかに評価
+      searchPatterns(pIdxIndex + 1, currentAssignment, currentScore + weight);
       delete currentAssignment[pIdx];
     });
   }
 
   if (unassignedPIdxs.length > 0 && unassignedMembers.length > 0) {
-    searchPatterns(0, {}, 1.0);
+    searchPatterns(0, {}, 0.0);
   }
 
-  // 全パターン統合確率の計算
   const totalPatternScore = validPatterns.reduce((sum, p) => sum + p.score, 0) || 1;
   const finalProbabilityMap = {};
 
@@ -1283,7 +1283,7 @@ function runForecast() {
     });
   });
 
-  // パーセントの四捨五入および各ポジションでの合計100%調整
+  // パーセントの調整
   unassignedPIdxs.forEach(pIdx => {
     let sum = 0;
     unassignedMembers.forEach(m => {
@@ -1330,9 +1330,7 @@ function runForecast() {
     let reasonHtml = "";
     let percentText = "";
 
-    // -------------------------------------------------------------
     // 【パターン1】事前に100%確定しているポジションの場合
-    // -------------------------------------------------------------
     if (confirmedAssignments[pIdx]) {
       const assignedMember = confirmedAssignments[pIdx];
 
@@ -1383,21 +1381,21 @@ function runForecast() {
         }
       }
 
-    // -------------------------------------------------------------
     // 【パターン2・3・4】未確定ポジション（算出された確率マップから描画）
-    // -------------------------------------------------------------
     } else {
       const pMap = finalProbabilityMap[pIdx] || {};
 
-      // 確率が1%以上のメンバーを抽出してソート
-      const candidateMems = unassignedMembers.filter(m => (pMap[m] || 0) > 0);
-      const sortedCandidates = sortByInputOrder(candidateMems, inputMemberList);
+      // 該当ポジの経験者 ＋ 確率1%以上のメンバーを漏れなく抽出
+      const candidateSet = new Set([
+        ...expAttending,
+        ...unassignedMembers.filter(m => (pMap[m] || 0) > 0)
+      ]);
+      const sortedCandidates = sortByInputOrder(Array.from(candidateSet), inputMemberList);
 
       badgeHtml = getBadgeHtml(pIdx, fixedMember, expAttending, false);
 
-      // パーセンテージ文字列の作成
       percentText = sortedCandidates
-        .map(m => `${m} ${pMap[m]}%`)
+        .map(m => `${m} ${pMap[m] || 0}%`)
         .join('　');
 
       if (sortedCandidates.length === 0) {
@@ -1405,21 +1403,25 @@ function runForecast() {
         const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
         reasonHtml = `この日の「${stageName}」公演は、${absencePhrase}。`;
       } else {
-        // 出演回数実績の解説文を作成
-        const expMemsWithHistory = sortedCandidates.filter(m => (appearanceCountMap[pIdx][m] || 0) > 0);
+        // 全候補メンバーの出演実績回数をテキスト化
+        const countDetails = sortedCandidates
+          .map(m => {
+            const cnt = appearanceCountMap[pIdx][m] || 0;
+            return cnt > 0 ? `${m}が${cnt}回` : null;
+          })
+          .filter(Boolean);
 
         let historyDetail = "";
-        if (expMemsWithHistory.length > 0) {
-          const details = expMemsWithHistory.map(m => `${m}が${appearanceCountMap[pIdx][m]}回`).join('、');
-          historyDetail = `過去に「${stageName}」公演で${fixedMember}ポジでの出演が${details}あり、`;
+        if (countDetails.length > 0) {
+          historyDetail = `過去に「${stageName}」公演で${fixedMember}ポジでの出演が${countDetails.join('、')}あり、`;
         } else {
           historyDetail = `過去の「${stageName}」公演での出演実績や他ポジションとの兼ね合いから、`;
         }
 
-        // 一番確率が高いメンバーの特定
+        // 最高確率メンバーの判定
         let topMem = sortedCandidates[0];
         sortedCandidates.forEach(m => {
-          if (pMap[m] > pMap[topMem]) topMem = m;
+          if ((pMap[m] || 0) > (pMap[topMem] || 0)) topMem = m;
         });
 
         const memText = formatMemberListText(sortedCandidates);
@@ -1460,7 +1462,6 @@ function runForecast() {
     positionsList.appendChild(card);
   });
 }
-
   
     /* --- メンバー詳細・各種統計ロジック --- */
 
