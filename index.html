@@ -1574,14 +1574,15 @@ while (changed) {
       if (isContestedMember) {
         const otherFixedMember = stage.fixed[otherContestedPIdx];
 
-        const getCount = (m, pos) => {
-          if (typeof getPosAppearanceCount === "function") {
-            return getPosAppearanceCount(m, pos);
-          }
-          if (pos === "徳永羚海") return 16;
-          if (pos === "武藤小麟") return 1;
-          return 10;
-        };
+  const getCount = (m, pos) => {
+  const posIndex = stage.fixed.indexOf(pos);
+  if (posIndex === -1) return 0;
+
+  // 過去の公演データ(validShows)から、そのポジション(posIndex)にメンバー(m)が出演した回数を実際にカウント
+  return validShows.filter(show => 
+    show.positionsArray && show.positionsArray[posIndex] === m
+  ).length;
+};
 
         const countThisPos = getCount(confirmedMember, fixedMember);
         const countOtherPos = getCount(confirmedMember, otherFixedMember);
