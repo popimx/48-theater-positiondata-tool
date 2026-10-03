@@ -1051,7 +1051,7 @@ function getCircleNum(num) {
     allMembersGrid.appendChild(div);
   });
 
-  // ポジション経験マップの生成
+  // 各ポジションの経験者マップ構築
   const initialAttendingExpMap = {};
   const absenceExpMap = {};
 
@@ -1080,25 +1080,7 @@ function getCircleNum(num) {
     });
   });
 
-  // バッジ判定用ヘルパー関数
-  function getBadgeHtml(pIdx, fixedMember, targetMembers, isConfirmed = false) {
-    if (!targetMembers || targetMembers.length === 0) {
-      return `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎ ${fixedMember}ポジで初出演</span>`;
-    }
-
-    const initialExpList = initialAttendingExpMap[pIdx] || [];
-    const allHaveExp = targetMembers.every(m => initialExpList.includes(m));
-
-    if (allHaveExp) {
-      return isConfirmed
-        ? `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`
-        : `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`;
-    }
-
-    return `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎ ${fixedMember}ポジで初出演</span>`;
-  }
-
-  // 各出演メンバーの「経験ポジション数」を算出
+  // 各出演メンバーの「経験ポジション一覧」を抽出
   const memberExpPosList = {};
   inputMemberList.forEach(m => {
     memberExpPosList[m] = [];
@@ -1110,52 +1092,58 @@ function getCircleNum(num) {
   });
 
   // =============================================================
-  // 【新・確定判定】①経験者1人または ②1ポジしかできないメンバー のみ100%確定
+  // 【確定判定ロジック】
+  // ① 出演メンバーの中で経験者が1人しかいないポジション
+  // ② 複数候補者はいるものの、1ポジしかできないメンバーのポジション
   // =============================================================
   const confirmedAssignments = {};
-  const memberAssignedToPos = {};
+  const confirmedMemberList = [];
 
-  stage.fixed.forEach((fM, pIdx) => {
-    const exps = initialAttendingExpMap[pIdx] || [];
-    
-    // ① 出演メンバーの中でこのポジの経験者が1人しかおらず、そのメンバーもこの1ポジしか経験がない場合
-    if (exps.length === 1) {
-      const m = exps[0];
-      if (memberExpPosList[m].length === 1) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    stage.fixed.forEach((fM, pIdx) => {
+      if (confirmedAssignments[pIdx]) return;
+
+      const unassignedExpMembers = (initialAttendingExpMap[pIdx] || []).filter(
+        m => !confirmedMemberList.includes(m)
+      );
+
+      // 条件①：出演メンバーの中で経験者が1人しかいないポジション
+      if (unassignedExpMembers.length === 1) {
+        const m = unassignedExpMembers[0];
+        // 他に競合するポジ確定枠がなければ確定
         confirmedAssignments[pIdx] = m;
-        memberAssignedToPos[m] = { pIdx, posName: `${fM}ポジ` };
-      }
-    }
-  });
+        confirmedMemberList.push(m);
+        changed = true;
 
-  // 未確定ポジション・未割当メンバーの抽出
-  let unassignedPIdxs = stage.fixed
+      // 条件②：複数候補者はいるが、未割当の中で1ポジしかできないメンバーのポジション
+      } else if (unassignedExpMembers.length > 1) {
+        const singlePosMembers = unassignedExpMembers.filter(m => {
+          const remainingPoses = memberExpPosList[m].filter(p => !confirmedAssignments[p]);
+          return remainingPoses.length === 1 && remainingPoses[0] === pIdx;
+        });
+
+        if (singlePosMembers.length === 1) {
+          const m = singlePosMembers[0];
+          confirmedAssignments[pIdx] = m;
+          confirmedMemberList.push(m);
+          changed = true;
+        }
+      }
+    });
+  }
+
+  // 未確定ポジションと未割当メンバーの抽出
+  const unassignedPIdxs = stage.fixed
     .map((_, idx) => idx)
     .filter(idx => !confirmedAssignments[idx]);
 
-  const confirmedMemberList = Object.values(confirmedAssignments);
-  let unassignedMembers = inputMemberList.filter(
+  const unassignedMembers = inputMemberList.filter(
     m => !confirmedMemberList.includes(m)
   );
 
-  // 未確定ポジと未割当メンバーが共に最後の1つの場合は確定
-  if (unassignedPIdxs.length === 1 && unassignedMembers.length === 1) {
-    const lastPIdx = unassignedPIdxs[0];
-    const lastMember = unassignedMembers[0];
-    confirmedAssignments[lastPIdx] = lastMember;
-    memberAssignedToPos[lastMember] = { pIdx: lastPIdx, posName: `${stage.fixed[lastPIdx]}ポジ` };
-    unassignedPIdxs = [];
-    unassignedMembers = [];
-  }
-
-  // 候補者の抽出
-  const allowedCandidates = {};
-  unassignedPIdxs.forEach(pIdx => {
-    const exps = (initialAttendingExpMap[pIdx] || []).filter(m => unassignedMembers.includes(m));
-    allowedCandidates[pIdx] = exps.length > 0 ? exps : unassignedMembers;
-  });
-
-  // 各ポジションでの出演回数マップとスコア行列構築
+  // 出演回数マップとスコア行列の作成（重みの過度な偏りを防ぐためリニアスコア化）
   const appearanceCountMap = {};
   const scoreMatrix = {};
 
@@ -1170,15 +1158,21 @@ function getCircleNum(num) {
       appearanceCountMap[pIdx][m] = count;
 
       const isExp = (initialAttendingExpMap[pIdx] || []).includes(m);
-      // 回数をスコア化（回数の相対差を確率へ反映）
-      let weight = count > 0 ? Math.pow(1.4, count) : (isExp ? 1.1 : 0.1);
+      // 回数に応じたマイルドな重み付け（100%/0%への完全収束を防ぐ）
+      let weight = isExp ? (1.0 + count * 0.12) : 0.25;
       scoreMatrix[pIdx][m] = weight;
     });
   });
 
-  // 全パターン探索処理
-  let validPatterns = [];
+  // 候補メンバー設定（経験者を優先しつつ、不足時は全体を候補とする）
+  const allowedCandidates = {};
+  unassignedPIdxs.forEach(pIdx => {
+    const exps = (initialAttendingExpMap[pIdx] || []).filter(m => unassignedMembers.includes(m));
+    allowedCandidates[pIdx] = exps.length > 0 ? exps : unassignedMembers;
+  });
 
+  // 全パターン探索
+  let validPatterns = [];
   function searchPatterns(pIdxIndex, currentAssignment, currentScore, candidateMap) {
     if (pIdxIndex === unassignedPIdxs.length) {
       validPatterns.push({
@@ -1202,19 +1196,18 @@ function getCircleNum(num) {
     });
   }
 
-  let activeCandidates = allowedCandidates;
   if (unassignedPIdxs.length > 0 && unassignedMembers.length > 0) {
-    searchPatterns(0, {}, 1.0, activeCandidates);
+    searchPatterns(0, {}, 1.0, allowedCandidates);
 
+    // 候補制限でパターンが組めない場合のバックアップ処理
     if (validPatterns.length === 0) {
       const fallbackCandidates = {};
       unassignedPIdxs.forEach(pIdx => fallbackCandidates[pIdx] = unassignedMembers);
-      activeCandidates = fallbackCandidates;
-      searchPatterns(0, {}, 1.0, activeCandidates);
+      searchPatterns(0, {}, 1.0, fallbackCandidates);
     }
   }
 
-  // 生の発生確率の試算
+  // 生確率の試算
   const totalPatternScore = validPatterns.reduce((sum, p) => sum + p.score, 0) || 1;
   const rawProbMap = {};
 
@@ -1232,7 +1225,7 @@ function getCircleNum(num) {
   });
 
   // =============================================================
-  // 【2次元100%最適化アルゴリズム】（ポジション和100% & 個人和100%）
+  // 2次元確率最適化（縦横の合計を100%に揃える正規化処理）
   // =============================================================
   const finalProbabilityMap = {};
   const probMatrix = {};
@@ -1245,8 +1238,7 @@ function getCircleNum(num) {
   });
 
   if (unassignedPIdxs.length > 0 && unassignedMembers.length > 0) {
-    // Sinkhorn正規化ループ（列和100%、行和100%に近付ける）
-    for (let iter = 0; iter < 30; iter++) {
+    for (let iter = 0; iter < 20; iter++) {
       unassignedPIdxs.forEach(pIdx => {
         const colSum = unassignedMembers.reduce((sum, m) => sum + probMatrix[pIdx][m], 0);
         if (colSum > 0) {
@@ -1262,7 +1254,7 @@ function getCircleNum(num) {
       });
     }
 
-    // 整数化
+    // 整数化（四捨五入）
     unassignedPIdxs.forEach(pIdx => {
       finalProbabilityMap[pIdx] = {};
       unassignedMembers.forEach(m => {
@@ -1270,96 +1262,75 @@ function getCircleNum(num) {
       });
     });
 
-    // 誤差微調整（端数丸め）
-    let adjusted = true;
-    let loopCount = 0;
-    while (adjusted && loopCount < 50) {
-      adjusted = false;
-      loopCount++;
-
-      unassignedPIdxs.forEach(pIdx => {
-        const colSum = unassignedMembers.reduce((sum, m) => sum + finalProbabilityMap[pIdx][m], 0);
-        const diff = 100 - colSum;
-        if (diff !== 0) {
-          const sortedMems = [...unassignedMembers].sort((a, b) => finalProbabilityMap[pIdx][b] - finalProbabilityMap[pIdx][a]);
-          for (const m of sortedMems) {
-            if (finalProbabilityMap[pIdx][m] + diff >= 0) {
-              finalProbabilityMap[pIdx][m] += diff;
-              adjusted = true;
-              break;
-            }
-          }
+    // 各列（ポジ）の合計100%への端数補正
+    unassignedPIdxs.forEach(pIdx => {
+      const colSum = unassignedMembers.reduce((sum, m) => sum + finalProbabilityMap[pIdx][m], 0);
+      const diff = 100 - colSum;
+      if (diff !== 0) {
+        const sorted = [...unassignedMembers].sort((a, b) => finalProbabilityMap[pIdx][b] - finalProbabilityMap[pIdx][a]);
+        if (sorted.length > 0 && finalProbabilityMap[pIdx][sorted[0]] + diff >= 0) {
+          finalProbabilityMap[pIdx][sorted[0]] += diff;
         }
-      });
-
-      unassignedMembers.forEach(m => {
-        const rowSum = unassignedPIdxs.reduce((sum, pIdx) => sum + finalProbabilityMap[pIdx][m], 0);
-        const diff = 100 - rowSum;
-        if (diff !== 0) {
-          const sortedPIdxs = [...unassignedPIdxs].sort((a, b) => finalProbabilityMap[b][m] - finalProbabilityMap[a][m]);
-          for (const pIdx of sortedPIdxs) {
-            if (finalProbabilityMap[pIdx][m] + diff >= 0) {
-              finalProbabilityMap[pIdx][m] += diff;
-              adjusted = true;
-              break;
-            }
-          }
-        }
-      });
-    }
+      }
+    });
   }
 
-  // ヘルパー関数
+  // 補助フォーマット関数
   function formatWithYa(list) { return list.join('や'); }
   function formatWithKa(list) { return list.join('か'); }
 
-  // -------------------------------------------------------------
-  // 各ポジションカードの生成・描画
-  // -------------------------------------------------------------
+  // バッジ判定用関数
+  function getBadgeHtml(pIdx, fixedMember, isConfirmed = false) {
+    const expList = initialAttendingExpMap[pIdx] || [];
+    if (expList.length > 0) {
+      return `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`;
+    }
+    return `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎ ${fixedMember}ポジで初出演</span>`;
+  }
+
+  // =============================================================
+  // 各ポジションカードのHTML生成
+  // =============================================================
   stage.fixed.forEach((fixedMember, pIdx) => {
-    const expAttending = (initialAttendingExpMap[pIdx] || []).filter(
-      m => inputSet.has(m)
-    );
+    const expAttending = (initialAttendingExpMap[pIdx] || []).filter(m => inputSet.has(m));
+    const absenceExp = (absenceExpMap[pIdx] || []).filter(m => m !== fixedMember);
 
-    const absenceExp = (absenceExpMap[pIdx] || []).filter(
-      m => m !== fixedMember
-    );
-
-    let badgeHtml = "";
+    let badgeHtml = getBadgeHtml(pIdx, fixedMember, !!confirmedAssignments[pIdx]);
     let reasonHtml = "";
     let percentText = "";
 
-    // 【パターン1】100%確定ポジション
+    // -------------------------------------------------------------
+    // パターン1：100%確定ポジション（①または②で確定）
+    // -------------------------------------------------------------
     if (confirmedAssignments[pIdx]) {
       const assignedMember = confirmedAssignments[pIdx];
       percentText = `${assignedMember} 100%`;
-      badgeHtml = getBadgeHtml(pIdx, fixedMember, [assignedMember], true);
 
       reasonHtml = assignedMember === fixedMember
         ? `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`
         : `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
 
-    // 【パターン2】未確定ポジション（試算表示）
+    // -------------------------------------------------------------
+    // パターン2：未確定ポジション（確率分散＆文章分岐）
+    // -------------------------------------------------------------
     } else {
       const pMap = finalProbabilityMap[pIdx] || {};
-      const cands = unassignedMembers.filter(m => (pMap[m] || 0) > 0);
       
-      // %が大きい順に並び替え
-      cands.sort((a, b) => (pMap[b] || 0) - (pMap[a] || 0));
+      // 確率が1%以上あるメンバーを抽出して降順ソート
+      const candidateList = unassignedMembers
+        .filter(m => (pMap[m] || 0) > 0)
+        .sort((a, b) => (pMap[b] || 0) - (pMap[a] || 0));
 
-      badgeHtml = getBadgeHtml(pIdx, fixedMember, expAttending, false);
+      percentText = candidateList.map(m => `${m} ${pMap[m] || 0}%`).join('　');
 
-      percentText = cands.map(m => `${m} ${pMap[m] || 0}%`).join('　');
-
-      if (cands.length === 0) {
+      if (candidateList.length === 0) {
         percentText = "予想不能";
-        const absText = absenceExp.length > 0 ? formatWithYa(absenceExp) : "他メンバー";
-        reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジの経験者（${absText}）の出演予定がありません。`;
+        reasonHtml = `この日の「${stageName}」公演は、出演メンバーのポジションの兼ね合いから割当可能なメンバーを試算できませんでした。`;
       } else {
-        const topMem = cands[0];
+        const topMem = candidateList[0];
 
-        // 複数ポジション兼任メンバー（鈴木くるみ等）の特定
-        let multiExpMember = null;
+        // 複数ポジション兼任メンバーの検出（未確定ポジの中で2つ以上の経験があるメンバー）
+        let multiExpMem = null;
         let otherPosName = null;
 
         expAttending.forEach(m => {
@@ -1367,38 +1338,44 @@ function getCircleNum(num) {
             oPIdx !== pIdx && (initialAttendingExpMap[oPIdx] || []).includes(m)
           );
           if (otherPIdx !== undefined) {
-            multiExpMember = m;
+            multiExpMem = m;
             otherPosName = `${stage.fixed[otherPIdx]}ポジ`;
           }
         });
 
-        // A. 複数ポジ兼任メンバー（鈴木くるみ等）がいるパターン
-        if (multiExpMember && otherPosName) {
-          const myCount = appearanceCountMap[pIdx]?.[multiExpMember] || 0;
-          const isTop = (topMem === multiExpMember);
+        // ---------------------------------------------------------
+        // 【文章分岐 A】複数ポジ兼任メンバー（例: 鈴木くるみなど）が存在するパターン
+        // ---------------------------------------------------------
+        if (multiExpMem && otherPosName) {
+          const myCount = appearanceCountMap[pIdx]?.[multiExpMem] || 0;
+          const isTopSelf = (topMem === multiExpMem && (pMap[topMem] || 0) >= 50);
 
-          const predictionText = isTop
-            ? `今回は${multiExpMember}が${fixedMember}ポジで出演する可能性が最も高いと予想。`
-            : `今回は${formatWithKa(cands.slice(0, 2))}が${fixedMember}ポジで出演する可能性が高いと予想。`;
+          const predictionSentence = isTopSelf
+            ? `今回は${multiExpMem}が${fixedMember}ポジで出演する可能性が最も高いと予想。`
+            : `今回は${formatWithKa(candidateList.slice(0, 2))}が${fixedMember}ポジで出演する可能性が高いと予想。`;
 
           reasonHtml =
             `この日の「${stageName}」公演は、` +
-            `${fixedMember}ポジでの出演経験がある${multiExpMember}の出演予定があるが、` +
-            `他にも${otherPosName}での出演経験もあることから、この日の「${stageName}」公演で${multiExpMember}が${fixedMember}ポジと${otherPosName}のどちらのポジションで出演になるか断定できないが、` +
-            `過去に${multiExpMember}が${fixedMember}ポジで「${stageName}」公演に出演した回数が${myCount}回あること、` +
-            `他の出演メンバーのポジションの兼ね合いから総合的に試算した結果、${predictionText}`;
+            `${fixedMember}ポジでの出演経験がある${multiExpMem}の出演予定があるが、` +
+            `他にも${otherPosName}での出演経験もあることから、この日の「${stageName}」公演で${multiExpMem}が${fixedMember}ポジと${otherPosName}のどちらのポジションで出演になるか断定できないが、` +
+            `過去に${multiExpMem}が${fixedMember}ポジで「${stageName}」公演に出演した回数が${myCount}回あること、` +
+            `他の出演メンバーのポジションの兼ね合いから総合的に試算した結果、${predictionSentence}`;
 
-        // B. 初出演（経験者0名）パターン
+        // ---------------------------------------------------------
+        // 【文章分岐 B】経験者不在（初出演）パターン（例: 坂川陽香ポジ等）
+        // ---------------------------------------------------------
         } else if (expAttending.length === 0) {
           const absText = absenceExp.length > 0 ? formatWithYa(absenceExp) : "該当メンバー";
-          const topCandidates = cands.slice(0, 2);
+          const topTwo = candidateList.slice(0, 2);
 
           reasonHtml =
             `この日の「${stageName}」公演は、` +
             `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absText}などの出演予定がない。` +
-            `他の出演メンバーのポジションの兼ね合いから、今回は${formatWithKa(topCandidates)}が${fixedMember}ポジで出演する可能性が高いと予想。`;
+            `他の出演メンバーのポジションの兼ね合いから、今回は${formatWithKa(topTwo)}が${fixedMember}ポジで出演する可能性が高いと予想。`;
 
-        // C. 通常の複数経験者競合パターン（坂川陽香ポジ・田口愛佳ポジ・徳永羚海ポジ・長友彩海ポジ等）
+        // ---------------------------------------------------------
+        // 【文章分岐 C】通常の複数経験者競合パターン（例: 坂川陽香ポジ・田口愛佳ポジ・徳永羚海ポジ・長友彩海ポジ等）
+        // ---------------------------------------------------------
         } else {
           const countDetails = expAttending.map(m => {
             const cnt = appearanceCountMap[pIdx]?.[m] || 0;
@@ -1414,7 +1391,7 @@ function getCircleNum(num) {
       }
     }
 
-    // カードDOM構築
+    // DOM構築
     const card = document.createElement('div');
     card.className = "bg-white p-3 rounded-lg border border-slate-200 shadow-sm space-y-2";
 
@@ -1436,6 +1413,7 @@ function getCircleNum(num) {
     positionsList.appendChild(card);
   });
 }
+
 
     /* --- メンバー詳細・各種統計ロジック --- */
 
