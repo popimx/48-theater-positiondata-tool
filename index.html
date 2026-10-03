@@ -996,8 +996,8 @@ function getCircleNum(num) {
   const circles = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
   return circles[num - 1] || `(${num})`;
 }
-    
-function runForecast() {
+
+  function runForecast() {
   const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
 
   if (!stage) {
@@ -1194,7 +1194,7 @@ function runForecast() {
   }
 
   // =============================================================
-  // パターン割り当て計算エンジン（解なし時自動補正機能付き）
+  // パターン割り当て計算エンジン（排他候補＆回数比例重み付け）
   // =============================================================
   const unassignedPIdxs = stage.fixed
     .map((_, idx) => idx)
@@ -1205,16 +1205,35 @@ function runForecast() {
     m => !confirmedMemberList.includes(m)
   );
 
-  let allowedCandidates = {};
-  unassignedPIdxs.forEach(pIdx => {
-    const exps = (initialAttendingExpMap[pIdx] || []).filter(m => unassignedMembers.includes(m));
-    if (exps.length > 0) {
-      allowedCandidates[pIdx] = exps;
-    } else {
-      allowedCandidates[pIdx] = [...unassignedMembers];
-    }
+  // 1. 各メンバーの未確定ポジションでの経験リストを判定
+  const memberExpPosSet = {};
+  unassignedMembers.forEach(m => {
+    memberExpPosSet[m] = new Set();
+    unassignedPIdxs.forEach(pIdx => {
+      const exps = initialAttendingExpMap[pIdx] || [];
+      if (exps.includes(m)) {
+        memberExpPosSet[m].add(pIdx);
+      }
+    });
   });
 
+  // 2. 各ポジションの候補者をフィルタリング
+  // 「他ポジションに経験があるメンバー」は未経験ポジションの候補から完全に除外する
+  let allowedCandidates = {};
+  unassignedPIdxs.forEach(pIdx => {
+    allowedCandidates[pIdx] = unassignedMembers.filter(m => {
+      const hasExpInThisPos = (initialAttendingExpMap[pIdx] || []).includes(m);
+      if (hasExpInThisPos) return true;
+
+      // 自ポジ未経験で、他ポジに経験があるメンバーは候補から完全に除外
+      const expCountOtherPos = memberExpPosSet[m] ? memberExpPosSet[m].size : 0;
+      if (expCountOtherPos > 0) return false;
+
+      return true;
+    });
+  });
+
+  // 3. スコアマトリックス算出（回数をそのまま重みに使用）
   function calculateScores(candsMap) {
     const sMatrix = {};
     const aMap = {};
@@ -1224,24 +1243,15 @@ function runForecast() {
       aMap[pIdx] = {};
 
       const cands = candsMap[pIdx] || [];
-      let totalCountInPos = 0;
 
       cands.forEach(m => {
         const count = validShows.filter(show => 
           show.positionsArray && show.positionsArray[pIdx] === m
         ).length;
         aMap[pIdx][m] = count;
-        totalCountInPos += count;
-      });
 
-      cands.forEach(m => {
-        const count = aMap[pIdx][m];
-        let ratio = totalCountInPos > 0 ? (count / totalCountInPos) : 0;
-        if (ratio === 0) {
-          const isExpInInitial = (initialAttendingExpMap[pIdx] || []).includes(m);
-          ratio = isExpInInitial ? 0.1 : 0.02;
-        }
-        sMatrix[pIdx][m] = ratio;
+        // 回数が多ければ重みを正比例で大きく（未経験は重み1）
+        sMatrix[pIdx][m] = count > 0 ? count : 1;
       });
     });
 
@@ -1252,11 +1262,11 @@ function runForecast() {
 
   let validPatterns = [];
 
-  function searchPatterns(pIdxIndex, currentAssignment, currentScore, candsMap) {
+  function searchPatterns(pIdxIndex, currentAssignment, currentScoreProduct, candsMap) {
     if (pIdxIndex === unassignedPIdxs.length) {
       validPatterns.push({
         assignment: { ...currentAssignment },
-        score: currentScore
+        score: currentScoreProduct
       });
       return;
     }
@@ -1268,15 +1278,16 @@ function runForecast() {
     cands.forEach(m => {
       if (assignedMems.includes(m)) return;
 
-      const weight = scoreMatrix[pIdx][m] || 0.02;
+      const weight = scoreMatrix[pIdx][m] || 1;
       currentAssignment[pIdx] = m;
-      searchPatterns(pIdxIndex + 1, currentAssignment, currentScore + weight, candsMap);
+      // スコアを乗算していくことで、回数が多いポジションの組み合わせの確率を跳ね上げる
+      searchPatterns(pIdxIndex + 1, currentAssignment, currentScoreProduct * weight, candsMap);
       delete currentAssignment[pIdx];
     });
   }
 
   if (unassignedPIdxs.length > 0 && unassignedMembers.length > 0) {
-    searchPatterns(0, {}, 0.0, allowedCandidates);
+    searchPatterns(0, {}, 1.0, allowedCandidates);
   }
 
   // 解がない場合（経験者ルールで破綻時）は全未割り当てメンバーに開放
@@ -1288,7 +1299,7 @@ function runForecast() {
     scoreMatrix = res.sMatrix;
     appearanceCountMap = res.aMap;
 
-    searchPatterns(0, {}, 0.0, allowedCandidates);
+    searchPatterns(0, {}, 1.0, allowedCandidates);
   }
 
   const totalPatternScore = validPatterns.reduce((sum, p) => sum + p.score, 0) || 1;
@@ -1313,7 +1324,7 @@ function runForecast() {
 
   // パーセントの調整（合計100%に丸める）
   unassignedPIdxs.forEach(pIdx => {
-    const cands = unassignedMembers.filter(m => (finalProbabilityMap[pIdx][m] || 0) > 0);
+    const cands = (allowedCandidates[pIdx] || []).filter(m => (finalProbabilityMap[pIdx][m] || 0) > 0);
     let sum = 0;
     cands.forEach(m => {
       const pct = Math.round(finalProbabilityMap[pIdx][m] * 100);
@@ -1422,12 +1433,12 @@ function runForecast() {
         }
       }
 
-    // 【パターン2】未確定ポジション（動的テキスト生成）
+    // 【パターン2】未確定ポジション
     } else {
       const pMap = finalProbabilityMap[pIdx] || {};
       
-      // 対象メンバーを並べ替え
-      const activeCandidates = unassignedMembers.filter(m => (pMap[m] || 0) >= 0);
+      // 対象メンバー（allowedCandidatesに指定されたメンバーのみ抽出）
+      const activeCandidates = allowedCandidates[pIdx] || [];
       const sortedCandidates = sortByInputOrder(activeCandidates, inputMemberList);
 
       badgeHtml = getBadgeHtml(pIdx, fixedMember, expAttending, false);
@@ -1450,7 +1461,6 @@ function runForecast() {
 
         const topMembers = sortedCandidates.filter(m => (pMap[m] || 0) === maxVal);
         
-        // 結論の文章（1人の場合 vs 複数人同率の場合）
         let conclusionText = "";
         if (topMembers.length === 1) {
           conclusionText = `今回は${topMembers[0]}が${fixedMember}ポジで出演する可能性が最も高いと予想。`;
@@ -1470,7 +1480,7 @@ function runForecast() {
           }
         });
 
-        // 【ケースA】複数ポジで経験があるメンバー（鈴木くるみ等）の比較・比較文言
+        // 【ケースA】複数ポジで経験があるメンバー（鈴木くるみ等）の比較・文章生成
         if (multiExpMember && otherPositions.length > 0) {
           const cnt = appearanceCountMap[pIdx]?.[multiExpMember] || 0;
           const otherPosStr = otherPositions.join('や');
@@ -1513,7 +1523,7 @@ function runForecast() {
           const memText = formatMemberListText(sortedCandidates);
 
           reasonHtml =
-            `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
+            `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定があるが、` +
             `${historyDetail}他の出演メンバーのポジションの兼ね合いから総合的に試算した結果、` +
             `${conclusionText}`;
         }
@@ -1542,7 +1552,6 @@ function runForecast() {
     positionsList.appendChild(card);
   });
 }
-
   
     /* --- メンバー詳細・各種統計ロジック --- */
 
