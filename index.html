@@ -1230,68 +1230,86 @@ function runForecast() {
   }
 
   // ポジション自動確定ロジック
-  const attendingExpMap = {};
+const attendingExpMap = {};
+stage.fixed.forEach((_, pIdx) => {
+  attendingExpMap[pIdx] = [...(initialAttendingExpMap[pIdx] || [])];
+});
+
+const confirmedAssignments = {};
+const memberAssignedToPos = {};
+let changed = true;
+
+function isKeyMemberForMultipleVacantPositions(member) {
+  let neededCount = 0;
   stage.fixed.forEach((_, pIdx) => {
-    attendingExpMap[pIdx] = [...(initialAttendingExpMap[pIdx] || [])];
+    if (confirmedAssignments[pIdx]) return;
+    const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
+    if (candidates.length === 1 && candidates[0] === member) {
+      neededCount++;
+    }
+  });
+  return neededCount >= 2;
+}
+
+while (changed) {
+  changed = false;
+
+  // パス1: 候補者が1人しかいないポジションを優先的に確定
+  stage.fixed.forEach((fM, pIdx) => {
+    if (confirmedAssignments[pIdx]) return;
+    const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
+    if (candidates.length === 1) {
+      const confirmedMember = candidates[0];
+      if (isKeyMemberForMultipleVacantPositions(confirmedMember)) return;
+
+      confirmedAssignments[pIdx] = confirmedMember;
+      memberAssignedToPos[confirmedMember] = { pIdx, posName: `${fM}ポジ` };
+      changed = true;
+
+      stage.fixed.forEach((_, otherPIdx) => {
+        if (otherPIdx === pIdx || confirmedAssignments[otherPIdx]) return;
+        attendingExpMap[otherPIdx] = (attendingExpMap[otherPIdx] || []).filter(m => m !== confirmedMember);
+      });
+    }
   });
 
-  const confirmedAssignments = {};
-  const memberAssignedToPos = {};
-  let changed = true;
+  if (changed) continue;
 
-  function isKeyMemberForMultipleVacantPositions(member) {
-    let neededCount = 0;
-    stage.fixed.forEach((_, pIdx) => {
-      if (confirmedAssignments[pIdx]) return;
-      const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
-      if (candidates.length === 1 && candidates[0] === member) {
-        neededCount++;
-      }
-    });
-    return neededCount >= 2;
-  }
+  // パス2: 専任メンバー（他ポジの選択肢がないメンバー）の判定
+  stage.fixed.forEach((fM, pIdx) => {
+    if (confirmedAssignments[pIdx]) return;
+    const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
+    if (candidates.length === 0) return;
 
-  while (changed) {
-    changed = false;
-
-    stage.fixed.forEach((fM, pIdx) => {
-      if (confirmedAssignments[pIdx]) return;
-      const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
-      if (candidates.length === 0) return;
-
-      const exclusiveCandidates = candidates.filter(member => {
-        let candidatePositionCount = 0;
-        stage.fixed.forEach((_, otherPIdx) => {
-          if (confirmedAssignments[otherPIdx]) return;
-          const otherCandidates = (attendingExpMap[otherPIdx] || []).filter(m => m && m !== "-" && m !== "－");
-          if (otherCandidates.includes(member)) candidatePositionCount++;
-        });
-        return candidatePositionCount === 1;
+    const exclusiveCandidates = candidates.filter(member => {
+      let candidatePositionCount = 0;
+      stage.fixed.forEach((_, otherPIdx) => {
+        if (confirmedAssignments[otherPIdx]) return;
+        const otherCandidates = (attendingExpMap[otherPIdx] || []).filter(m => m && m !== "-" && m !== "－");
+        if (otherCandidates.includes(member)) candidatePositionCount++;
       });
-
-      if (exclusiveCandidates.length === 1) {
-        const confirmedMember = exclusiveCandidates[0];
-        if (isKeyMemberForMultipleVacantPositions(confirmedMember)) return;
-
-        confirmedAssignments[pIdx] = confirmedMember;
-        memberAssignedToPos[confirmedMember] = { pIdx, posName: `${fM}ポジ` };
-        attendingExpMap[pIdx] = [confirmedMember];
-        changed = true;
-
-        stage.fixed.forEach((_, otherPIdx) => {
-          if (otherPIdx === pIdx || confirmedAssignments[otherPIdx]) return;
-          attendingExpMap[otherPIdx] = (attendingExpMap[otherPIdx] || []).filter(m => m !== confirmedMember);
-        });
-        return;
-      }
+      return candidatePositionCount === 1;
     });
 
-    stage.fixed.forEach((fM, pIdx) => {
-      if (confirmedAssignments[pIdx]) return;
-      const candidates = (attendingExpMap[pIdx] || []).filter(m => m && m !== "-" && m !== "－");
-      if (candidates.length !== 1) return;
+    // 【1の修正ポイント】初日メンバー本人(fM)がそのポジしか選択肢がない場合は最優先で100%確定させる
+    if (exclusiveCandidates.includes(fM)) {
+      if (isKeyMemberForMultipleVacantPositions(fM)) return;
 
-      const confirmedMember = candidates[0];
+      confirmedAssignments[pIdx] = fM;
+      memberAssignedToPos[fM] = { pIdx, posName: `${fM}ポジ` };
+      attendingExpMap[pIdx] = [fM];
+      changed = true;
+
+      stage.fixed.forEach((_, otherPIdx) => {
+        if (otherPIdx === pIdx || confirmedAssignments[otherPIdx]) return;
+        attendingExpMap[otherPIdx] = (attendingExpMap[otherPIdx] || []).filter(m => m !== fM);
+      });
+      return;
+    }
+
+    // 専任候補が1名のみの場合
+    if (exclusiveCandidates.length === 1) {
+      const confirmedMember = exclusiveCandidates[0];
       if (isKeyMemberForMultipleVacantPositions(confirmedMember)) return;
 
       confirmedAssignments[pIdx] = confirmedMember;
@@ -1303,8 +1321,10 @@ function runForecast() {
         if (otherPIdx === pIdx || confirmedAssignments[otherPIdx]) return;
         attendingExpMap[otherPIdx] = (attendingExpMap[otherPIdx] || []).filter(m => m !== confirmedMember);
       });
-    });
-  }
+      return;
+    }
+  });
+}
 
   function getLikelyPositionForMember(member, excludePIdx) {
     for (let pIdx = 0; pIdx < stage.fixed.length; pIdx++) {
@@ -1434,9 +1454,29 @@ function runForecast() {
       const absencePhrase = formatAbsencePhrase(fixedMember, absenceExp);
 
       const confirmedMemberList = Object.values(confirmedAssignments);
-      const unassignedMembers = inputMemberList.filter(
-        m => !confirmedMemberList.includes(m)
+
+      // 【2の修正ポイント】未確定ポジションの中で「経験者枠」として名前が挙がっているメンバーを特定
+      const unconfirmedPIdxs = stage.fixed
+        .map((_, idx) => idx)
+        .filter(idx => !confirmedAssignments[idx]);
+
+      const experiencedInOtherUnconfirmed = new Set();
+      unconfirmedPIdxs.forEach(otherPIdx => {
+        const exps = (attendingExpMap[otherPIdx] || []).filter(m => m && m !== "-" && m !== "－");
+        exps.forEach(m => experiencedInOtherUnconfirmed.add(m));
+      });
+
+      // 他の未確定ポジで経験者枠に入っていない「完全な余りメンバー」のみを初出演候補にする
+      let unassignedMembers = inputMemberList.filter(
+        m => !confirmedMemberList.includes(m) && !experiencedInOtherUnconfirmed.has(m)
       );
+
+      // 万が一候補が0名になった場合のフォールバック処理
+      if (unassignedMembers.length === 0) {
+        unassignedMembers = inputMemberList.filter(
+          m => !confirmedMemberList.includes(m)
+        );
+      }
 
       badgeHtml = getBadgeHtml(pIdx, fixedMember, unassignedMembers, false);
 
@@ -1513,6 +1553,7 @@ function runForecast() {
         const sortedMembers = sortByInputOrder(Object.keys(pctMap), inputMemberList);
         percentText = sortedMembers.map(m => `${m} ${pctMap[m]}%`).join('　');
       }
+
 
     // -------------------------------------------------------------
     // 【パターン3】該当ポジションの経験者が1人の場合
