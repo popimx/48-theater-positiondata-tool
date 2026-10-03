@@ -1092,9 +1092,8 @@ function getCircleNum(num) {
   });
 
   // =============================================================
-  // 【新・確定判定ロジック】
-  // ① 出演メンバーの中で経験者が1人しかいないポジション
-  // ② 1ポジしか経験がないメンバー（例: 武藤小麟など）のポジション
+  // 【確定判定ロジック】
+  // 1ポジ専任メンバー（武藤小麟など）を最優先確定
   // =============================================================
   const confirmedAssignments = {};
   const confirmedMemberList = [];
@@ -1103,11 +1102,12 @@ function getCircleNum(num) {
   while (changed) {
     changed = false;
 
-    // A. メンバー起点：1ポジしか経験がないメンバーをそのポジで確定
+    // A. 1ポジ専任者を最優先確定
     inputMemberList.forEach(m => {
       if (confirmedMemberList.includes(m)) return;
 
       const unassignedExpPoses = memberExpPosList[m].filter(pIdx => !confirmedAssignments[pIdx]);
+
       if (unassignedExpPoses.length === 1) {
         const targetPIdx = unassignedExpPoses[0];
         confirmedAssignments[targetPIdx] = m;
@@ -1116,7 +1116,9 @@ function getCircleNum(num) {
       }
     });
 
-    // B. ポジション起点：経験者が1人しかいないポジションを確定
+    if (changed) continue;
+
+    // B. ポジション起点：未確定メンバーの中で経験者が1人しかいないポジションを確定
     stage.fixed.forEach((fM, pIdx) => {
       if (confirmedAssignments[pIdx]) return;
 
@@ -1162,7 +1164,7 @@ function getCircleNum(num) {
     });
   });
 
-  // 候補メンバー設定（未割当メンバーの中で候補を選択）
+  // 候補メンバー設定
   const allowedCandidates = {};
   unassignedPIdxs.forEach(pIdx => {
     const exps = (initialAttendingExpMap[pIdx] || []).filter(m => unassignedMembers.includes(m));
@@ -1221,9 +1223,7 @@ function getCircleNum(num) {
     });
   });
 
-  // =============================================================
-  // 2次元確率最適化（合計100%への収束）
-  // =============================================================
+  // 2次元確率最適化
   const finalProbabilityMap = {};
   const probMatrix = {};
 
@@ -1251,7 +1251,6 @@ function getCircleNum(num) {
       });
     }
 
-    // 整数化（四捨五入）
     unassignedPIdxs.forEach(pIdx => {
       finalProbabilityMap[pIdx] = {};
       unassignedMembers.forEach(m => {
@@ -1259,7 +1258,6 @@ function getCircleNum(num) {
       });
     });
 
-    // 補正処理（各ポジ100%化）
     unassignedPIdxs.forEach(pIdx => {
       const colSum = unassignedMembers.reduce((sum, m) => sum + finalProbabilityMap[pIdx][m], 0);
       const diff = 100 - colSum;
@@ -1276,26 +1274,20 @@ function getCircleNum(num) {
   function formatWithYa(list) { return list.join('や'); }
   function formatWithKa(list) { return list.join('か'); }
 
-  // =============================================================
-  // 【バッジ判定関数】（100%確定かつ経験ありの場合は緑色）
-  // =============================================================
+  // バッジ判定関数
   function getBadgeHtml(pIdx, fixedMember, isConfirmed = false) {
     const expList = initialAttendingExpMap[pIdx] || [];
     if (expList.length > 0) {
       if (isConfirmed) {
-        // ② 100%確定かつ経験ありの場合は緑色
         return `<span class="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded font-bold border border-emerald-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`;
       } else {
-        // 確率試算（未確定）の場合は青色
         return `<span class="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-1 rounded font-bold border border-blue-200">☑︎ ${fixedMember}ポジでの出演経験あり</span>`;
       }
     }
     return `<span class="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded font-bold border border-amber-200">⚠︎ ${fixedMember}ポジで初出演</span>`;
   }
 
-  // =============================================================
-  // 各ポジションカードのHTML生成
-  // =============================================================
+  // 各ポジションカード描画
   stage.fixed.forEach((fixedMember, pIdx) => {
     const expAttending = (initialAttendingExpMap[pIdx] || []).filter(m => inputSet.has(m));
     const absenceExp = (absenceExpMap[pIdx] || []).filter(m => m !== fixedMember);
@@ -1305,9 +1297,6 @@ function getCircleNum(num) {
     let reasonHtml = "";
     let percentText = "";
 
-    // -------------------------------------------------------------
-    // パターン1：100%確定ポジション
-    // -------------------------------------------------------------
     if (isConfirmed) {
       const assignedMember = confirmedAssignments[pIdx];
       percentText = `${assignedMember} 100%`;
@@ -1316,9 +1305,6 @@ function getCircleNum(num) {
         ? `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`
         : `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
 
-    // -------------------------------------------------------------
-    // パターン2：未確定ポジション（確率分散＆文章分岐）
-    // -------------------------------------------------------------
     } else {
       const pMap = finalProbabilityMap[pIdx] || {};
 
@@ -1334,63 +1320,42 @@ function getCircleNum(num) {
       } else {
         const topMem = candidateList[0];
 
-        // 兼任メンバーの検出
-        let multiExpMem = null;
-        let otherPosName = null;
-
-        expAttending.forEach(m => {
-          const otherPIdx = unassignedPIdxs.find(oPIdx => 
-            oPIdx !== pIdx && (initialAttendingExpMap[oPIdx] || []).includes(m)
-          );
-          if (otherPIdx !== undefined) {
-            multiExpMem = m;
-            otherPosName = `${stage.fixed[otherPIdx]}ポジ`;
-          }
-        });
-
-        // A. 複数ポジ兼任メンバー（鈴木くるみ・長友彩海など）がいるパターン
-        if (multiExpMem && otherPosName) {
-          const myCount = appearanceCountMap[pIdx]?.[multiExpMem] || 0;
-          const isTopSelf = (topMem === multiExpMem && (pMap[topMem] || 0) >= 50);
-
-          const predictionSentence = isTopSelf
-            ? `今回は${multiExpMem}が${fixedMember}ポジで出演する可能性が最も高いと予想。`
-            : `今回は${formatWithKa(candidateList.slice(0, 2))}が${fixedMember}ポジで出演する可能性が高いと予想。`;
-
-          reasonHtml =
-            `この日の「${stageName}」公演は、` +
-            `${fixedMember}ポジでの出演経験がある${multiExpMem}の出演予定があるが、` +
-            `他にも${otherPosName}での出演経験もあることから、この日の「${stageName}」公演で${multiExpMem}が${fixedMember}ポジと${otherPosName}のどちらのポジションで出演になるか断定できないが、` +
-            `過去に${multiExpMem}が${fixedMember}ポジで「${stageName}」公演に出演した回数が${myCount}回あること、` +
-            `他の出演メンバーのポジションの兼ね合いから総合的に試算した結果、${predictionSentence}`;
-
-        // B. 経験者不在（初出演）パターン
-        } else if (expAttending.length === 0) {
-          const absText = absenceExp.length > 0 ? formatWithYa(absenceExp) : "該当メンバー";
-          const topTwo = candidateList.slice(0, 2);
-
-          reasonHtml =
-            `this日の「${stageName}」公演は、` +
-            `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absText}などの出演予定がない。` +
-            `他の出演メンバーのポジションの兼ね合いから、今回は${formatWithKa(topTwo)}が${fixedMember}ポジで出演する可能性が高いと予想。`.replace("this日", "この日");
-
-        // C. 通常の複数経験者競合パターン（ご指示通りのフォーマット）
-        } else {
+        // =============================================================
+        // 【文章生成ロジックの修正】
+        // ① 経験者が1人以上いる場合は標準フォーマット（パターンC）を優先
+        // ② 経験者不在（初出演）の場合のみ専用フォーマット
+        // =============================================================
+        if (expAttending.length > 0) {
+          // 経験者がいる場合：全員の回数を「、」で繋いで並べる
           const countDetails = expAttending.map(m => {
             const cnt = appearanceCountMap[pIdx]?.[m] || 0;
             return `${m}が${cnt}回`;
           }).join('、');
 
+          const topPercent = pMap[topMem] || 0;
+          const predictionPhrase = topPercent >= 50
+            ? `今回は${topMem}が${fixedMember}ポジで出演する可能性が最も高いと予想。`
+            : `今回は${formatWithKa(candidateList.slice(0, 2))}が${fixedMember}ポジで出演する可能性が高いと予想。`;
+
           reasonHtml =
             `この日の「${stageName}」公演は、` +
             `${fixedMember}ポジでの出演経験がある${formatWithYa(expAttending)}の出演予定がある。` +
             `過去に${fixedMember}ポジで「${stageName}」公演に出演した回数が${countDetails}あり、` +
-            `他の出演メンバーのポジションの兼ね合いから総合的に試算した結果、今回は${topMem}が${fixedMember}ポジで出演する可能性が最も高いと予想。`;
+            `他の出演メンバーのポジションの兼ね合いから総合的に試算した結果、${predictionPhrase}`;
+
+        } else {
+          // 経験者不在（初出演）の場合
+          const absText = absenceExp.length > 0 ? formatWithYa(absenceExp) : "該当メンバー";
+          const topTwo = candidateList.slice(0, 2);
+
+          reasonHtml =
+            `この日の「${stageName}」公演は、` +
+            `初日メンバーである${fixedMember}と、${fixedMember}ポジでの出演経験がある${absText}などの出演予定がない。` +
+            `他の出演メンバーのポジションの兼ね合いから、今回は${formatWithKa(topTwo)}が${fixedMember}ポジで出演する可能性が高いと予想。`;
         }
       }
     }
 
-    // DOM構築
     const card = document.createElement('div');
     card.className = "bg-white p-3 rounded-lg border border-slate-200 shadow-sm space-y-2";
 
@@ -1412,6 +1377,7 @@ function getCircleNum(num) {
     positionsList.appendChild(card);
   });
 }
+
 
     /* --- メンバー詳細・各種統計ロジック --- */
 
