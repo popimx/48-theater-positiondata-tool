@@ -1653,54 +1653,66 @@ while (changed) {
 
       badgeHtml = getBadgeHtml(pIdx, fixedMember, expAttending, false);
 
-      const sharedPosIndices = [pIdx];
-      const sharedPosNames = [fixedMember];
-
-      stage.fixed.forEach((otherFm, otherPIdx) => {
-        if (otherPIdx === pIdx) return;
-        const expList = (initialAttendingExpMap[otherPIdx] || []);
-        if (expAttending.every(m => expList.includes(m))) {
-          sharedPosIndices.push(otherPIdx);
-          sharedPosNames.push(otherFm);
-        }
-      });
-
       const counts = {};
       expAttending.forEach(m => counts[m] = 0);
-      let totalCooccurrences = 0;
+      let totalCount = 0;
+      let hasHistoryData = false;
 
-      if (sharedPosIndices.length > 1) {
-        validShows.forEach(perf => {
-          if (!Array.isArray(perf.positionsArray)) return;
+      // --- 【修正】2人の場合は「共演時のポジ割り振り履歴」、3人以上の場合は「該当ポジでの個別の出演回数」を集計 ---
+      if (memberCount === 2) {
+        const sharedPosIndices = [pIdx];
+        const sharedPosNames = [fixedMember];
 
-          const allPresent = expAttending.every(m => perf.positionsArray.includes(m));
-          if (!allPresent) return;
-
-          const inSharedPos = expAttending.every(m => {
-            const posIdx = perf.positionsArray.indexOf(m);
-            return sharedPosIndices.includes(posIdx);
-          });
-
-          if (inSharedPos) {
-            const assignedMem = perf.positionsArray[pIdx];
-            if (counts[assignedMem] !== undefined) {
-              counts[assignedMem]++;
-              totalCooccurrences++;
-            }
+        stage.fixed.forEach((otherFm, otherPIdx) => {
+          if (otherPIdx === pIdx) return;
+          const expList = (initialAttendingExpMap[otherPIdx] || []);
+          if (expAttending.every(m => expList.includes(m))) {
+            sharedPosIndices.push(otherPIdx);
+            sharedPosNames.push(otherFm);
           }
         });
+
+        if (sharedPosIndices.length > 1) {
+          validShows.forEach(perf => {
+            if (!Array.isArray(perf.positionsArray)) return;
+            const allPresent = expAttending.every(m => perf.positionsArray.includes(m));
+            if (!allPresent) return;
+
+            const inSharedPos = expAttending.every(m => {
+              const posIdx = perf.positionsArray.indexOf(m);
+              return sharedPosIndices.includes(posIdx);
+            });
+
+            if (inSharedPos) {
+              const assignedMem = perf.positionsArray[pIdx];
+              if (counts[assignedMem] !== undefined) {
+                counts[assignedMem]++;
+                totalCount++;
+              }
+            }
+          });
+        }
+        hasHistoryData = (totalCount > 0);
+      } else {
+        // 3人以上の場合は、そのポジション(pIdx)での個別の出演回数を集計
+        expAttending.forEach(m => {
+          const cnt = validShows.filter(show => 
+            show.positionsArray && show.positionsArray[pIdx] === m
+          ).length;
+          counts[m] = cnt;
+          totalCount += cnt;
+        });
+        hasHistoryData = (totalCount > 0);
       }
 
-      const hasNoCooccurrenceData = (totalCooccurrences === 0);
       const subjectWord = memberCount === 2 ? "どちら" : "誰";
       const equalWord = memberCount === 2 ? "五分五分" : "均等";
 
-      if (hasNoCooccurrenceData) {
-        // 【修正点①対応】共演データがない場合の文章変更
+      if (!hasHistoryData) {
         reasonHtml =
           `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
           `他の出演メンバーのポジションの兼ね合いから、${memText}の${subjectWord}が${fixedMember}ポジで出演するかは断定できないが、` +
-          `過去の「${stageName}」公演で${memText}の共演経験もないため、${equalWord}の可能性になると予想。`;
+          `過去の「${stageName}」公演で${memText}の出演実績が同等のため、${equalWord}の可能性になると予想。`;
 
         const equalPct = Math.floor(100 / memberCount);
         const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
@@ -1728,19 +1740,17 @@ while (changed) {
           if (idx === memberCount - 1) {
             pctMap[m] = 100 - sumPct;
           } else {
-            const pct = Math.round((counts[m] / totalCooccurrences) * 100);
+            const pct = Math.round((counts[m] / totalCount) * 100);
             pctMap[m] = pct;
             sumPct += pct;
           }
         });
 
         let detailText = "";
-        if (memberCount === 2 && sharedPosIndices.length === 2) {
+        if (memberCount === 2) {
           const m1 = expAttending[0];
           const m2 = expAttending[1];
-          const otherFixedMember = sharedPosNames[1];
-          detailText = `${m1}が${fixedMember}ポジ・${m2}が${otherFixedMember}ポジで${counts[m1]}回、` +
-                       `${m2}が${fixedMember}ポジ・${m1}が${otherFixedMember}ポジで${counts[m2]}回出演しているため、`;
+          detailText = `${m1}が${counts[m1]}回、${m2}が${counts[m2]}回出演しているため、`;
         } else {
           const countDetails = expAttending.map(m => `${m}が${counts[m]}回`).join('、');
           detailText = `${fixedMember}ポジでの出演が${countDetails}だったため、`;
@@ -1752,7 +1762,7 @@ while (changed) {
 
         reasonHtml =
           `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${memText}の出演予定がある。` +
-          `過去に${memText}が「${stageName}」公演で共演した際、` +
+          `過去に${memText}が「${stageName}」公演に出演した際、` +
           `${detailText}${conclusionText}`;
 
         const sortedMembers = sortByInputOrder(expAttending, inputMemberList);
