@@ -1079,11 +1079,26 @@ function runForecast() {
   });
 
   // =============================================================
+  // 【追加】ポジションごとに割り当て（経験者の抽出一覧）の描画
+  // =============================================================
+  const allocationBox = document.createElement('div');
+  allocationBox.className = "mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2";
+  
+  let allocationHtml = `<h4 class="font-bold text-slate-700 text-sm mb-2 border-b border-slate-200 pb-1">【ポジションごとに割り当て】</h4>`;
+  stage.fixed.forEach((fM, pIdx) => {
+    const expMembersInInput = (initialAttendingExpMap[pIdx] || []).filter(m => inputSet.has(m));
+    const expStr = expMembersInInput.length > 0 ? expMembersInInput.join('　') : '-';
+    allocationHtml += `<div class="text-xs text-slate-600 flex"><span class="font-semibold text-slate-700 w-28 shrink-0">${fM}ポジ</span><span class="text-slate-800">${expStr}</span></div>`;
+  });
+  allocationBox.innerHTML = allocationHtml;
+  positionsList.appendChild(allocationBox);
+
+
+  // =============================================================
   // 【100%確定判定ロジック】
   // =============================================================
   const confirmedAssignments = {};
   const confirmedMemberList = [];
-  const confirmedDetails = {};
 
   let changed = true;
   while (changed) {
@@ -1119,31 +1134,6 @@ function runForecast() {
         confirmedAssignments[pIdx] = m;
         confirmedMemberList.push(m);
         changed = true;
-
-        const initialExps = initialAttendingExpMap[pIdx] || [];
-        const otherExps = initialExps.filter(x => x !== m);
-
-        if (otherExps.length > 0) {
-          const movedExps = otherExps.filter(x => confirmedMemberList.includes(x));
-          const otherMemberName = movedExps.length > 0 ? movedExps[0] : otherExps[0];
-          
-          let otherMemberMovedPosName = "";
-          for (const [otherPIdx, assignedM] of Object.entries(confirmedAssignments)) {
-            if (assignedM === otherMemberName && parseInt(otherPIdx, 10) !== pIdx) {
-              otherMemberMovedPosName = stage.fixed[otherPIdx];
-              break;
-            }
-          }
-
-          confirmedDetails[pIdx] = {
-            member: m,
-            type: 'pattern1_auto',
-            otherMember: otherMemberName,
-            otherPosName: otherMemberMovedPosName
-          };
-        } else {
-          confirmedDetails[pIdx] = { member: m, type: 'single_exp_pos' };
-        }
         break;
       }
     }
@@ -1162,7 +1152,6 @@ function runForecast() {
   // 【全組み合わせ試算アルゴリズム（確率算出）】
   // =============================================================
   const rawProbMap = {};
-  let totalValidPatternsCount = 0;
 
   if (unassignedPIdxs.length > 0 && unassignedMembers.length > 0) {
     const n = unassignedPIdxs.length;
@@ -1188,7 +1177,6 @@ function runForecast() {
     }
 
     searchAssignments(0, {}, 1.0);
-    totalValidPatternsCount = patterns.length;
 
     const totalScore = patterns.reduce((sum, p) => sum + p.score, 0) || 1;
 
@@ -1222,13 +1210,17 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【カード描画処理】
+  // 【ポジション予想セクションの描画】
   // =============================================================
+  const forecastHeader = document.createElement('h4');
+  forecastHeader.className = "font-bold text-slate-700 text-sm mb-3 mt-4";
+  forecastHeader.innerText = "【ポジション予想】";
+  positionsList.appendChild(forecastHeader);
+
   stage.fixed.forEach((fixedMember, pIdx) => {
     let isConfirmed = !!confirmedAssignments[pIdx];
     const pRawProbs = rawProbMap[pIdx] || {};
 
-    // 未確定であっても、試算確率が 100%（1.0）に達している場合は「1対1の最適解で一意に定まった」とみなし、確定扱いにする
     let topCandidate = null;
     let topProb = 0;
     unassignedMembers.forEach(m => {
@@ -1238,7 +1230,7 @@ function runForecast() {
       }
     });
 
-    if (!isConfirmed && topProb >= 0.995 && topCandidate) {
+    if (!isConfirmed && topProb >= 0.90 && topCandidate) {
       isConfirmed = true;
       confirmedAssignments[pIdx] = topCandidate;
     }
@@ -1248,17 +1240,49 @@ function runForecast() {
     let percentText = "";
 
     if (isConfirmed) {
-      // ---------------------------------------------------------
-      // 【確定（または1対1の最適解で一意に決まった）ポジション】
-      // ---------------------------------------------------------
+      // 確定（または一意な最適解に昇格した）ポジション
       const assignedMember = confirmedAssignments[pIdx] || topCandidate;
-      const details = confirmedDetails[pIdx] || {};
-
       percentText = `${assignedMember} 100%`;
 
-      if (details.type === 'pattern1_auto' && details.otherMember) {
-        const otherPosPhrase = details.otherPosName ? `${details.otherPosName}ポジ` : "他ポジ";
-        reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${details.otherMember}や${details.member}の出演予定があるが、${details.otherMember}が${otherPosPhrase}で出演する可能性が高いと予想されるため、${details.member}が${fixedMember}ポジで出演すると予想。`;
+      const initialExps = initialAttendingExpMap[pIdx] || [];
+      
+      if (initialExps.length > 1) {
+        const otherExps = initialExps.filter(m => m !== assignedMember);
+        
+        let movedPosNames = [];
+        otherExps.forEach(oMem => {
+          let foundPos = null;
+          stage.fixed.forEach((fName, checkPIdx) => {
+            if (confirmedAssignments[checkPIdx] === oMem) {
+              foundPos = fName;
+            }
+          });
+          if (foundPos) {
+            movedPosNames.push(`${foundPos}ポジ`);
+          } else {
+            stage.fixed.forEach((fName, checkPIdx) => {
+              if (checkPIdx !== pIdx && (initialAttendingExpMap[checkPIdx] || []).includes(oMem)) {
+                if (!movedPosNames.includes(`${fName}ポジ`)) {
+                  movedPosNames.push(`${fName}ポジ`);
+                }
+              }
+            });
+          }
+        });
+
+        const otherMemberStr = otherExps.join('や');
+        const posText = movedPosNames.length === 1 
+          ? movedPosNames[0] 
+          : movedPosNames.slice(0, 2).join('か');
+
+        if (movedPosNames.length > 0) {
+          reasonHtml = `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${initialExps.join('や')}の出演予定があるが、${otherMemberStr}が${posText}で出演する可能性が高いと予想されるため、${assignedMember}が${fixedMember}ポジで出演すると予想。`;
+        } else {
+          reasonHtml = assignedMember === fixedMember
+            ? `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`
+            : `この日の「${stageName}」公演は、${fixedMember}ポジでの出演経験がある${assignedMember}が${fixedMember}ポジで出演すると予想。`;
+        }
+
       } else {
         reasonHtml = assignedMember === fixedMember
           ? `この日の「${stageName}」公演は、初日メンバーである${fixedMember}が自分のポジションで出演すると予想。`
@@ -1266,9 +1290,7 @@ function runForecast() {
       }
 
     } else {
-      // ---------------------------------------------------------
-      // 【複数パターンの組み合わせが考えられる場合のみ（曖昧な確率表示）】
-      // ---------------------------------------------------------
+      // 複数パターンの組み合わせが考えられる場合（曖昧な確率表示）
       const expCandidates = unassignedMembers
         .filter(m => (initialAttendingExpMap[pIdx] || []).includes(m))
         .sort((a, b) => (pRawProbs[b] || 0) - (pRawProbs[a] || 0));
@@ -1376,6 +1398,7 @@ function runForecast() {
     positionsList.appendChild(card);
   });
 }
+
 
     /* --- メンバー詳細・各種統計ロジック --- */
 
