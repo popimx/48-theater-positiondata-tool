@@ -1063,7 +1063,7 @@ function runForecast() {
       const showsWithMember = validShows.filter(s => s.positionsArray && s.positionsArray[pIdx] === m);
       appearanceCountMap[pIdx][m] = showsWithMember.length;
 
-      // 最終出演日の算出（日付文字列を比較可能なタイムスタンプに）
+      // 最終出演日の算出
       if (showsWithMember.length > 0) {
         const sortedDates = showsWithMember.map(s => new Date(s.date).getTime()).filter(t => !isNaN(t)).sort((a, b) => b - a);
         lastAppearedDateMap[pIdx][m] = sortedDates.length > 0 ? sortedDates[0] : 0;
@@ -1099,38 +1099,39 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【全組み合わせ（パーミュテーション）の全探索とスコアリング】
+  // 【厳格な条件を満たす全組み合わせの列挙とスコアリング】
   // =============================================================
   const pIndices = stage.fixed.map((_, idx) => idx);
   let allPatterns = [];
 
-  // バックトラッキングによる全組み合わせの列挙
-  function searchAllPermutations(pIndex, currentAssignment) {
+  // 経験者以外の割り当てを完全にNGとするバックトラッキング
+  function searchValidPermutations(pIndex, currentAssignment) {
     if (pIndex === pIndices.length) {
       allPatterns.push({ ...currentAssignment });
       return;
     }
 
     const pIdx = pIndices[pIndex];
-    const attendingExps = initialAttendingExpMap[pIdx] || [];
+    // 今回の出演メンバーに含まれる、このポジションの経験者リスト
+    const attendingExps = (initialAttendingExpMap[pIdx] || []).filter(m => inputSet.has(m));
 
-    // このポジションにアサイン可能なメンバーの候補リスト
-    // ※「経験者がいるのに経験者以外を割り当てる」をNGとするため、経験者がいる場合は経験者のみを候補とする
-    // （ただし、すべての経験者が他の必須枠で埋まってしまう等の例外に備え、候補が枯渇する場合は全入力メンバーにフォールバック）
-    let candidates = attendingExps.filter(m => !Object.values(currentAssignment).includes(m));
-    
-    if (candidates.length === 0) {
+    let candidates = [];
+    if (attendingExps.length > 0) {
+      // 【ルール】経験者がいる場合は、そのポジションの経験者のうち、まだ使われていない人のみ候補とする
+      candidates = attendingExps.filter(m => !Object.values(currentAssignment).includes(m));
+    } else {
+      // 経験者がゼロ（初出演）の場合は、まだ使われていない全出演メンバーが候補
       candidates = inputMemberList.filter(m => !Object.values(currentAssignment).includes(m));
     }
 
     candidates.forEach(m => {
       currentAssignment[pIdx] = m;
-      searchAllPermutations(pIndex + 1, currentAssignment);
+      searchValidPermutations(pIndex + 1, currentAssignment);
       delete currentAssignment[pIdx];
     });
   }
 
-  searchAllPermutations(0, {});
+  searchValidPermutations(0, {});
 
   // 各パターンのスコア計算（①出演回数、②最終出演日、③共演データ）
   const scoredPatterns = allPatterns.map(pattern => {
@@ -1139,21 +1140,15 @@ function runForecast() {
     Object.entries(pattern).forEach(([pIdxStr, m]) => {
       const pIdx = parseInt(pIdxStr, 10);
       
-      // 軸1: 出演回数（多いほど高得点。未経験・初出演はごく低い値）
       const count = appearanceCountMap[pIdx]?.[m] || 0;
       const countScore = Math.pow(count + 1, 1.8);
 
-      // 軸2: 最終出演日（直近であるほど高得点）
       const lastDate = lastAppearedDateMap[pIdx]?.[m] || 0;
-      // 日付の新しさを加味するための重み付け（過去からの経過日数等に応じた係数、なければ1.0）
       const dateScore = lastDate > 0 ? 1.2 : 0.5;
 
-      // 軸3: 共演データ（このパターン内で、過去に一緒に同じ公演に入った実績の有無）
-      // 簡単のため、このポジションのメンバーが他のメンバーと過去に共演した実績があればボーナス
       let coappearanceBonus = 1.0;
       validShows.forEach(show => {
         if (show.positionsArray && show.positionsArray[pIdx] === m) {
-          // この公演で一緒にステージに入っていた他メンバーとの一致度をチェック
           let matchCount = 0;
           Object.entries(pattern).forEach(([otherPIdxStr, otherM]) => {
             const otherPIdx = parseInt(otherPIdxStr, 10);
@@ -1176,23 +1171,22 @@ function runForecast() {
   // スコアが高い順にソート
   scoredPatterns.sort((a, b) => b.score - a.score);
 
-  // 上位のユニークなパターンを抽出（重複やスコア0を除く、最大10〜15個程度）
   const totalScore = scoredPatterns.reduce((sum, p) => sum + p.score, 0) || 1;
 
-  // 確率（％）を付与して上位パターンを整形
+  // 成立したすべてのパターンをそのまま反映（制限なし）
   const rankedPatterns = scoredPatterns.map(p => ({
     pattern: p.pattern,
     probability: Math.max(1, Math.round((p.score / totalScore) * 100))
-  })).slice(0, 10); // 上位10パターンまで表示
+  }));
 
   // =============================================================
-  // 【④ 確率順の全組み合わせ表（またはリスト）の描画】
+  // 【④ 確率順の全組み合わせ表の描画】
   // =============================================================
   const container = document.createElement('div');
   container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
 
   let html = `
-    <div class="font-bold text-slate-800 text-sm mb-2">【ポジション予想 可能性パターン一覧】</div>
+    <div class="font-bold text-slate-800 text-sm mb-2">【ポジション予想 可能性パターン一覧（全 ${rankedPatterns.length} 通り）】</div>
     <div class="overflow-x-auto">
       <table class="w-full text-xs text-left border-collapse">
         <thead>
@@ -1207,7 +1201,7 @@ function runForecast() {
   html += `</tr></thead><tbody>`;
 
   if (rankedPatterns.length === 0) {
-    html += `<tr><td colspan="${stage.fixed.length + 1}" class="p-4 text-center text-slate-500">条件に一致する組み合わせが見つかりませんでした。</td></tr>`;
+    html += `<tr><td colspan="${stage.fixed.length + 1}" class="p-4 text-center text-slate-500">条件を満たす有効な組み合わせが見つかりませんでした。（入力メンバーや経験者の条件を確認してください）</td></tr>`;
   } else {
     rankedPatterns.forEach(({ pattern, probability }) => {
       html += `<tr class="border-b border-slate-100 hover:bg-pink-50/50 transition">`;
