@@ -1181,38 +1181,49 @@ function runForecast() {
     rankedPatterns[0].probability += diff;
   }
 
-  // =============================================================
-  // 【④ 確率順の全組み合わせ表の描画】
+    // =============================================================
+  // 【④ 確率順の全組み合わせ表の描画（既存タブと幅・デザインを統一）】
   // =============================================================
   const container = document.createElement('div');
   container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
 
   let html = `
-   <div class="overflow-x-auto">
-      <table class="w-full text-xs text-left border-collapse">
+    <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+      <table class="w-full text-left text-sm border-collapse min-w-max">
         <thead>
-          <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
-            <th class="p-2 border-r border-slate-200 text-center whitespace-nowrap">確率</th>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap">
+              <span class="text-xs font-bold text-slate-600">確率</span>
+            </th>
   `;
 
+  // 各ポジションのヘッダー（既存の一覧表と同じ min-w-[110px] と p-2.5）
   stage.fixed.forEach(fixedMember => {
-    html += `<th class="p-2 border-r border-slate-200 text-center whitespace-nowrap">${escapeHtml(fixedMember)}</th>`;
+    html += `
+      <th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap">
+        <span class="text-xs font-bold text-slate-600">${escapeHtml(fixedMember)}ポジ</span>
+      </th>
+    `;
   });
 
-  html += `</tr></thead><tbody>`;
+  html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
 
   if (rankedPatterns.length === 0) {
     html += `<tr><td colspan="${stage.fixed.length + 1}" class="p-4 text-center text-slate-500">条件を満たす有効な組み合わせが見つかりませんでした。</td></tr>`;
   } else {
     rankedPatterns.forEach(({ pattern, probability }) => {
-      html += `<tr class="border-b border-slate-100 hover:bg-pink-50/50 transition">`;
-      html += `<td class="p-2 border-r border-slate-100 text-center font-bold text-pink-600 whitespace-nowrap">${probability}%</td>`;
+      html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
+      
+      // 確率セル
+      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[90px] font-bold text-pink-600">${probability}%</td>`;
 
+      // 各ポジションのメンバー名セル
       stage.fixed.forEach((_, pIdx) => {
         const assignedMember = pattern[pIdx] || "-";
         const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
         const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
-        html += `<td class="p-2 border-r border-slate-100 text-center whitespace-nowrap ${cellClass}">${escapeHtml(assignedMember)}</td>`;
+        
+        html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
       });
 
       html += `</tr>`;
@@ -1222,7 +1233,6 @@ function runForecast() {
   html += `</tbody></table></div>`;
   container.innerHTML = html;
   positionsList.appendChild(container);
-}
 
     /* --- メンバー詳細・各種統計ロジック --- */
 
