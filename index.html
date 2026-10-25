@@ -997,7 +997,7 @@ function getCircleNum(num) {
   return circles[num - 1] || `(${num})`;
 }
 
-  function runForecast() {
+function runForecast() {
   const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
 
   if (!stage) {
@@ -1112,7 +1112,6 @@ function getCircleNum(num) {
       if (exps.length === 1) {
         const m = exps[0];
 
-        // 2つ以上のポジで唯一の経験者として被っている場合は確定保留
         if (memberToUniquePoses[m] && memberToUniquePoses[m].length > 1) {
           continue;
         }
@@ -1160,15 +1159,15 @@ function getCircleNum(num) {
   );
 
   // =============================================================
-  // 【二次元相関 試算アルゴリズム（ポジション軸 × メンバー軸）】
+  // 【全組み合わせ試算アルゴリズム（確率算出）】
   // =============================================================
   const rawProbMap = {};
+  let totalValidPatternsCount = 0;
 
   if (unassignedPIdxs.length > 0 && unassignedMembers.length > 0) {
     const n = unassignedPIdxs.length;
     let patterns = [];
 
-    // 全割り当てパターンの全探索と二重重み付け評価
     function searchAssignments(pIndex, currentAssignment, currentScore) {
       if (pIndex === n) {
         patterns.push({ assignment: { ...currentAssignment }, score: currentScore });
@@ -1180,8 +1179,6 @@ function getCircleNum(num) {
 
         const isExp = (initialAttendingExpMap[pIdx] || []).includes(m);
         const cnt = appearanceCountMap[pIdx]?.[m] || 0;
-
-        // 回数の影響力を指数関数的に評価（ポジ内比較・個人内ポジ比較の両方に強く作用）
         const weight = isExp ? Math.pow(cnt + 1, 1.6) : 0.01;
 
         currentAssignment[pIdx] = m;
@@ -1191,6 +1188,7 @@ function getCircleNum(num) {
     }
 
     searchAssignments(0, {}, 1.0);
+    totalValidPatternsCount = patterns.length;
 
     const totalScore = patterns.reduce((sum, p) => sum + p.score, 0) || 1;
 
@@ -1208,7 +1206,6 @@ function getCircleNum(num) {
   }
 
   // 補助フォーマット関数
-  function formatWithYa(list) { return list.join('や'); }
   function formatWithKa(list) { return list.join('か'); }
 
   // バッジ描画
@@ -1225,19 +1222,36 @@ function getCircleNum(num) {
   }
 
   // =============================================================
-  // 【カード描画処理（①・②・③文章生成）】
+  // 【カード描画処理】
   // =============================================================
   stage.fixed.forEach((fixedMember, pIdx) => {
-    const isConfirmed = !!confirmedAssignments[pIdx];
+    let isConfirmed = !!confirmedAssignments[pIdx];
+    const pRawProbs = rawProbMap[pIdx] || {};
+
+    // 未確定であっても、試算確率が 100%（1.0）に達している場合は「1対1の最適解で一意に定まった」とみなし、確定扱いにする
+    let topCandidate = null;
+    let topProb = 0;
+    unassignedMembers.forEach(m => {
+      if ((pRawProbs[m] || 0) > topProb) {
+        topProb = pRawProbs[m] || 0;
+        topCandidate = m;
+      }
+    });
+
+    if (!isConfirmed && topProb >= 0.995 && topCandidate) {
+      isConfirmed = true;
+      confirmedAssignments[pIdx] = topCandidate;
+    }
+
     let badgeHtml = getBadgeHtml(pIdx, fixedMember, isConfirmed);
     let reasonHtml = "";
     let percentText = "";
 
     if (isConfirmed) {
       // ---------------------------------------------------------
-      // 【100%確定ポジション】
+      // 【確定（または1対1の最適解で一意に決まった）ポジション】
       // ---------------------------------------------------------
-      const assignedMember = confirmedAssignments[pIdx];
+      const assignedMember = confirmedAssignments[pIdx] || topCandidate;
       const details = confirmedDetails[pIdx] || {};
 
       percentText = `${assignedMember} 100%`;
@@ -1253,16 +1267,12 @@ function getCircleNum(num) {
 
     } else {
       // ---------------------------------------------------------
-      // 【未確定ポジション】
+      // 【複数パターンの組み合わせが考えられる場合のみ（曖昧な確率表示）】
       // ---------------------------------------------------------
-      const pRawProbs = rawProbMap[pIdx] || {};
-
-      // 未確定メンバーの中でこのポジの経験者（二次元試算確率の降順でソート）
       const expCandidates = unassignedMembers
         .filter(m => (initialAttendingExpMap[pIdx] || []).includes(m))
         .sort((a, b) => (pRawProbs[b] || 0) - (pRawProbs[a] || 0));
 
-      // 2ポジ兼任メンバーの検出（パターン②判定）
       let pattern2Target = null;
       let otherPosIdx = -1;
 
@@ -1277,16 +1287,14 @@ function getCircleNum(num) {
         }
       });
 
+      const sortedAll = [...unassignedMembers].sort((a, b) => (pRawProbs[b] || 0) - (pRawProbs[a] || 0));
+
       if (pattern2Target && otherPosIdx !== -1) {
-        // -------------------------------------------------------
-        // 【パターン②：兼任メンバーの回数比較】
-        // -------------------------------------------------------
+        // パターン②：兼任メンバーの回数比較
         const otherPosName = stage.fixed[otherPosIdx];
         const countThisPos = appearanceCountMap[pIdx][pattern2Target] || 0;
         const countOtherPos = appearanceCountMap[otherPosIdx][pattern2Target] || 0;
 
-        // 全未確定メンバーを確率降順でフォーマット
-        const sortedAll = [...unassignedMembers].sort((a, b) => (pRawProbs[b] || 0) - (pRawProbs[a] || 0));
         percentText = sortedAll.map(m => `${m} ${Math.round((pRawProbs[m] || 0) * 100)}%`).join('　');
 
         if (countThisPos >= countOtherPos) {
@@ -1299,12 +1307,8 @@ function getCircleNum(num) {
         }
 
       } else if (expCandidates.length > 0) {
-        // -------------------------------------------------------
-        // 【パターン③：複数の経験者がいて定まらない場合】
-        // -------------------------------------------------------
+        // パターン③：複数の経験者がいて定まらない場合
         const candsText = expCandidates.join('や');
-
-        // 回数詳細テキストの作成（例：「久保姫菜乃が25回、坂川陽香が3回」）
         const countDetails = expCandidates.map(m => {
           const cnt = appearanceCountMap[pIdx]?.[m] || 0;
           return `${m}が${cnt}回`;
@@ -1312,7 +1316,6 @@ function getCircleNum(num) {
 
         const topMem = expCandidates[0];
 
-        // 経験者メンバーのみの確率を取り出して合計100%に再正規化
         const expScoreSum = expCandidates.reduce((sum, m) => sum + (pRawProbs[m] || 0), 0) || 1;
         let roundSum = 0;
         const expPctMap = {};
@@ -1323,7 +1326,6 @@ function getCircleNum(num) {
           roundSum += pct;
         });
 
-        // 整数化の誤差補正（100%に調整）
         const diff = 100 - roundSum;
         if (diff !== 0 && expCandidates.length > 0) {
           expPctMap[expCandidates[0]] += diff;
@@ -1338,13 +1340,10 @@ function getCircleNum(num) {
           `他の出演メンバーのポジションの兼ね合いから総合的に試算した結果、今回は${topMem}が${fixedMember}ポジで出演する可能性が最も高いと予想。`;
 
       } else {
-        // -------------------------------------------------------
-        // 【初出演（経験者不在）の場合】
-        // -------------------------------------------------------
+        // 初出演（経験者不在）の場合
         const absExps = (absenceExpMap[pIdx] || []).filter(m => m !== fixedMember);
         const absText = absExps.length > 0 ? absExps.join('や') : "該当メンバー";
 
-        const sortedAll = [...unassignedMembers].sort((a, b) => (pRawProbs[b] || 0) - (pRawProbs[a] || 0));
         const topTwoStr = formatWithKa(sortedAll.slice(0, 2));
 
         percentText = sortedAll.map(m => `${m} ${Math.round((pRawProbs[m] || 0) * 100)}%`).join('　');
