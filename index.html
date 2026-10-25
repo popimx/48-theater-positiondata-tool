@@ -277,26 +277,157 @@
   </nav>
   <!-- JavaScript Logic -->
   <script>
-    const MASTER_MEMBER_ORDER = [
-      "秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀", "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純", 
-      "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海", 
-      "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜", "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優", 
-      "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた", 
-      "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"
-    ];
-    let SCHEDULE_DATA = [];
-    let ALL_SCHEDULE_DATA = []; 
-    let GLOBAL_STAGE_DATABASE = {}; 
-    let STAGE_DATABASE = {};
-    let currentStageKey = null;
-    let currentScheduleFilter = "ALL";
-    let selectedMemberName = null;
-    let currentSelectedMemberYear = null;
-    let currentRankingYear = null;
-    let showAllAppearanceRanking = false;
-    let showAllCoappearanceRanking = false;
-    let todayString = "";
-    let calendarViewMode = 'list';
+    
+const MASTER_MEMBER_ORDER_BY_GROUP = {
+  AKB48: [
+    "秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀",
+    "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純",
+    "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実",
+    "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海",
+    "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜",
+    "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優",
+    "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛",
+    "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた",
+    "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心",
+    "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"
+  ],
+
+  SKE48: [
+    "相川暖花", "石黒友月", "伊藤虹々美", "入内嶋涼", "熊崎晴香",
+    "倉島杏実", "桒原椿", "佐々木希美", "杉本りいな", "鈴木恋奈",
+    "野村実代", "原優寧", "松川みゆ", "南澤恋々", "山村さくら",
+    "荒野姫楓", "伊藤実希", "奥野心羽", "鎌田菜月", "川村昇子",
+    "北川愛乃", "久保田怜", "雲井紗菜", "倉本羽菜", "近藤海琴",
+    "佐藤佳穂", "篠原京香", "立花菖", "松本慈子", "宮本倫花",
+    "青木莉樺", "赤堀君江", "浅井裕華", "井田玲音名", "太田彩夏",
+    "太田愛恵", "大村杏", "河村優愛", "鈴木愛菜", "中坂美祐",
+    "西井美桜", "長谷川雅", "森本くるみ", "飯田ゆら", "池田有沙",
+    "高村紗弥", "竹下茉莉花", "田村真悠", "中尾楓華", "聖遥花",
+    "矢島凪", "横井志穂"
+  ],
+
+  NMB48: [
+    "青原優花", "石山千尋", "泉綾乃", "板垣心和", "内田愛彩",
+    "岡腰星来", "衣笠彩実", "木根彩呂花", "黒島咲花", "坂下真心",
+    "坂田心咲", "桜田彩叶", "塩月希依音", "澁谷愛紗南", "新澤菜央",
+    "高橋ことね", "竹田京加", "龍本弥生", "田中美空", "田中ミリア",
+    "中川朋香", "西島梨央", "西田帆花", "平山真衣", "福野杏実",
+    "松岡さくら", "松本海日菜", "三鴨くるみ", "宮崎紗衣", "宮原心音",
+    "宮本杏海", "村井悠莉", "山口美桜", "赤松昊", "桜井ひまり",
+    "善家侑莉花", "高橋樹奈", "田中れい", "谷口詩乃", "西住美咲妃",
+    "福原琴美", "藪内陽花"
+  ],
+
+  HKT48: [
+    "生野莉奈", "石川歩実優", "石松結菜", "市村愛里", "北川陽彩",
+    "栗原紗英", "渋井美奈", "豊永阿紀", "中野南実", "藤野心葉",
+    "渕上舞", "松永悠良", "梁瀬鈴雅", "山内祐奈", "吉田めい",
+    "龍頭綺音", "秋吉優花", "井澤美優", "石井彩音", "猪島莉玲亜",
+    "猪原絆愛", "今村麻莉愛", "江浦優香", "江口心々華", "大庭凜咲",
+    "栗山梨奈", "竹本くるみ", "立花心良", "田中伊桜莉", "長野らら",
+    "福井可憐", "松本苺花", "森﨑冴彩", "安井妃奈", "青木日菜子",
+    "靏川那智", "山川万里愛"
+  ],
+
+  NGT48: [
+    "清司麗菜", "西潟茉莉奈", "佐藤海里", "大塚七海", "三村妃乃",
+    "磯部瑠紅", "喜多花恵", "北村優羽", "水津菜月", "杉本萌",
+    "磯崎菜々", "木本杏菜", "佐藤広花", "新沢葵唯", "高島柚愛",
+    "西川晴菜", "安座間結", "阿達夢", "甲斐瑞季", "北澤百音",
+    "佐藤柚花", "須藤凜華", "中田麻実", "皆川日和", "相木茉采",
+    "猪股咲那", "大橋彩乃", "片山珠吏", "久我水羚", "佐藤歩夏",
+    "平井柚葉", "細矢夏帆"
+  ],
+
+  STU48: [
+    "甲斐心愛", "谷口茉妃菜", "兵頭葵", "福田朱里", "信濃宙花",
+    "中村舞", "池田裕楽", "内海里音", "尾崎世里花", "川又優菜",
+    "工藤理子", "迫姫華", "高雄さやか", "原田清花", "宗雪里香",
+    "吉田彩良", "渡辺菜月", "岡田あずみ", "岡村梨央", "久留島優果",
+    "諸葛望愛", "新井梨杏", "石原侑奈", "奥田唯菜", "北澤苺",
+    "濵田響", "森末妃奈", "石松陽菜", "井上久伶杏", "蕪竹真奈",
+    "木原姫花世", "小松奈侑", "坂木叶愛", "坂崎愛", "島田紗香",
+    "曽我部あこ", "髙村栞里", "田中奈菜子", "道保琉南", "野中莉央",
+    "濵田美惟", "藤田愛結", "三好真綺", "屋木優菜", "横井結菜"
+  ]
+};
+
+// 現在使用するメンバー順（初期値はAKB48）
+let MASTER_MEMBER_ORDER = [
+  ...MASTER_MEMBER_ORDER_BY_GROUP.AKB48
+];
+
+let currentMemberOrderGroup = "AKB48";
+
+function normalizeGroupName(groupName) {
+  const value = String(groupName || "")
+    .replace(/劇場/g, "")
+    .trim()
+    .toUpperCase();
+
+  const match = value.match(/(AKB48|SKE48|NMB48|HKT48|NGT48|STU48)/);
+
+  return match ? match[1] : null;
+}
+
+function getMasterMemberOrder(groupName) {
+  const group = normalizeGroupName(groupName) || "AKB48";
+  return MASTER_MEMBER_ORDER_BY_GROUP[group] || [];
+}
+
+function setMasterMemberOrder(groupName) {
+  const group = normalizeGroupName(groupName) || "AKB48";
+
+  currentMemberOrderGroup = group;
+  MASTER_MEMBER_ORDER = [
+    ...(MASTER_MEMBER_ORDER_BY_GROUP[group] || [])
+  ];
+
+  return group;
+}
+
+function detectGroupFromMembers(memberNames) {
+  const inputSet = new Set(memberNames);
+  let bestGroup = null;
+  let bestScore = 0;
+  let tied = false;
+
+  for (const [group, members] of Object.entries(
+    MASTER_MEMBER_ORDER_BY_GROUP
+  )) {
+    if (!members || members.length === 0) continue;
+
+    const score = members.filter(name => inputSet.has(name)).length;
+
+    if (score > bestScore) {
+      bestGroup = group;
+      bestScore = score;
+      tied = false;
+    } else if (score > 0 && score === bestScore) {
+      tied = true;
+    }
+  }
+
+  if (!bestGroup || bestScore === 0 || tied) {
+    return null;
+  }
+
+  return bestGroup;
+}
+
+let SCHEDULE_DATA = [];
+let ALL_SCHEDULE_DATA = [];
+let GLOBAL_STAGE_DATABASE = {};
+let STAGE_DATABASE = {};
+let currentStageKey = null;
+let currentScheduleFilter = "ALL";
+let selectedMemberName = null;
+let currentSelectedMemberYear = null;
+let currentRankingYear = null;
+let showAllAppearanceRanking = false;
+let showAllCoappearanceRanking = false;
+let todayString = "";
+let calendarViewMode = 'list';
     const FALLBACK_SCHEDULE_2026 = [
       {
         "id": "akb_260807",
