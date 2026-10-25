@@ -1099,7 +1099,6 @@ function runForecast() {
   const pIndices = stage.fixed.map((_, idx) => idx);
   let allPatterns = [];
 
-  // 段階1: 「完全な経験者のみ」でパズルが解けるか試す厳格な探索
   function searchStrictExpPermutations(pIndex, currentAssignment) {
     if (pIndex === pIndices.length) {
       allPatterns.push({ ...currentAssignment });
@@ -1117,7 +1116,6 @@ function runForecast() {
     });
   }
 
-  // 段階2: 経験者だけではハマらない（解が見つからない）場合に、ハマるポジは経験者、ハマらないポジは他のメンバーも許容する柔軟な探索
   function searchFlexiblePermutations(pIndex, currentAssignment) {
     if (pIndex === pIndices.length) {
       allPatterns.push({ ...currentAssignment });
@@ -1130,9 +1128,9 @@ function runForecast() {
 
     let candidates = [];
     if (attendingExps.length > 0) {
-      candidates = attendingExps; // 経験者がいるなら経験者を優先
+      candidates = attendingExps;
     } else {
-      candidates = inputMemberList.filter(m => !Object.values(currentAssignment).includes(m)); // 不足分は他の出演メンバーを候補に
+      candidates = inputMemberList.filter(m => !Object.values(currentAssignment).includes(m));
     }
 
     candidates.forEach(m => {
@@ -1142,15 +1140,12 @@ function runForecast() {
     });
   }
 
-  // まずは厳格な「経験者のみ」で探索を実行
   searchStrictExpPermutations(0, {});
-
-  // 【重要】もし経験者のみでは1つもパターンが組めない（＝ハマらない）場合のみ、柔軟な探索に切り替える
   if (allPatterns.length === 0) {
     searchFlexiblePermutations(0, {});
   }
 
-  // スコア計算（対数加算による偏りのない評価）
+  // スコア計算
   const scoredPatterns = allPatterns.map(pattern => {
     let scoreSum = 0;
 
@@ -1183,23 +1178,26 @@ function runForecast() {
 
   scoredPatterns.sort((a, b) => b.rawScore - a.rawScore);
 
-  // 確率の正規化（合計がぴったり100%になる調整）
+  // 確率の安全な正規化処理
   const totalRawScore = scoredPatterns.reduce((sum, p) => sum + p.rawScore, 0) || 1;
   
-  const rankedPatterns = scoredPatterns.map((p) => {
-    let pct = Math.round((p.rawScore / totalRawScore) * 100);
-    if (pct < 1) pct = 1; 
-    return { pattern: p.pattern, probability: pct };
+  let rankedPatterns = scoredPatterns.map((p) => {
+    const exactPct = (p.rawScore / totalRawScore) * 100;
+    return { pattern: p.pattern, probability: Math.round(exactPct) };
   });
 
   if (rankedPatterns.length > 0) {
-    const currentSum = rankedPatterns.reduce((sum, p) => sum + p.probability, 0);
-    const diff = 100 - currentSum;
+    let currentSum = rankedPatterns.reduce((sum, p) => sum + p.probability, 0);
+    let diff = 100 - currentSum;
+    
     rankedPatterns[0].probability += diff;
+    if (rankedPatterns[0].probability < 0) {
+      rankedPatterns[0].probability = 0;
+    }
   }
 
   // =============================================================
-  // 【④ 確率順の全組み合わせ表の描画】
+  // 【④ 行列を入れ替えた表の描画（縦：ポジション、横：パターン確率）】
   // =============================================================
   const container = document.createElement('div');
   container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
@@ -1209,15 +1207,16 @@ function runForecast() {
       <table class="w-full text-left text-sm border-collapse min-w-max">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
-            <th class="p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap">
-              <span class="text-xs font-bold text-slate-600">確率</span>
+            <th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap">
+              <span class="text-xs font-bold text-slate-600">ポジション</span>
             </th>
   `;
 
-  stage.fixed.forEach(fixedMember => {
+  // ヘッダーに各パターンの確率を並べる
+  rankedPatterns.forEach((p) => {
     html += `
-      <th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap">
-        <span class="text-xs font-bold text-slate-600">${escapeHtml(fixedMember)}</span>
+      <th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap">
+        <span class="text-xs font-bold text-pink-600">${p.probability}%</span>
       </th>
     `;
   });
@@ -1225,20 +1224,22 @@ function runForecast() {
   html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
 
   if (rankedPatterns.length === 0) {
-    html += `<tr><td colspan="${stage.fixed.length + 1}" class="p-4 text-center text-slate-500">条件を満たす組み合わせが見つかりませんでした。</td></tr>`;
+    html += `<tr><td colspan="2" class="p-4 text-center text-slate-500">条件を満たす有効な組み合わせが見つかりませんでした。</td></tr>`;
   } else {
-    rankedPatterns.forEach(({ pattern, probability }) => {
+    // ポジション（行）ごとにループを回す
+    stage.fixed.forEach((fixedMember, pIdx) => {
       html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
       
-      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[90px] font-bold text-pink-600">${probability}%</td>`;
+      // 左端の列：ポジション名（固定メンバー）
+      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">${escapeHtml(fixedMember)}</td>`;
 
-      stage.fixed.forEach((_, pIdx) => {
+      // 各パターンのアサインメンバーを横に並べる
+      rankedPatterns.forEach(({ pattern }) => {
         const assignedMember = pattern[pIdx] || "-";
         const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
-        // 経験者なら通常の文字色、柔軟枠で入った場合はアンバー（警告・別枠）カラーで表示
         const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
         
-        html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
+        html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[100px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
       });
 
       html += `</tr>`;
