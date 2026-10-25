@@ -997,7 +997,7 @@ function getCircleNum(num) {
   return circles[num - 1] || `(${num})`;
 }
 
-function runForecast() {
+  function runForecast() {
   const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
 
   if (!stage) {
@@ -1094,32 +1094,120 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【クロススライドを完全に網羅する柔軟な組み合わせ探索】
+  // 【ご指定の条件 ①②③ に基づく「未確定ポジション」の判定ロジック】
   // =============================================================
-  const pIndices = stage.fixed.map((_, idx) => idx);
-  let allPatterns = [];
+  const confirmedAssignments = {}; 
+  const confirmedMembers = new Set();
+  const unassignedPIdxsSet = new Set();
 
-  function searchAllPossiblePermutations(pIndex, currentAssignment) {
-    if (pIndex === pIndices.length) {
-      allPatterns.push({ ...currentAssignment });
+  // 各ポジションごとの「今回の出演メンバーである経験者リスト」をあらかじめ作成
+  const posCandidatesMap = {};
+  stage.fixed.forEach((_, pIdx) => {
+    const exps = (initialAttendingExpMap[pIdx] || []).filter(m => inputSet.has(m));
+    posCandidatesMap[pIdx] = exps;
+  });
+
+  // 条件①：そのポジションの経験者がいない場合 ➔ 未確定
+  // 条件②：同一メンバーしか入れないポジションが2つ以上ある、または
+  // 条件③：できるポジション（候補メンバーのセット）が他のポジションと一致している場合 ➔ 未確定
+  
+  // 候補メンバーの組み合わせパターンごとにポジションをグループ化してみる
+  const candidateGroupMap = {}; // "memberA,memberB" -> [pIdx1, pIdx2, ...]
+  
+  stage.fixed.forEach((_, pIdx) => {
+    const cands = posCandidatesMap[pIdx];
+    if (cands.length === 0) {
+      // 条件①：経験者がいない
+      unassignedPIdxsSet.add(pIdx);
+    } else {
+      const key = [...cands].sort().join(',');
+      if (!candidateGroupMap[key]) candidateGroupMap[key] = [];
+      candidateGroupMap[key].push(pIdx);
+    }
+  });
+
+  // グループを精査：同じ候補メンバーセットを共有するポジションが複数ある（条件②・③）場合、
+  // あるいは、そのメンバー数をポジション数が上回っている（競合している）場合はすべて未確定グループとする
+  Object.entries(candidateGroupMap).forEach(([key, pIndices]) => {
+    if (key === "") return;
+    const cands = key.split(',');
+    if (pIndices.length > 1 || cands.length < pIndices.length) {
+      // 条件②・③に該当：同一メンバーが複数ポジに関与している、または候補セットが重複・一致している
+      pIndices.forEach(pIdx => unassignedPIdxsSet.add(pIdx));
+    } else if (pIndices.length === 1) {
+      // 1対1で綺麗に決まる場合は、一旦「確定候補」として扱う
+      // （ただし他の確定と被る場合は後続のループで安全に処理）
+      const pIdx = pIndices[0];
+      if (cands.length === 1) {
+        confirmedAssignments[pIdx] = cands[0];
+        confirmedMembers.add(cands[0]);
+      } else {
+        unassignedPIdxsSet.add(pIdx);
+      }
+    }
+  });
+
+  // まだ確定しておらず、未確定セットにも入っていないポジションがあれば安全のため未確定に追加
+  stage.fixed.forEach((_, pIdx) => {
+    if (confirmedAssignments[pIdx] === undefined && !unassignedPIdxsSet.has(pIdx)) {
+      unassignedPIdxsSet.add(pIdx);
+    }
+  });
+
+  const unassignedPIdxs = Array.from(unassignedPIdxsSet);
+  const unassignedMembers = inputMemberList.filter(m => !confirmedMembers.has(m));
+
+  // =============================================================
+  // 【未確定ポジション間での組み合わせ探索】
+  // =============================================================
+  let subPatterns = [];
+
+  function searchUnassignedPermutations(subIndex, currentSubAssignment) {
+    if (subIndex === unassignedPIdxs.length) {
+      subPatterns.push({ ...currentSubAssignment });
       return;
     }
-    const pIdx = pIndices[pIndex];
+    const pIdx = unassignedPIdxs[subIndex];
     
-    // まだどのポジションにもアサインされていない「今回の出演メンバー全員」を候補にする
-    const candidates = inputMemberList.filter(m => !Object.values(currentAssignment).includes(m));
+    // そのポジション固有の経験者、または未割当の出演メンバーから候補を選定
+    let candidates = (initialAttendingExpMap[pIdx] || []).filter(
+      m => inputSet.has(m) && !Object.values(currentSubAssignment).includes(m) && !confirmedMembers.has(m)
+    );
+
+    if (candidates.length === 0) {
+      candidates = unassignedMembers.filter(m => !Object.values(currentSubAssignment).includes(m));
+    }
+    if (candidates.length === 0) {
+      candidates = inputMemberList.filter(m => !Object.values(currentSubAssignment).includes(m));
+    }
 
     candidates.forEach(m => {
-      currentAssignment[pIdx] = m;
-      searchAllPossiblePermutations(pIndex + 1, currentAssignment);
-      delete currentAssignment[pIdx];
+      currentSubAssignment[pIdx] = m;
+      searchUnassignedPermutations(subIndex + 1, currentSubAssignment);
+      delete currentSubAssignment[pIdx];
     });
   }
 
-  searchAllPossiblePermutations(0, {});
+  if (unassignedPIdxs.length > 0) {
+    searchUnassignedPermutations(0, {});
+  } else {
+    subPatterns.push({});
+  }
+
+  let allPatterns = subPatterns.map(subP => {
+    return { ...confirmedAssignments, ...subP };
+  });
+
+  if (allPatterns.length === 0) {
+    let fallback = { ...confirmedAssignments };
+    stage.fixed.forEach((_, pIdx) => {
+      if (fallback[pIdx] === undefined) fallback[pIdx] = inputMemberList[pIdx] || "-";
+    });
+    allPatterns.push(fallback);
+  }
 
   // =============================================================
-  // 【スコア計算（経験者を優遇しつつ、スライドパターンも適正評価）】
+  // 【スコア計算 ＆ 確率正規化】
   // =============================================================
   const scoredPatterns = allPatterns.map(pattern => {
     let scoreSum = 1.0;
@@ -1130,15 +1218,7 @@ function runForecast() {
       const isExp = (initialAttendingExpMap[pIdx] || []).includes(m);
       const count = appearanceCountMap[pIdx]?.[m] || 0;
 
-      let posScore = 0;
-      if (isExp) {
-        // 経験者の場合は高得点（王道パターンとして確率を高くするため）
-        posScore = 2.0 + (count * 0.5);
-      } else {
-        // 未経験・スライド（アンダー）の場合は低めだが、選択肢に残す
-        posScore = 0.2;
-      }
-
+      let posScore = isExp ? (2.0 + count * 0.5) : 0.2;
       const lastDate = lastAppearedDateMap[pIdx]?.[m] || 0;
       const dateScore = lastDate > 0 ? 0.1 : 0;
 
@@ -1162,9 +1242,6 @@ function runForecast() {
 
   scoredPatterns.sort((a, b) => b.rawScore - a.rawScore);
 
-  // -------------------------------------------------------------
-  // 【確率の正規化（上位の可能性を綺麗にパーセンテージ化）】
-  // -------------------------------------------------------------
   const totalRawScore = scoredPatterns.reduce((sum, p) => sum + p.rawScore, 0) || 1;
   
   let rankedPatterns = scoredPatterns.map((p) => {
@@ -1211,25 +1288,21 @@ function runForecast() {
 
   html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
 
-  if (rankedPatterns.length === 0) {
-    html += `<tr><td colspan="2" class="p-4 text-center text-slate-500">条件を満たす有効な組み合わせが見つかりませんでした。</td></tr>`;
-  } else {
-    stage.fixed.forEach((fixedMember, pIdx) => {
-      html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
+  stage.fixed.forEach((fixedMember, pIdx) => {
+    html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
+    
+    html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">${escapeHtml(fixedMember)}</td>`;
+
+    rankedPatterns.forEach(({ pattern }) => {
+      const assignedMember = pattern[pIdx] || "-";
+      const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
+      const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
       
-      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">${escapeHtml(fixedMember)}</td>`;
-
-      rankedPatterns.forEach(({ pattern }) => {
-        const assignedMember = pattern[pIdx] || "-";
-        const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
-        const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
-        
-        html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[100px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
-      });
-
-      html += `</tr>`;
+      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[100px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
     });
-  }
+
+    html += `</tr>`;
+  });
 
   html += `</tbody></table></div>`;
   container.innerHTML = html;
