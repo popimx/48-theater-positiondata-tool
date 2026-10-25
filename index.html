@@ -696,20 +696,30 @@ let calendarViewMode = 'list';
       switchTab('calendar');
     }
 
-    function selectStage(stageKey) {
-      currentStageKey = stageKey;
-      let stage = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
-      if (!stage) return;
-      document.getElementById('mainTabsContainer').classList.remove('hidden');
-      document.getElementById('memberDetailContainer').classList.add('hidden');
-      document.getElementById('navNormal').classList.add('hidden');
-      document.getElementById('navMemberSearching').classList.add('hidden');
-      document.getElementById('navStageDetail').classList.remove('hidden');
-      document.getElementById('navStageDetail').classList.add('flex');
-      renderPositions();
-      renderDailyTable();
-      switchTab('positions');
-    }
+  function selectStage(stageKey) {
+  currentStageKey = stageKey;
+
+  const stage =
+    GLOBAL_STAGE_DATABASE[stageKey] ||
+    STAGE_DATABASE[stageKey];
+
+  if (!stage) return;
+
+  // 選択した公演のグループを優先する
+  setMasterMemberOrder(stage.group);
+
+  document.getElementById('mainTabsContainer').classList.remove('hidden');
+  document.getElementById('memberDetailContainer').classList.add('hidden');
+  document.getElementById('navNormal').classList.add('hidden');
+  document.getElementById('navMemberSearching').classList.add('hidden');
+  document.getElementById('navStageDetail').classList.remove('hidden');
+  document.getElementById('navStageDetail').classList.add('flex');
+
+  renderPositions();
+  renderDailyTable();
+
+  switchTab('positions');
+}
 
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -1136,27 +1146,47 @@ function getCircleNum(num) {
     return;
   }
 
-  const rawInput = document.getElementById('forecastInputText').value;
+  
+const rawInput = document.getElementById('forecastInputText').value;
 
-  const inputNames = rawInput
-    .split(/[\s・、,\n/]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0 && s !== "-" && s !== "－");
+const inputNames = rawInput
+  .split(/[\s・、,\n/]+/)
+  .map(s => s.trim())
+  .filter(s => s.length > 0 && s !== "-" && s !== "－");
 
-  const inputSet = new Set(inputNames);
-  const inputMemberList = Array.from(new Set(inputNames));
+// 入力メンバーからグループを推定
+const detectedGroup = detectGroupFromMembers(inputNames);
 
-  const resultArea = document.getElementById('forecastResultArea');
-  const allMembersGrid = document.getElementById('forecastAllMembersGrid');
-  let expListArea = document.getElementById('forecastExpListArea');
-  const positionsList = document.getElementById('forecastPositionsList');
+// 選択中の公演があれば、そのグループを優先
+// 公演が取得できない場合は、入力メンバーから判定
+const forecastGroup =
+  normalizeGroupName(stage.group) ||
+  detectedGroup ||
+  currentMemberOrderGroup ||
+  "AKB48";
 
-  resultArea.classList.remove('hidden');
-  allMembersGrid.innerHTML = '';
-  positionsList.innerHTML = '';
-  if (expListArea) expListArea.innerHTML = '';
+// 使用するメンバー順を切り替える
+setMasterMemberOrder(forecastGroup);
 
-  const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
+console.log("予想対象グループ:", forecastGroup);
+console.log("使用するメンバー順:", MASTER_MEMBER_ORDER);
+
+const inputSet = new Set(inputNames);
+const inputMemberList = Array.from(new Set(inputNames));
+
+const resultArea = document.getElementById('forecastResultArea');
+const allMembersGrid = document.getElementById('forecastAllMembersGrid');
+let expListArea = document.getElementById('forecastExpListArea');
+const positionsList = document.getElementById('forecastPositionsList');
+
+resultArea.classList.remove('hidden');
+allMembersGrid.innerHTML = '';
+positionsList.innerHTML = '';
+if (expListArea) expListArea.innerHTML = '';
+
+const validShows = stage.schedules.filter(
+  s => s.positionsArray && s.positionsArray.length > 0
+);
 
   // 1. 全メンバーの出演状況グリッド描画
   MASTER_MEMBER_ORDER.forEach(name => {
