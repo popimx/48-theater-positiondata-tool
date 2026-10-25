@@ -509,24 +509,49 @@ let calendarViewMode = 'list';
       }
     }
 
-    async function loadAllYearsScheduleData() {
-      let allList = [];
-      const currentYear = new Date().getFullYear();
-      const promises = [];
-      
-      for (let y = 2020; y <= currentYear; y++) {
-        promises.push(fetchScheduleJson("akb48", y));
-      }
-      
-      const results = await Promise.all(promises);
-      results.forEach(rawData => {
-        if (Array.isArray(rawData)) {
-          allList = allList.concat(normalizeScheduleData(rawData));
-        }
-      });
-      ALL_SCHEDULE_DATA = allList;
-      generateGlobalStageDatabase(); 
+    
+async function loadAllYearsScheduleData() {
+  let allList = [];
+  const currentYear = new Date().getFullYear();
+  const groups = [
+    "akb48",
+    "ske48",
+    "nmb48",
+    "hkt48",
+    "ngt48",
+    "stu48"
+  ];
+
+  const promises = [];
+
+  for (const group of groups) {
+    for (let y = 2005; y <= currentYear; y++) {
+      promises.push(
+        fetchScheduleJson(group, y).then(rawData => ({
+          group,
+          year: y,
+          rawData
+        }))
+      );
     }
+  }
+
+  const results = await Promise.all(promises);
+
+  results.forEach(({ group, year, rawData }) => {
+    if (Array.isArray(rawData)) {
+      const normalizedData = normalizeScheduleData(rawData).map(item => ({
+        ...item,
+        sourceGroup: group.toUpperCase()
+      }));
+
+      allList = allList.concat(normalizedData);
+    }
+  });
+
+  ALL_SCHEDULE_DATA = allList;
+  generateGlobalStageDatabase();
+}
 
     function normalizeScheduleData(rawData) {
       return rawData.map(item => {
