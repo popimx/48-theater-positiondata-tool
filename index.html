@@ -1094,27 +1094,10 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【2段階フォールバックによる組み合わせ探索】
+  // 【超柔軟な組み合わせ探索（デッドロック防止・全自動フォールバック）】
   // =============================================================
   const pIndices = stage.fixed.map((_, idx) => idx);
   let allPatterns = [];
-
-  function searchStrictExpPermutations(pIndex, currentAssignment) {
-    if (pIndex === pIndices.length) {
-      allPatterns.push({ ...currentAssignment });
-      return;
-    }
-    const pIdx = pIndices[pIndex];
-    const attendingExps = (initialAttendingExpMap[pIdx] || []).filter(
-      m => inputSet.has(m) && !Object.values(currentAssignment).includes(m)
-    );
-
-    attendingExps.forEach(m => {
-      currentAssignment[pIdx] = m;
-      searchStrictExpPermutations(pIndex + 1, currentAssignment);
-      delete currentAssignment[pIdx];
-    });
-  }
 
   function searchFlexiblePermutations(pIndex, currentAssignment) {
     if (pIndex === pIndices.length) {
@@ -1122,15 +1105,24 @@ function runForecast() {
       return;
     }
     const pIdx = pIndices[pIndex];
-    const attendingExps = (initialAttendingExpMap[pIdx] || []).filter(
+    
+    // 1. まず「今回の出演メンバーに含まれる、このポジションの経験者」で、まだ使われていない人を候補にする
+    let attendingExps = (initialAttendingExpMap[pIdx] || []).filter(
       m => inputSet.has(m) && !Object.values(currentAssignment).includes(m)
     );
 
     let candidates = [];
     if (attendingExps.length > 0) {
-      candidates = attendingExps;
+      candidates = attendingExps; // 経験者がいれば最優先
     } else {
+      // 2. もし経験者がいない（または全員すでに他のポジで使われている）場合は、
+      // データベースにいる全メンバー、あるいは今回の入力メンバーからまだ使われていない人を総動員して埋める
       candidates = inputMemberList.filter(m => !Object.values(currentAssignment).includes(m));
+      
+      // それでも候補が足りない場合の最終安全ネット（入力外のメンバーも含めて埋める）
+      if (candidates.length === 0) {
+        candidates = MASTER_MEMBER_ORDER.filter(m => m !== "-" && m !== "－" && !Object.values(currentAssignment).includes(m));
+      }
     }
 
     candidates.forEach(m => {
@@ -1140,20 +1132,28 @@ function runForecast() {
     });
   }
 
-  searchStrictExpPermutations(0, {});
+  searchFlexiblePermutations(0, {});
+
+  // 万が一それでもパターンが0件の場合のセーフティネット（1行だけでも強制生成する）
   if (allPatterns.length === 0) {
-    searchFlexiblePermutations(0, {});
+    let fallbackPattern = {};
+    stage.fixed.forEach((fM, pIdx) => {
+      fallbackPattern[pIdx] = inputMemberList[pIdx] || fM;
+    });
+    allPatterns.push(fallbackPattern);
   }
 
-  // スコア計算
+  // =============================================================
+  // 【スコア計算】
+  // =============================================================
   const scoredPatterns = allPatterns.map(pattern => {
-    let scoreSum = 0;
+    let scoreSum = 1.0;
 
     Object.entries(pattern).forEach(([pIdxStr, m]) => {
       const pIdx = parseInt(pIdxStr, 10);
       
       const count = appearanceCountMap[pIdx]?.[m] || 0;
-      const countScore = Math.log2(count + 2);
+      const countScore = count * 0.5;
 
       const lastDate = lastAppearedDateMap[pIdx]?.[m] || 0;
       const dateScore = lastDate > 0 ? 0.2 : 0;
@@ -1164,7 +1164,7 @@ function runForecast() {
           Object.entries(pattern).forEach(([otherPIdxStr, otherM]) => {
             const otherPIdx = parseInt(otherPIdxStr, 10);
             if (otherPIdx !== pIdx && show.positionsArray[otherPIdx] === otherM) {
-              coappearanceBonus += 0.05;
+              coappearanceBonus += 0.1;
             }
           });
         }
@@ -1173,23 +1173,26 @@ function runForecast() {
       scoreSum += (countScore + dateScore + coappearanceBonus);
     });
 
-    return { pattern, rawScore: Math.exp(scoreSum) };
+    return { pattern, rawScore: scoreSum };
   });
 
   scoredPatterns.sort((a, b) => b.rawScore - a.rawScore);
 
-  // 確率の安全な正規化処理
+  // 確率の正規化
   const totalRawScore = scoredPatterns.reduce((sum, p) => sum + p.rawScore, 0) || 1;
   
   let rankedPatterns = scoredPatterns.map((p) => {
     const exactPct = (p.rawScore / totalRawScore) * 100;
-    return { pattern: p.pattern, probability: Math.round(exactPct) };
+    let pct = Math.round(exactPct);
+    if (pct < 1 && exactPct > 0) {
+      pct = 1;
+    }
+    return { pattern: p.pattern, probability: pct };
   });
 
   if (rankedPatterns.length > 0) {
     let currentSum = rankedPatterns.reduce((sum, p) => sum + p.probability, 0);
     let diff = 100 - currentSum;
-    
     rankedPatterns[0].probability += diff;
     if (rankedPatterns[0].probability < 0) {
       rankedPatterns[0].probability = 0;
@@ -1197,7 +1200,7 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【④ 行列を入れ替えた表の描画（縦：ポジション、横：パターン確率）】
+  // 【④ 行列を入れ替えた表の描画】
   // =============================================================
   const container = document.createElement('div');
   container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
@@ -1212,7 +1215,6 @@ function runForecast() {
             </th>
   `;
 
-  // ヘッダーに各パターンの確率を並べる
   rankedPatterns.forEach((p) => {
     html += `
       <th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap">
@@ -1223,28 +1225,21 @@ function runForecast() {
 
   html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
 
-  if (rankedPatterns.length === 0) {
-    html += `<tr><td colspan="2" class="p-4 text-center text-slate-500">条件を満たす有効な組み合わせが見つかりませんでした。</td></tr>`;
-  } else {
-    // ポジション（行）ごとにループを回す
-    stage.fixed.forEach((fixedMember, pIdx) => {
-      html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
+  stage.fixed.forEach((fixedMember, pIdx) => {
+    html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
+    
+    html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">${escapeHtml(fixedMember)}</td>`;
+
+    rankedPatterns.forEach(({ pattern }) => {
+      const assignedMember = pattern[pIdx] || "-";
+      const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
+      const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
       
-      // 左端の列：ポジション名（固定メンバー）
-      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">${escapeHtml(fixedMember)}</td>`;
-
-      // 各パターンのアサインメンバーを横に並べる
-      rankedPatterns.forEach(({ pattern }) => {
-        const assignedMember = pattern[pIdx] || "-";
-        const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
-        const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
-        
-        html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[100px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
-      });
-
-      html += `</tr>`;
+      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[100px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
     });
-  }
+
+    html += `</tr>`;
+  });
 
   html += `</tbody></table></div>`;
   container.innerHTML = html;
