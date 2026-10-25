@@ -498,17 +498,37 @@ let calendarViewMode = 'list';
       onDateChange();
     }
 
-    async function fetchScheduleJson(groupName, year) {
-      const fileName = `schedule_${groupName.toLowerCase()}_${year}.json`;
-      try {
-        const response = await fetch(fileName);
-        if (!response.ok) throw new Error("JSON not found");
-        return await response.json();
-      } catch (err) {
-        return year == 2026 ? FALLBACK_SCHEDULE_2026 : [];
-      }
+    
+async function fetchScheduleJson(groupName, year) {
+  const group = String(groupName || "akb48").toLowerCase();
+  const fileName = `schedule_${group}_${year}.json`;
+
+  try {
+    const response = await fetch(fileName);
+
+    if (!response.ok) {
+      throw new Error(`JSON not found: ${fileName}`);
     }
 
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      console.error(`${fileName} のデータ形式が正しくありません。`);
+      return [];
+    }
+
+    return data;
+
+  } catch (err) {
+    // AKB48の2026年だけ、代替データを使用する
+    if (group === "akb48" && Number(year) === 2026) {
+      return FALLBACK_SCHEDULE_2026;
+    }
+
+    console.warn(`${fileName} の読み込みに失敗しました。`, err);
+    return [];
+  }
+}
     
 async function loadAllYearsScheduleData() {
   let allList = [];
@@ -681,13 +701,42 @@ async function loadAllYearsScheduleData() {
       return Array.from(set);
     }
 
-    async function onDateChange() {
-      const year = document.getElementById("yearSelect").value;
-      const rawData = await fetchScheduleJson("akb48", year);
-      SCHEDULE_DATA = normalizeScheduleData(rawData);
-      generateStageDatabase();
-      renderCalendar();
-    }
+  async function onDateChange() {
+  const yearSelect = document.getElementById("yearSelect");
+  if (!yearSelect) return;
+
+  const year = Number(yearSelect.value);
+
+  const groups = [
+    "akb48",
+    "ske48",
+    "nmb48",
+    "hkt48",
+    "ngt48",
+    "stu48"
+  ];
+
+  try {
+    const results = await Promise.all(
+      groups.map(async group => {
+        const rawData = await fetchScheduleJson(group, year);
+
+        return normalizeScheduleData(rawData).map(item => ({
+          ...item,
+          sourceGroup: group.toUpperCase()
+        }));
+      })
+    );
+
+    SCHEDULE_DATA = results.flat();
+
+    generateStageDatabase();
+    renderCalendar();
+
+  } catch (error) {
+    console.error("スケジュール更新エラー:", error);
+  }
+}
 
     function toggleCalendarView(mode) {
       calendarViewMode = mode;
