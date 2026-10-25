@@ -1181,7 +1181,7 @@ function runForecast() {
     rankedPatterns[0].probability += diff;
   }
 
-    // =============================================================
+  // =============================================================
   // 【④ 確率順の全組み合わせ表の描画（既存タブと幅・デザインを統一）】
   // =============================================================
   const container = document.createElement('div');
@@ -1233,6 +1233,7 @@ function runForecast() {
   html += `</tbody></table></div>`;
   container.innerHTML = html;
   positionsList.appendChild(container);
+  }
 
     /* --- メンバー詳細・各種統計ロジック --- */
 
