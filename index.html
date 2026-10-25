@@ -1094,37 +1094,63 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【全組み合わせの列挙とスコアリング】
+  // 【2段階フォールバックによる組み合わせ探索】
   // =============================================================
   const pIndices = stage.fixed.map((_, idx) => idx);
   let allPatterns = [];
 
-  function searchValidPermutations(pIndex, currentAssignment) {
+  // 段階1: 「完全な経験者のみ」でパズルが解けるか試す厳格な探索
+  function searchStrictExpPermutations(pIndex, currentAssignment) {
     if (pIndex === pIndices.length) {
       allPatterns.push({ ...currentAssignment });
       return;
     }
-
     const pIdx = pIndices[pIndex];
-    const attendingExps = (initialAttendingExpMap[pIdx] || []).filter(m => inputSet.has(m));
+    const attendingExps = (initialAttendingExpMap[pIdx] || []).filter(
+      m => inputSet.has(m) && !Object.values(currentAssignment).includes(m)
+    );
 
-    let candidates = [];
-    if (attendingExps.length > 0) {
-      candidates = attendingExps.filter(m => !Object.values(currentAssignment).includes(m));
-    } else {
-      candidates = inputMemberList.filter(m => !Object.values(currentAssignment).includes(m));
-    }
-
-    candidates.forEach(m => {
+    attendingExps.forEach(m => {
       currentAssignment[pIdx] = m;
-      searchValidPermutations(pIndex + 1, currentAssignment);
+      searchStrictExpPermutations(pIndex + 1, currentAssignment);
       delete currentAssignment[pIdx];
     });
   }
 
-  searchValidPermutations(0, {});
+  // 段階2: 経験者だけではハマらない（解が見つからない）場合に、ハマるポジは経験者、ハマらないポジは他のメンバーも許容する柔軟な探索
+  function searchFlexiblePermutations(pIndex, currentAssignment) {
+    if (pIndex === pIndices.length) {
+      allPatterns.push({ ...currentAssignment });
+      return;
+    }
+    const pIdx = pIndices[pIndex];
+    const attendingExps = (initialAttendingExpMap[pIdx] || []).filter(
+      m => inputSet.has(m) && !Object.values(currentAssignment).includes(m)
+    );
 
-  // スコア計算（評価の差がつきすぎないよう、適度な係数・対数処理）
+    let candidates = [];
+    if (attendingExps.length > 0) {
+      candidates = attendingExps; // 経験者がいるなら経験者を優先
+    } else {
+      candidates = inputMemberList.filter(m => !Object.values(currentAssignment).includes(m)); // 不足分は他の出演メンバーを候補に
+    }
+
+    candidates.forEach(m => {
+      currentAssignment[pIdx] = m;
+      searchFlexiblePermutations(pIndex + 1, currentAssignment);
+      delete currentAssignment[pIdx];
+    });
+  }
+
+  // まずは厳格な「経験者のみ」で探索を実行
+  searchStrictExpPermutations(0, {});
+
+  // 【重要】もし経験者のみでは1つもパターンが組めない（＝ハマらない）場合のみ、柔軟な探索に切り替える
+  if (allPatterns.length === 0) {
+    searchFlexiblePermutations(0, {});
+  }
+
+  // スコア計算（対数加算による偏りのない評価）
   const scoredPatterns = allPatterns.map(pattern => {
     let scoreSum = 0;
 
@@ -1132,7 +1158,6 @@ function runForecast() {
       const pIdx = parseInt(pIdxStr, 10);
       
       const count = appearanceCountMap[pIdx]?.[m] || 0;
-      // 加算形式（またはマイルドな乗算）にして極端な差を防止
       const countScore = Math.log2(count + 2);
 
       const lastDate = lastAppearedDateMap[pIdx]?.[m] || 0;
@@ -1153,28 +1178,20 @@ function runForecast() {
       scoreSum += (countScore + dateScore + coappearanceBonus);
     });
 
-    // 指数関数（ソフトマックス）で確率用の重みに変換
     return { pattern, rawScore: Math.exp(scoreSum) };
   });
 
-  // スコアが高い順にソート
   scoredPatterns.sort((a, b) => b.rawScore - a.rawScore);
 
-  // -------------------------------------------------------------
-  // 【確率の正規化処理（合計がちょうど100%になるよう調整）】
-  // -------------------------------------------------------------
+  // 確率の正規化（合計がぴったり100%になる調整）
   const totalRawScore = scoredPatterns.reduce((sum, p) => sum + p.rawScore, 0) || 1;
   
-  // 仮のパーセンテージ計算
-  let remainingPct = 100;
-  const rankedPatterns = scoredPatterns.map((p, idx) => {
+  const rankedPatterns = scoredPatterns.map((p) => {
     let pct = Math.round((p.rawScore / totalRawScore) * 100);
-    // 0%になってしまわないよう最小1%を保証
     if (pct < 1) pct = 1; 
     return { pattern: p.pattern, probability: pct };
   });
 
-  // 端数調整（1番目のパターンの確率を微調整して合計を正確に100%にする）
   if (rankedPatterns.length > 0) {
     const currentSum = rankedPatterns.reduce((sum, p) => sum + p.probability, 0);
     const diff = 100 - currentSum;
@@ -1182,7 +1199,7 @@ function runForecast() {
   }
 
   // =============================================================
-  // 【④ 確率順の全組み合わせ表の描画（既存タブと幅・デザインを統一）】
+  // 【④ 確率順の全組み合わせ表の描画】
   // =============================================================
   const container = document.createElement('div');
   container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
@@ -1197,7 +1214,6 @@ function runForecast() {
             </th>
   `;
 
-  // 各ポジションのヘッダー（既存の一覧表と同じ min-w-[110px] と p-2.5）
   stage.fixed.forEach(fixedMember => {
     html += `
       <th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap">
@@ -1209,18 +1225,17 @@ function runForecast() {
   html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
 
   if (rankedPatterns.length === 0) {
-    html += `<tr><td colspan="${stage.fixed.length + 1}" class="p-4 text-center text-slate-500">条件を満たす有効な組み合わせが見つかりませんでした。</td></tr>`;
+    html += `<tr><td colspan="${stage.fixed.length + 1}" class="p-4 text-center text-slate-500">条件を満たす組み合わせが見つかりませんでした。</td></tr>`;
   } else {
     rankedPatterns.forEach(({ pattern, probability }) => {
       html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
       
-      // 確率セル
       html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[90px] font-bold text-pink-600">${probability}%</td>`;
 
-      // 各ポジションのメンバー名セル
       stage.fixed.forEach((_, pIdx) => {
         const assignedMember = pattern[pIdx] || "-";
         const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
+        // 経験者なら通常の文字色、柔軟枠で入った場合はアンバー（警告・別枠）カラーで表示
         const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
         
         html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
@@ -1233,7 +1248,7 @@ function runForecast() {
   html += `</tbody></table></div>`;
   container.innerHTML = html;
   positionsList.appendChild(container);
-  }
+}
 
     /* --- メンバー詳細・各種統計ロジック --- */
 
