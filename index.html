@@ -812,6 +812,37 @@ async function loadAllYearsScheduleData() {
       }
     }
 
+    
+function filterSchedule(filter, button) {
+  currentScheduleFilter = filter;
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.remove(
+      'active',
+      'bg-slate-800',
+      'text-white'
+    );
+    btn.classList.add(
+      'bg-slate-100',
+      'text-slate-600'
+    );
+  });
+
+  if (button) {
+    button.classList.add(
+      'active',
+      'bg-slate-800',
+      'text-white'
+    );
+    button.classList.remove(
+      'bg-slate-100',
+      'text-slate-600'
+    );
+  }
+
+  renderCalendar();
+}
+
     function getFilteredSchedules() {
       const year = document.getElementById("yearSelect").value;
       const month = document.getElementById("monthSelect").value;
