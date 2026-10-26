@@ -1052,66 +1052,115 @@ function filterSchedule(filter, button) {
       }, 200);
     }
 
+    
   function renderPositions() {
-  const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
+  const stage =
+    GLOBAL_STAGE_DATABASE[currentStageKey] ||
+    STAGE_DATABASE[currentStageKey];
+
   if (!stage) return;
+
   document.getElementById('posStageTitle').innerText = stage.name;
-  
+
   const headerTr = document.getElementById('positionTableHeader');
   const tbody = document.getElementById('positionTableBody');
-  headerTr.innerHTML = ''; tbody.innerHTML = '';
+
+  headerTr.innerHTML = '';
+  tbody.innerHTML = '';
+
   if (stage.fixed.length === 0) return;
-  const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
+
+  const validShows = stage.schedules.filter(
+    s => s.positionsArray && s.positionsArray.length > 0
+  );
+
   const rowDataList = [];
   let maxCols = 0;
+
   stage.fixed.forEach((fixedMember, colIdx) => {
     const experiencedSet = new Set();
+
     validShows.forEach(show => {
       if (show.positionsArray && show.positionsArray[colIdx]) {
         const m = show.positionsArray[colIdx].trim();
-        if (m && m !== "-" && m !== "－") experiencedSet.add(m);
+
+        if (m && m !== '-' && m !== '－') {
+          experiencedSet.add(m);
+        }
       }
     });
-    const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
-    
-    const initialMembers = fixedMember ? [fixedMember, ...undersOrdered] : undersOrdered;
-    const orderedMembers = initialMembers.filter(m => m && m !== "-" && m !== "－");
+
+    const undersOrdered = MASTER_MEMBER_ORDER.filter(
+      m => m !== fixedMember && experiencedSet.has(m)
+    );
+
+    const initialMembers = fixedMember
+      ? [fixedMember, ...undersOrdered]
+      : undersOrdered;
+
+    const orderedMembers = initialMembers.filter(
+      m => m && m !== '-' && m !== '－'
+    );
+
     if (orderedMembers.length > 0) {
-      rowDataList.push({ fixedMember, orderedMembers });
+      rowDataList.push({
+        fixedMember,
+        orderedMembers
+      });
+
       if (orderedMembers.length > maxCols) {
         maxCols = orderedMembers.length;
       }
     }
   });
+
+  // ヘッダーを描画
   for (let i = 0; i < maxCols; i++) {
     const th = document.createElement('th');
-    th.className = "p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap";
-    th.innerHTML = `<span class="text-xs font-bold text-slate-600">${i === 0 ? '初日' : `${i + 1}人目`}</span>`;
+
+    th.className =
+      'p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap';
+
+    th.innerHTML = `
+      <span class="text-xs font-bold text-slate-600">
+        ${i === 0 ? '初日' : `${i + 1}人目`}
+      </span>
+    `;
+
     headerTr.appendChild(th);
   }
+
+  // ポジションごとのメンバーを描画
   rowDataList.forEach(({ fixedMember, orderedMembers }) => {
     const tr = document.createElement('tr');
-    tr.className = "border-b border-slate-100 hover:bg-slate-50";
+
+    tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+
     for (let i = 0; i < maxCols; i++) {
       const td = document.createElement('td');
-      td.className = "p-2.5 text-center border-r border-slate-100 whitespace-nowrap";
-      
-    const member = orderedMembers[i];
 
-if (member && member !== "-" && member !== "－") {
-  const isOriginal = (member === fixedMember);
-  const className = isOriginal ? 'member-first' : 'member-under';
+      td.className =
+        'p-2.5 text-center border-r border-slate-100 whitespace-nowrap';
 
-  td.innerHTML = `
-    <span
-      class="${className}"
-      style="color: #000; font-weight: ${isOriginal ? 'bold' : 'normal'}; cursor: pointer;"
-      onclick="openMemberDetail('${escapeHtml(member)}')"
-    >${escapeHtml(member)}</span>
-  `;
-}
+      const member = orderedMembers[i];
 
-    tr.appendChild(td);
+      if (member && member !== '-' && member !== '－') {
+        const isOriginal = member === fixedMember;
+        const className = isOriginal ? 'member-first' : 'member-under';
+
+        td.innerHTML = `
+          <span
+            class="${className}"
+            style="color: #000; font-weight: ${isOriginal ? 'bold' : 'normal'}; cursor: pointer;"
+            onclick="openMemberDetail('${escapeHtml(member)}')"
+          >${escapeHtml(member)}</span>
+        `;
+      }
+
+      tr.appendChild(td);
+    }
+
+    // ★ 内側の for ループを閉じてから行を追加する
     tbody.appendChild(tr);
   });
 }
