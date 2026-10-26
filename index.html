@@ -1124,38 +1124,106 @@ function formatShortDate(dateStr) {
 }
 
 function renderDailyTable() {
-  const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
+  const stage =
+    GLOBAL_STAGE_DATABASE[currentStageKey] ||
+    STAGE_DATABASE[currentStageKey];
+
   const headerTr = document.getElementById('dailyTableHeader');
   const tbody = document.getElementById('dailyTableBody');
-  
-  headerTr.innerHTML = ''; tbody.innerHTML = '';
-  if (!stage || stage.fixed.length === 0) return;
-  const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
-  
+
+  headerTr.innerHTML = '';
+  tbody.innerHTML = '';
+
+  if (!stage || !stage.fixed || stage.fixed.length === 0) return;
+
+  const validShows = stage.schedules.filter(
+    s => s.positionsArray && s.positionsArray.length > 0
+  );
+
+  // 日付・時間順に出演履歴を確認する
+  const sortedShows = [...validShows].sort((a, b) =>
+    `${a.date || ''} ${a.time || ''}`.localeCompare(
+      `${b.date || ''} ${b.time || ''}`
+    )
+  );
+
+  // ポジションごとに、メンバーの初出演日を記録する
+  const firstAppearanceByPosition = stage.fixed.map((_, idx) => {
+    const firstAppearance = new Map();
+
+    sortedShows.forEach((show, showIndex) => {
+      const member = String(show.positionsArray[idx] || '').trim();
+
+      // 空欄や欠員記号は対象外
+      if (!member || member === '-' || member === '－') return;
+
+      if (!firstAppearance.has(member)) {
+        firstAppearance.set(member, showIndex);
+      }
+    });
+
+    return firstAppearance;
+  });
+
+  // 日付のヘッダー
   validShows.forEach(show => {
     const shortDateStr = formatShortDate(show.date);
     const th = document.createElement('th');
-    th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-pink-50 transition group";
+
+    th.className =
+      "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-pink-50 transition group";
+
     th.title = "クリックしてスケジュールを表示";
     th.onclick = () => jumpToSchedule(show.date, show.id);
-    th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(shortDateStr)}</span>`;
+
+    th.innerHTML = `
+      <span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">
+        ${escapeHtml(shortDateStr)}
+      </span>
+    `;
+
     headerTr.appendChild(th);
   });
+
+  // ポジションごとの出演メンバー
   stage.fixed.forEach((fixedMember, idx) => {
     const tr = document.createElement('tr');
+
     tr.className = "border-b border-slate-100 hover:bg-slate-50";
+
     validShows.forEach(show => {
-      const member = show.positionsArray[idx] || "";
+      const member = String(show.positionsArray[idx] || '').trim();
       const td = document.createElement('td');
+
       td.className = "p-2.5 text-center border-r border-slate-100";
-      
-      if (member) {
-        const isOriginal = member === fixedMember;
-        const className = isOriginal ? 'member-first' : 'member-under';
-        td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
+
+      if (member && member !== '-' && member !== '－') {
+        // このメンバーが、このポジションに初めて出演した日か判定
+        const firstShowIndex = sortedShows.findIndex(
+          s => s === show
+        );
+
+        const isFirstAppearance =
+          firstAppearanceByPosition[idx].get(member) === firstShowIndex;
+
+        // 初出演セルのみ薄い黄色で強調
+        if (isFirstAppearance) {
+          td.style.backgroundColor = '#FFFBEB';
+        }
+
+        // 全メンバー黒文字で統一
+        const span = document.createElement('span');
+        span.style.color = '#111827';
+        span.style.cursor = 'pointer';
+        span.textContent = member;
+        span.onclick = () => openMemberDetail(member);
+
+        td.appendChild(span);
       }
+
       tr.appendChild(td);
     });
+
     tbody.appendChild(tr);
   });
 }
