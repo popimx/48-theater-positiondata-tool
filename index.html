@@ -1096,14 +1096,22 @@ function filterSchedule(filter, button) {
       const td = document.createElement('td');
       td.className = "p-2.5 text-center border-r border-slate-100 whitespace-nowrap";
       
-      const member = orderedMembers[i];
-      if (member && member !== "-" && member !== "－") {
-        const isOriginal = (member === fixedMember);
-        const className = isOriginal ? 'member-first' : 'member-under';
-        td.innerHTML = `<span class="${className}" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>`;
-      }
-      tr.appendChild(td);
-    }
+    const member = orderedMembers[i];
+
+if (member && member !== "-" && member !== "－") {
+  const isOriginal = (member === fixedMember);
+  const className = isOriginal ? 'member-first' : 'member-under';
+
+  td.innerHTML = `
+    <span
+      class="${className}"
+      style="color: #000; font-weight: ${isOriginal ? 'bold' : 'normal'}; cursor: pointer;"
+      onclick="openMemberDetail('${escapeHtml(member)}')"
+    >${escapeHtml(member)}</span>
+  `;
+}
+
+    tr.appendChild(td);
     tbody.appendChild(tr);
   });
 }
