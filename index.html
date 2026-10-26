@@ -1801,10 +1801,13 @@ const validShows = stage.schedules.filter(
           }
           if (!posName) posName = memberName;
 
-          let stageTitleWithSub = `「${item.baseStageName}」`;
-          if (item.subTitle) {
-            stageTitleWithSub += `  ${item.subTitle}`;
-          }
+          
+let stageTitleWithSub = `「${item.baseStageName}」`;
+
+if (item.subTitle && item.subTitle.trim()) {
+  stageTitleWithSub += ` ${item.subTitle.trim()}`;
+}
+
 
           const div = document.createElement('div');
           div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
