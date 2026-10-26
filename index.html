@@ -1208,13 +1208,16 @@ function renderDailyTable() {
           s => s === show
         );
 
-        const isFirstAppearance =
-          firstAppearanceByPosition[idx].get(member) === firstShowIndex;
+  const isFirstAppearance =
+  firstAppearanceByPosition[idx].get(member) === firstShowIndex;
 
-        // 初出演セルのみ薄い黄色で強調
-        if (isFirstAppearance) {
-          td.style.backgroundColor = '#FFFBEB';
-        }
+const isInitialMember = member === stage.fixed[idx];
+
+// 初日メンバーのセルは塗りつぶさず、
+// それ以外のメンバーのポジション初出演セルは黄色で強調
+if (isFirstAppearance && !isInitialMember) {
+  td.style.backgroundColor = '#FFFBEB';
+}
 
         // 全メンバー黒文字で統一
         const span = document.createElement('span');
