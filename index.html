@@ -819,25 +819,22 @@ function filterSchedule(filter, button) {
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.classList.remove(
       'active',
-      'bg-slate-800',
-      'text-white'
-    );
-    btn.classList.add(
       'bg-slate-100',
-      'text-slate-600'
+      'text-slate-600',
+      'bg-slate-800',
+      'text-white',
+      'border',
+      'border-slate-200',
+      'hover:bg-slate-200'
     );
+
+    btn.className =
+      'filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200';
   });
 
   if (button) {
-    button.classList.add(
-      'active',
-      'bg-slate-800',
-      'text-white'
-    );
-    button.classList.remove(
-      'bg-slate-100',
-      'text-slate-600'
-    );
+    button.className =
+      'filter-btn active bg-black text-white border border-black text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap';
   }
 
   renderCalendar();
