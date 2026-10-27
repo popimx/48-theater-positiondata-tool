@@ -1368,7 +1368,8 @@ function getCircleNum(num) {
   return circles[num - 1] || `(${num})`;
 }
 
-    function runForecast() {
+    
+function runForecast() {
   const stage =
     GLOBAL_STAGE_DATABASE[currentStageKey] ||
     STAGE_DATABASE[currentStageKey];
@@ -1430,6 +1431,24 @@ function getCircleNum(num) {
   );
 
   // =============================================================
+  // 0. 過去の履歴を抽出
+  //
+  // ・同じ公演の全履歴を対象にする
+  // ・未来の公演は実績に含めない
+  // =============================================================
+
+  const historyNow = Date.now();
+
+  const historyShows = validShows.filter(show => {
+    const time = new Date(show.date).getTime();
+
+    return Number.isFinite(time) && time <= historyNow;
+  });
+
+  console.log("全スケジュール数:", validShows.length);
+  console.log("過去の履歴数:", historyShows.length);
+
+  // =============================================================
   // 1. 全メンバーの出演状況グリッド
   // =============================================================
 
@@ -1466,10 +1485,11 @@ function getCircleNum(num) {
   const lastAppearedDateMap = {};
 
   stage.fixed.forEach((fixedMember, pIdx) => {
+    // 過去の履歴だけを経験者の抽出に使用
     const orderedUnders = getOrderedExperiencedMembers(
       pIdx,
       stage.fixed,
-      validShows
+      historyShows
     );
 
     initialAttendingExpMap[pIdx] = [];
@@ -1481,19 +1501,21 @@ function getCircleNum(num) {
     ];
 
     allExpForPos.forEach(member => {
-      const showsWithMember = validShows.filter(
+      const showsWithMember = historyShows.filter(
         show =>
           show.positionsArray &&
           show.positionsArray[pIdx] === member
       );
 
+      // 過去のポジション出演回数
       appearanceCountMap[pIdx][member] =
         showsWithMember.length;
 
+      // 過去の最終出演日
       if (showsWithMember.length > 0) {
         const sortedDates = showsWithMember
           .map(show => new Date(show.date).getTime())
-          .filter(time => !isNaN(time))
+          .filter(time => Number.isFinite(time))
           .sort((a, b) => b - a);
 
         lastAppearedDateMap[pIdx][member] =
@@ -1502,10 +1524,9 @@ function getCircleNum(num) {
         lastAppearedDateMap[pIdx][member] = 0;
       }
 
+      // 今回の出演メンバーのうち、経験者を登録
       if (inputSet.has(member)) {
-        if (
-          !initialAttendingExpMap[pIdx].includes(member)
-        ) {
+        if (!initialAttendingExpMap[pIdx].includes(member)) {
           initialAttendingExpMap[pIdx].push(member);
         }
       }
@@ -1617,8 +1638,6 @@ function getCircleNum(num) {
     let lowerBound = 0;
 
     for (const pIdx of remainingPositions) {
-      // 入力メンバーが残っていない場合、
-      // そのポジションにはメンバーを割り当てられない
       const availableMembers = inputMemberList.filter(
         member => !usedMembers.has(member)
       );
@@ -1630,8 +1649,6 @@ function getCircleNum(num) {
       const availableExps =
         getAvailableExperiencedMembers(pIdx);
 
-      // 残りのメンバーに経験者がいなければ、
-      // このポジションには少なくとも1人の新ポジが必要
       if (availableExps.length === 0) {
         lowerBound++;
       }
@@ -1645,16 +1662,13 @@ function getCircleNum(num) {
     const key = makePatternKey(pattern);
 
     if (newPosCount < minNewPosCount) {
-      // これまでより新ポジ数が少ないパターンを発見
       minNewPosCount = newPosCount;
       bestPatterns.clear();
       bestPatterns.set(key, pattern);
-
       return;
     }
 
     if (newPosCount === minNewPosCount) {
-      // 最小値と同じ新ポジ数のパターンをすべて保持
       bestPatterns.set(key, pattern);
     }
   }
@@ -1663,13 +1677,10 @@ function getCircleNum(num) {
     remainingPositions,
     currentNewPosCount
   ) {
-    // 現時点ですでに最小値を超えているなら探索不要
     if (currentNewPosCount > minNewPosCount) {
       return;
     }
 
-    // 残りのポジションをすべて新ポジで埋めても
-    // 現在の最小値を下回れない場合は枝刈りする
     const lowerBound =
       getMinimumAdditionalNewPositions(
         remainingPositions
@@ -1682,7 +1693,6 @@ function getCircleNum(num) {
       return;
     }
 
-    // 全ポジションの割り当てが完了
     if (remainingPositions.length === 0) {
       saveCompletedPattern(currentNewPosCount);
       return;
@@ -1693,9 +1703,6 @@ function getCircleNum(num) {
     const nextRemainingPositions =
       remainingPositions.filter(idx => idx !== pIdx);
 
-    // 経験者以外も含め、未使用の入力メンバーを候補にする。
-    // 経験者を先に探索するが、経験者だけに限定しない。
-    // これにより、別ポジションに経験者を残す組み合わせも調べられる。
     const candidates = inputMemberList
       .filter(member => !usedMembers.has(member))
       .sort((a, b) => {
@@ -1713,7 +1720,7 @@ function getCircleNum(num) {
           inputMemberList.indexOf(b);
       });
 
-    // 入力メンバーが足りない場合は「-」で空欄扱いにする
+    // 入力メンバーが足りない場合は空欄扱い
     if (candidates.length === 0) {
       currentAssignment[pIdx] = "-";
 
@@ -1734,7 +1741,6 @@ function getCircleNum(num) {
       const nextNewPosCount =
         currentNewPosCount + (isExperienced ? 0 : 1);
 
-      // この割り当てだけで最小値を超えるならスキップ
       if (nextNewPosCount > minNewPosCount) {
         continue;
       }
@@ -1752,10 +1758,7 @@ function getCircleNum(num) {
     }
   }
 
-  // 全ポジションを対象に探索する。
-  // 一意候補を先に確定してしまうと、
-  // 最小パターンの一部を失う場合があるため、
-  // 確定枠の事前固定は行わない。
+  // 全ポジションを対象に探索
   if (positionCount > 0) {
     searchAllPatterns(
       Array.from(
@@ -1786,27 +1789,27 @@ function getCircleNum(num) {
     );
   }
 
-  console.log(
-    "最小新ポジ数:",
-    minNewPosCount
-  );
-
-  console.log(
-    "最小新ポジ数のパターン数:",
-    rawPatterns.length
-  );
+  console.log("最小新ポジ数:", minNewPosCount);
+  console.log("最小新ポジ数のパターン数:", rawPatterns.length);
 
   // =============================================================
-  // 4. 最小新ポジ数のパターンだけをスコア計算する
+  // 4. 最小新ポジ数のパターンをスコア計算
+  //
+  // ・経験回数
+  // ・最終出演日の新しさ
+  // ・同じ公演でのポジション配置実績
   // =============================================================
 
   const scoredPatterns = rawPatterns.map(pattern => {
     let scoreSum = 1.0;
 
+    // -----------------------------------------------------------
+    // 4-1. ポジション経験回数と最終出演日の新しさ
+    // -----------------------------------------------------------
+
     Object.entries(pattern).forEach(([pIdxStr, member]) => {
       const pIdx = parseInt(pIdxStr, 10);
 
-      // 空欄はスコア計算の対象外
       if (!member || member === "-") {
         return;
       }
@@ -1818,51 +1821,105 @@ function getCircleNum(num) {
       const count =
         appearanceCountMap[pIdx]?.[member] || 0;
 
+      // 経験者：基本2点 + 出演回数1回につき0.5点
+      // 新ポジション：0.2点
       const posScore = isExp
         ? 2.0 + count * 0.5
         : 0.2;
 
+      // 最終出演日の新しさを指数関数で評価
+      // 直近ほど高く、日数が経つほど緩やかに減点
       const lastDate =
         lastAppearedDateMap[pIdx]?.[member] || 0;
 
-      const dateScore = lastDate > 0 ? 0.1 : 0;
+      let dateScore = 0;
 
-      let coappearanceBonus = 0;
+      if (lastDate > 0) {
+        const daysSinceLastAppearance = Math.max(
+          0,
+          (historyNow - lastDate) / (1000 * 60 * 60 * 24)
+        );
 
-      validShows.forEach(show => {
-        if (
-          show.positionsArray &&
-          show.positionsArray[pIdx] === member
-        ) {
-          Object.entries(pattern).forEach(
-            ([otherPIdxStr, otherMember]) => {
-              const otherPIdx =
-                parseInt(otherPIdxStr, 10);
-
-              if (
-                otherPIdx !== pIdx &&
-                show.positionsArray[otherPIdx] === otherMember
-              ) {
-                coappearanceBonus += 0.05;
-              }
-            }
+        dateScore =
+          1.5 * Math.exp(
+            -daysSinceLastAppearance / 180
           );
-        }
-      });
+      }
 
-      scoreSum +=
-        posScore + dateScore + coappearanceBonus;
+      scoreSum += posScore + dateScore;
     });
+
+    // -----------------------------------------------------------
+    // 4-2. 過去の配置パターン実績を評価
+    //
+    // 例：
+    // パターンA：ポジション1=A、ポジション2=B
+    // パターンB：ポジション1=B、ポジション2=A
+    //
+    // 同じ公演の過去履歴において、各ポジションの
+    // 組み合わせが成立した回数を集計する。
+    // 1回につき0.5点を加算する。
+    // -----------------------------------------------------------
+
+    let patternHistoryScore = 0;
+
+    for (
+      let pIdx = 0;
+      pIdx < stage.fixed.length;
+      pIdx++
+    ) {
+      const member = pattern[pIdx];
+
+      if (!member || member === "-") {
+        continue;
+      }
+
+      for (
+        let otherPIdx = pIdx + 1;
+        otherPIdx < stage.fixed.length;
+        otherPIdx++
+      ) {
+        const otherMember = pattern[otherPIdx];
+
+        if (!otherMember || otherMember === "-") {
+          continue;
+        }
+
+        const pairCount = historyShows.filter(show => {
+          const positions = show.positionsArray;
+
+          return (
+            positions &&
+            positions[pIdx] === member &&
+            positions[otherPIdx] === otherMember
+          );
+        }).length;
+
+        patternHistoryScore += pairCount * 0.5;
+      }
+    }
+
+    scoreSum += patternHistoryScore;
 
     return {
       pattern,
-      rawScore: scoreSum
+      rawScore: scoreSum,
+      patternHistoryScore
     };
   });
 
   // スコアの高い順に並べる
   scoredPatterns.sort(
     (a, b) => b.rawScore - a.rawScore
+  );
+
+  console.log(
+    "パターン別スコア:",
+    scoredPatterns.map(item => ({
+      pattern: item.pattern,
+      rawScore: item.rawScore,
+      patternHistoryScore: item.patternHistoryScore
+    }))
   );
 
   // =============================================================
