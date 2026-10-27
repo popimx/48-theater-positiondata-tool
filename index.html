@@ -1514,26 +1514,46 @@ const validShows = stage.schedules.filter(
 
   let subPatterns = [];
 
+  // 組み合わせが増えすぎて処理が止まるのを防ぐ
+  const MAX_SUB_PATTERNS = 500;
+
   function searchSubPermutations(subIndex, currentSubAssignment) {
+    // 上限に達したら、それ以上の探索を終了
+    if (subPatterns.length >= MAX_SUB_PATTERNS) {
+      return;
+    }
+
     if (subIndex === unassignedPIdxs.length) {
       subPatterns.push({ ...currentSubAssignment });
       return;
     }
+
     const pIdx = unassignedPIdxs[subIndex];
-    
+
     let candidates = (initialAttendingExpMap[pIdx] || []).filter(
-      m => inputSet.has(m) && !Object.values(currentSubAssignment).includes(m) && !confirmedMembers.has(m)
+      m =>
+        inputSet.has(m) &&
+        !Object.values(currentSubAssignment).includes(m) &&
+        !confirmedMembers.has(m)
     );
 
     if (candidates.length === 0) {
-      candidates = unassignedMembers.filter(m => !Object.values(currentSubAssignment).includes(m));
+      candidates = unassignedMembers.filter(
+        m => !Object.values(currentSubAssignment).includes(m)
+      );
     }
 
-    candidates.forEach(m => {
+    for (const m of candidates) {
+      if (subPatterns.length >= MAX_SUB_PATTERNS) {
+        break;
+      }
+
       currentSubAssignment[pIdx] = m;
+
       searchSubPermutations(subIndex + 1, currentSubAssignment);
+
       delete currentSubAssignment[pIdx];
-    });
+    }
   }
 
   if (unassignedPIdxs.length > 0) {
@@ -1542,15 +1562,20 @@ const validShows = stage.schedules.filter(
     subPatterns.push({});
   }
 
-  let rawPatterns = subPatterns.map(subP => {
-    return { ...confirmedAssignments, ...subP };
-  });
+  let rawPatterns = subPatterns.map(subP => ({
+    ...confirmedAssignments,
+    ...subP
+  }));
 
   if (rawPatterns.length === 0) {
-    let fallback = { ...confirmedAssignments };
+    const fallback = { ...confirmedAssignments };
+
     stage.fixed.forEach((_, pIdx) => {
-      if (fallback[pIdx] === undefined) fallback[pIdx] = inputMemberList[pIdx] || "-";
+      if (fallback[pIdx] === undefined) {
+        fallback[pIdx] = inputMemberList[pIdx] || "-";
+      }
     });
+
     rawPatterns.push(fallback);
   }
 
