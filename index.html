@@ -1368,347 +1368,629 @@ function getCircleNum(num) {
   return circles[num - 1] || `(${num})`;
 }
 
-  function runForecast() {
-  const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
+    function runForecast() {
+  const stage =
+    GLOBAL_STAGE_DATABASE[currentStageKey] ||
+    STAGE_DATABASE[currentStageKey];
 
   if (!stage) {
     alert("先に公演を選択してください。");
     return;
   }
 
-  
-const rawInput = document.getElementById('forecastInputText').value;
+  const rawInput =
+    document.getElementById('forecastInputText').value;
 
-const inputNames = rawInput
-  .split(/[\s・、,\n/]+/)
-  .map(s => s.trim())
-  .filter(s => s.length > 0 && s !== "-" && s !== "－");
+  const inputNames = rawInput
+    .split(/[\s・、,\n/]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && s !== "-" && s !== "－");
 
-// 入力メンバーからグループを推定
-const detectedGroup = detectGroupFromMembers(inputNames);
+  // 入力メンバーからグループを推定
+  const detectedGroup = detectGroupFromMembers(inputNames);
 
-// 選択中の公演があれば、そのグループを優先
-// 公演が取得できない場合は、入力メンバーから判定
-const forecastGroup =
-  normalizeGroupName(stage.group) ||
-  detectedGroup ||
-  currentMemberOrderGroup ||
-  "AKB48";
+  // 選択中の公演のグループを優先
+  const forecastGroup =
+    normalizeGroupName(stage.group) ||
+    detectedGroup ||
+    currentMemberOrderGroup ||
+    "AKB48";
 
-// 使用するメンバー順を切り替える
-setMasterMemberOrder(forecastGroup);
+  // 使用するメンバー順を切り替える
+  setMasterMemberOrder(forecastGroup);
 
-console.log("予想対象グループ:", forecastGroup);
-console.log("使用するメンバー順:", MASTER_MEMBER_ORDER);
+  console.log("予想対象グループ:", forecastGroup);
+  console.log("使用するメンバー順:", MASTER_MEMBER_ORDER);
 
-const inputSet = new Set(inputNames);
-const inputMemberList = Array.from(new Set(inputNames));
+  const inputSet = new Set(inputNames);
+  const inputMemberList = Array.from(new Set(inputNames));
 
-const resultArea = document.getElementById('forecastResultArea');
-const allMembersGrid = document.getElementById('forecastAllMembersGrid');
-let expListArea = document.getElementById('forecastExpListArea');
-const positionsList = document.getElementById('forecastPositionsList');
+  const resultArea =
+    document.getElementById('forecastResultArea');
 
-resultArea.classList.remove('hidden');
-allMembersGrid.innerHTML = '';
-positionsList.innerHTML = '';
-if (expListArea) expListArea.innerHTML = '';
+  const allMembersGrid =
+    document.getElementById('forecastAllMembersGrid');
 
-const validShows = stage.schedules.filter(
-  s => s.positionsArray && s.positionsArray.length > 0
-);
+  const expListArea =
+    document.getElementById('forecastExpListArea');
 
-  // 1. 全メンバーの出演状況グリッド描画
+  const positionsList =
+    document.getElementById('forecastPositionsList');
+
+  resultArea.classList.remove('hidden');
+  allMembersGrid.innerHTML = '';
+  positionsList.innerHTML = '';
+
+  if (expListArea) {
+    expListArea.innerHTML = '';
+  }
+
+  const validShows = (stage.schedules || []).filter(
+    s => s.positionsArray && s.positionsArray.length > 0
+  );
+
+  // =============================================================
+  // 1. 全メンバーの出演状況グリッド
+  // =============================================================
+
   MASTER_MEMBER_ORDER.forEach(name => {
     if (name === "-" || name === "－") return;
 
     const isAttending = inputSet.has(name);
     const div = document.createElement('div');
+
     div.className =
       `p-2 rounded border flex items-center justify-between ` +
-      `${isAttending ? 'bg-pink-50 border-pink-300 font-bold text-pink-700' : 'bg-white border-slate-200 text-slate-600'}`;
+      `${isAttending
+        ? 'bg-pink-50 border-pink-300 font-bold text-pink-700'
+        : 'bg-white border-slate-200 text-slate-600'}`;
+
     div.innerHTML = `
       <span>${escapeHtml(name)}</span>
-      <span class="text-[10px] px-1.5 py-0.5 rounded ${isAttending ? 'bg-pink-600 text-white' : 'bg-slate-100 text-slate-400'}">${isAttending ? '出演' : '不在'}</span>
+      <span class="text-[10px] px-1.5 py-0.5 rounded ${
+        isAttending
+          ? 'bg-pink-600 text-white'
+          : 'bg-slate-100 text-slate-400'
+      }">${isAttending ? '出演' : '不在'}</span>
     `;
+
     allMembersGrid.appendChild(div);
   });
 
-  // 2. 各ポジションのデータ構築
-  const initialAttendingExpMap = {}; 
-  const appearanceCountMap = {};    
-  const lastAppearedDateMap = {};   
+  // =============================================================
+  // 2. 各ポジションの経験者・出演回数・最終出演日を構築
+  // =============================================================
 
-  stage.fixed.forEach((fM, pIdx) => {
-    const orderedUnders = getOrderedExperiencedMembers(pIdx, stage.fixed, validShows);
+  const initialAttendingExpMap = {};
+  const appearanceCountMap = {};
+  const lastAppearedDateMap = {};
+
+  stage.fixed.forEach((fixedMember, pIdx) => {
+    const orderedUnders = getOrderedExperiencedMembers(
+      pIdx,
+      stage.fixed,
+      validShows
+    );
+
     initialAttendingExpMap[pIdx] = [];
     appearanceCountMap[pIdx] = {};
     lastAppearedDateMap[pIdx] = {};
 
-    const allExpForPos = [...new Set([fM, ...orderedUnders])];
+    const allExpForPos = [
+      ...new Set([fixedMember, ...orderedUnders])
+    ];
 
-    allExpForPos.forEach(m => {
-      const showsWithMember = validShows.filter(s => s.positionsArray && s.positionsArray[pIdx] === m);
-      appearanceCountMap[pIdx][m] = showsWithMember.length;
+    allExpForPos.forEach(member => {
+      const showsWithMember = validShows.filter(
+        show =>
+          show.positionsArray &&
+          show.positionsArray[pIdx] === member
+      );
+
+      appearanceCountMap[pIdx][member] =
+        showsWithMember.length;
 
       if (showsWithMember.length > 0) {
-        const sortedDates = showsWithMember.map(s => new Date(s.date).getTime()).filter(t => !isNaN(t)).sort((a, b) => b - a);
-        lastAppearedDateMap[pIdx][m] = sortedDates.length > 0 ? sortedDates[0] : 0;
+        const sortedDates = showsWithMember
+          .map(show => new Date(show.date).getTime())
+          .filter(time => !isNaN(time))
+          .sort((a, b) => b - a);
+
+        lastAppearedDateMap[pIdx][member] =
+          sortedDates.length > 0 ? sortedDates[0] : 0;
       } else {
-        lastAppearedDateMap[pIdx][m] = 0;
+        lastAppearedDateMap[pIdx][member] = 0;
       }
 
-      if (inputSet.has(m)) {
-        if (!initialAttendingExpMap[pIdx].includes(m)) {
-          initialAttendingExpMap[pIdx].push(m);
+      if (inputSet.has(member)) {
+        if (
+          !initialAttendingExpMap[pIdx].includes(member)
+        ) {
+          initialAttendingExpMap[pIdx].push(member);
         }
       }
     });
   });
 
-  // 2.5 ポジション経験者の一覧の描画
+  // =============================================================
+  // 2.5 ポジション経験者の一覧
+  // =============================================================
+
   if (expListArea) {
     const expListContainer = document.createElement('div');
-    expListContainer.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-2 mb-4";
-    let expListHtml = `<div class="font-bold text-slate-800 text-sm mb-2">【ポジション経験者の一覧】</div><div class="space-y-1 text-xs text-slate-700 font-mono">`;
+
+    expListContainer.className =
+      "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-2 mb-4";
+
+    let expListHtml = `
+      <div class="font-bold text-slate-800 text-sm mb-2">
+        【ポジション経験者の一覧】
+      </div>
+      <div class="space-y-1 text-xs text-slate-700 font-mono">
+    `;
 
     stage.fixed.forEach((fixedMember, pIdx) => {
       const rawExps = initialAttendingExpMap[pIdx] || [];
-      const sortedExps = inputMemberList.filter(m => rawExps.includes(m));
-      const membersStr = sortedExps.length > 0 ? sortedExps.join('　') : "（経験者なし）";
-      expListHtml += `<div><span class="font-bold">${fixedMember}ポジ</span>　${membersStr}</div>`;
+
+      const sortedExps = inputMemberList.filter(
+        member => rawExps.includes(member)
+      );
+
+      const membersStr =
+        sortedExps.length > 0
+          ? sortedExps.join('　')
+          : "（経験者なし）";
+
+      expListHtml += `
+        <div>
+          <span class="font-bold">${escapeHtml(fixedMember)}ポジ</span>
+          ${escapeHtml(membersStr)}
+        </div>
+      `;
     });
 
     expListHtml += `</div>`;
+
     expListContainer.innerHTML = expListHtml;
     expListArea.appendChild(expListContainer);
   }
 
   // =============================================================
-  // 【効率的な組み合わせ探索（確定枠の事前固定）】
+  // 3. 組み合わせ探索
+  //
+  // ・同じメンバーの複数ポジションへの重複割り当てを禁止
+  // ・経験者を優先して探索
+  // ・経験者以外の割り当ても探索する
+  // ・新ポジ数の最小値を更新し、最小パターンをすべて保持
+  // ・500件で打ち切る上限は設けない
   // =============================================================
-  const confirmedAssignments = {};
-  const confirmedMembers = new Set();
 
-  let changed = true;
-  while (changed) {
-    changed = false;
-    stage.fixed.forEach((fixedMember, pIdx) => {
-      if (confirmedAssignments[pIdx] !== undefined) return;
+  const positionCount = stage.fixed.length;
 
-      const availableExps = (initialAttendingExpMap[pIdx] || []).filter(
-        m => inputSet.has(m) && !confirmedMembers.has(m)
-      );
+  let minNewPosCount = Infinity;
 
-      if (availableExps.length === 1) {
-        const m = availableExps[0];
-        confirmedAssignments[pIdx] = m;
-        confirmedMembers.add(m);
-        changed = true;
-      }
-    });
+  // 最小の新ポジ数に該当するパターンだけを保存する
+  const bestPatterns = new Map();
+
+  const currentAssignment = {};
+  const usedMembers = new Set();
+
+  // パターンを一意に識別するキー
+  function makePatternKey(pattern) {
+    return stage.fixed
+      .map((_, pIdx) => `${pIdx}:${pattern[pIdx] || "-"}`)
+      .join("|");
   }
 
-  const unassignedPIdxs = stage.fixed.map((_, idx) => idx).filter(idx => confirmedAssignments[idx] === undefined);
-  const unassignedMembers = inputMemberList.filter(m => !confirmedMembers.has(m));
-
-  let subPatterns = [];
-
-  // 組み合わせが増えすぎて処理が止まるのを防ぐ
-  const MAX_SUB_PATTERNS = 500;
-
-  function searchSubPermutations(subIndex, currentSubAssignment) {
-    // 上限に達したら、それ以上の探索を終了
-    if (subPatterns.length >= MAX_SUB_PATTERNS) {
-      return;
-    }
-
-    if (subIndex === unassignedPIdxs.length) {
-      subPatterns.push({ ...currentSubAssignment });
-      return;
-    }
-
-    const pIdx = unassignedPIdxs[subIndex];
-
-    let candidates = (initialAttendingExpMap[pIdx] || []).filter(
-      m =>
-        inputSet.has(m) &&
-        !Object.values(currentSubAssignment).includes(m) &&
-        !confirmedMembers.has(m)
+  // ポジションごとの経験者を取得
+  function getAvailableExperiencedMembers(pIdx) {
+    return (initialAttendingExpMap[pIdx] || []).filter(
+      member =>
+        inputSet.has(member) &&
+        !usedMembers.has(member)
     );
+  }
 
-    if (candidates.length === 0) {
-      candidates = unassignedMembers.filter(
-        m => !Object.values(currentSubAssignment).includes(m)
-      );
+  // 探索するポジションを選ぶ
+  // 未割り当ての経験者候補が少ないポジションから処理する
+  function selectNextPosition(remainingPositions) {
+    let selectedPosition = remainingPositions[0];
+    let selectedCandidateCount = Infinity;
+
+    for (const pIdx of remainingPositions) {
+      const candidates =
+        getAvailableExperiencedMembers(pIdx);
+
+      if (candidates.length < selectedCandidateCount) {
+        selectedCandidateCount = candidates.length;
+        selectedPosition = pIdx;
+      }
     }
 
-    for (const m of candidates) {
-      if (subPatterns.length >= MAX_SUB_PATTERNS) {
-        break;
+    return selectedPosition;
+  }
+
+  // 残りポジションに必要となる新ポジ数の下限を計算
+  function getMinimumAdditionalNewPositions(
+    remainingPositions
+  ) {
+    let lowerBound = 0;
+
+    for (const pIdx of remainingPositions) {
+      // 入力メンバーが残っていない場合、
+      // そのポジションにはメンバーを割り当てられない
+      const availableMembers = inputMemberList.filter(
+        member => !usedMembers.has(member)
+      );
+
+      if (availableMembers.length === 0) {
+        continue;
       }
 
-      currentSubAssignment[pIdx] = m;
+      const availableExps =
+        getAvailableExperiencedMembers(pIdx);
 
-      searchSubPermutations(subIndex + 1, currentSubAssignment);
+      // 残りのメンバーに経験者がいなければ、
+      // このポジションには少なくとも1人の新ポジが必要
+      if (availableExps.length === 0) {
+        lowerBound++;
+      }
+    }
 
-      delete currentSubAssignment[pIdx];
+    return lowerBound;
+  }
+
+  function saveCompletedPattern(newPosCount) {
+    const pattern = { ...currentAssignment };
+    const key = makePatternKey(pattern);
+
+    if (newPosCount < minNewPosCount) {
+      // これまでより新ポジ数が少ないパターンを発見
+      minNewPosCount = newPosCount;
+      bestPatterns.clear();
+      bestPatterns.set(key, pattern);
+
+      return;
+    }
+
+    if (newPosCount === minNewPosCount) {
+      // 最小値と同じ新ポジ数のパターンをすべて保持
+      bestPatterns.set(key, pattern);
     }
   }
 
-  if (unassignedPIdxs.length > 0) {
-    searchSubPermutations(0, {});
-  } else {
-    subPatterns.push({});
+  function searchAllPatterns(
+    remainingPositions,
+    currentNewPosCount
+  ) {
+    // 現時点ですでに最小値を超えているなら探索不要
+    if (currentNewPosCount > minNewPosCount) {
+      return;
+    }
+
+    // 残りのポジションをすべて新ポジで埋めても
+    // 現在の最小値を下回れない場合は枝刈りする
+    const lowerBound =
+      getMinimumAdditionalNewPositions(
+        remainingPositions
+      );
+
+    if (
+      currentNewPosCount + lowerBound >
+      minNewPosCount
+    ) {
+      return;
+    }
+
+    // 全ポジションの割り当てが完了
+    if (remainingPositions.length === 0) {
+      saveCompletedPattern(currentNewPosCount);
+      return;
+    }
+
+    const pIdx = selectNextPosition(remainingPositions);
+
+    const nextRemainingPositions =
+      remainingPositions.filter(idx => idx !== pIdx);
+
+    // 経験者以外も含め、未使用の入力メンバーを候補にする。
+    // 経験者を先に探索するが、経験者だけに限定しない。
+    // これにより、別ポジションに経験者を残す組み合わせも調べられる。
+    const candidates = inputMemberList
+      .filter(member => !usedMembers.has(member))
+      .sort((a, b) => {
+        const aIsExp =
+          (initialAttendingExpMap[pIdx] || []).includes(a);
+
+        const bIsExp =
+          (initialAttendingExpMap[pIdx] || []).includes(b);
+
+        if (aIsExp !== bIsExp) {
+          return aIsExp ? -1 : 1;
+        }
+
+        return inputMemberList.indexOf(a) -
+          inputMemberList.indexOf(b);
+      });
+
+    // 入力メンバーが足りない場合は「-」で空欄扱いにする
+    if (candidates.length === 0) {
+      currentAssignment[pIdx] = "-";
+
+      searchAllPatterns(
+        nextRemainingPositions,
+        currentNewPosCount
+      );
+
+      delete currentAssignment[pIdx];
+      return;
+    }
+
+    for (const member of candidates) {
+      const isExperienced =
+        (initialAttendingExpMap[pIdx] || [])
+          .includes(member);
+
+      const nextNewPosCount =
+        currentNewPosCount + (isExperienced ? 0 : 1);
+
+      // この割り当てだけで最小値を超えるならスキップ
+      if (nextNewPosCount > minNewPosCount) {
+        continue;
+      }
+
+      currentAssignment[pIdx] = member;
+      usedMembers.add(member);
+
+      searchAllPatterns(
+        nextRemainingPositions,
+        nextNewPosCount
+      );
+
+      usedMembers.delete(member);
+      delete currentAssignment[pIdx];
+    }
   }
 
-  let rawPatterns = subPatterns.map(subP => ({
-    ...confirmedAssignments,
-    ...subP
-  }));
+  // 全ポジションを対象に探索する。
+  // 一意候補を先に確定してしまうと、
+  // 最小パターンの一部を失う場合があるため、
+  // 確定枠の事前固定は行わない。
+  if (positionCount > 0) {
+    searchAllPatterns(
+      Array.from(
+        { length: positionCount },
+        (_, idx) => idx
+      ),
+      0
+    );
+  } else {
+    minNewPosCount = 0;
+    bestPatterns.set("empty", {});
+  }
 
+  let rawPatterns = Array.from(bestPatterns.values());
+
+  // 念のためのフォールバック
   if (rawPatterns.length === 0) {
-    const fallback = { ...confirmedAssignments };
+    const fallback = {};
 
     stage.fixed.forEach((_, pIdx) => {
-      if (fallback[pIdx] === undefined) {
-        fallback[pIdx] = inputMemberList[pIdx] || "-";
-      }
+      fallback[pIdx] = inputMemberList[pIdx] || "-";
     });
 
-    rawPatterns.push(fallback);
+    rawPatterns = [fallback];
+
+    console.warn(
+      "通常の組み合わせ探索で候補が得られなかったため、フォールバックを使用しました。"
+    );
   }
 
-  // =============================================================
-  // 【新ルールに基づく厳格なフィルタリング】
-  // =============================================================
-  // 各パターンの「新ポジ（そのポジションの経験がない人）の人数」を算出
-  const evaluatedPatterns = rawPatterns.map(pattern => {
-    let newPosCount = 0;
-    Object.entries(pattern).forEach(([pIdxStr, m]) => {
-      const pIdx = parseInt(pIdxStr, 10);
-      const isExp = (initialAttendingExpMap[pIdx] || []).includes(m);
-      if (!isExp) {
-        newPosCount++;
-      }
-    });
-    return { pattern, newPosCount };
-  });
+  console.log(
+    "最小新ポジ数:",
+    minNewPosCount
+  );
 
-  // 全パターンの中での「新ポジ数の最小値」を特定
-  let minNewPos = Math.min(...evaluatedPatterns.map(p => p.newPosCount));
-
-  let filteredPatterns = [];
-  if (minNewPos === 0) {
-    // ルール1：経験者だけで組めるパターン（新ポジ数0）が存在するなら、それらをすべて採用
-    filteredPatterns = evaluatedPatterns.filter(p => p.newPosCount === 0);
-  } else {
-    // ルール2：経験者だけでは組めないなら、新ポジ数が最小のパターンをすべて採用
-    filteredPatterns = evaluatedPatterns.filter(p => p.newPosCount === minNewPos);
-  }
+  console.log(
+    "最小新ポジ数のパターン数:",
+    rawPatterns.length
+  );
 
   // =============================================================
-  // 【スコア計算 ＆ 確率算出（採用されたパターン内での比較）】
+  // 4. 最小新ポジ数のパターンだけをスコア計算する
   // =============================================================
-  const scoredPatterns = filteredPatterns.map(({ pattern }) => {
+
+  const scoredPatterns = rawPatterns.map(pattern => {
     let scoreSum = 1.0;
 
-    Object.entries(pattern).forEach(([pIdxStr, m]) => {
+    Object.entries(pattern).forEach(([pIdxStr, member]) => {
       const pIdx = parseInt(pIdxStr, 10);
-      const isExp = (initialAttendingExpMap[pIdx] || []).includes(m);
-      const count = appearanceCountMap[pIdx]?.[m] || 0;
 
-      let posScore = isExp ? (2.0 + count * 0.5) : 0.2;
-      const lastDate = lastAppearedDateMap[pIdx]?.[m] || 0;
+      // 空欄はスコア計算の対象外
+      if (!member || member === "-") {
+        return;
+      }
+
+      const isExp =
+        (initialAttendingExpMap[pIdx] || [])
+          .includes(member);
+
+      const count =
+        appearanceCountMap[pIdx]?.[member] || 0;
+
+      const posScore = isExp
+        ? 2.0 + count * 0.5
+        : 0.2;
+
+      const lastDate =
+        lastAppearedDateMap[pIdx]?.[member] || 0;
+
       const dateScore = lastDate > 0 ? 0.1 : 0;
 
       let coappearanceBonus = 0;
+
       validShows.forEach(show => {
-        if (show.positionsArray && show.positionsArray[pIdx] === m) {
-          Object.entries(pattern).forEach(([otherPIdxStr, otherM]) => {
-            const otherPIdx = parseInt(otherPIdxStr, 10);
-            if (otherPIdx !== pIdx && show.positionsArray[otherPIdx] === otherM) {
-              coappearanceBonus += 0.05;
+        if (
+          show.positionsArray &&
+          show.positionsArray[pIdx] === member
+        ) {
+          Object.entries(pattern).forEach(
+            ([otherPIdxStr, otherMember]) => {
+              const otherPIdx =
+                parseInt(otherPIdxStr, 10);
+
+              if (
+                otherPIdx !== pIdx &&
+                show.positionsArray[otherPIdx] === otherMember
+              ) {
+                coappearanceBonus += 0.05;
+              }
             }
-          });
+          );
         }
       });
 
-      scoreSum += (posScore + dateScore + coappearanceBonus);
+      scoreSum +=
+        posScore + dateScore + coappearanceBonus;
     });
 
-    return { pattern, rawScore: scoreSum };
+    return {
+      pattern,
+      rawScore: scoreSum
+    };
   });
 
-  scoredPatterns.sort((a, b) => b.rawScore - a.rawScore);
+  // スコアの高い順に並べる
+  scoredPatterns.sort(
+    (a, b) => b.rawScore - a.rawScore
+  );
 
-  const totalRawScore = scoredPatterns.reduce((sum, p) => sum + p.rawScore, 0) || 1;
-  
-  let rankedPatterns = scoredPatterns.map((p) => {
-    const exactPct = (p.rawScore / totalRawScore) * 100;
+  // =============================================================
+  // 5. 確率を算出
+  // =============================================================
+
+  const totalRawScore =
+    scoredPatterns.reduce(
+      (sum, pattern) => sum + pattern.rawScore,
+      0
+    ) || 1;
+
+  let rankedPatterns = scoredPatterns.map(pattern => {
+    const exactPct =
+      (pattern.rawScore / totalRawScore) * 100;
+
     let pct = Math.round(exactPct);
+
     if (pct < 1 && exactPct > 0) {
       pct = 1;
     }
-    return { pattern: p.pattern, probability: pct };
+
+    return {
+      pattern: pattern.pattern,
+      probability: pct
+    };
   });
 
+  // 四捨五入による合計誤差を調整
   if (rankedPatterns.length > 0) {
-    let currentSum = rankedPatterns.reduce((sum, p) => sum + p.probability, 0);
-    let diff = 100 - currentSum;
+    const currentSum = rankedPatterns.reduce(
+      (sum, pattern) => sum + pattern.probability,
+      0
+    );
+
+    const diff = 100 - currentSum;
+
     rankedPatterns[0].probability += diff;
+
     if (rankedPatterns[0].probability < 0) {
       rankedPatterns[0].probability = 0;
     }
   }
 
   // =============================================================
-  // 【④ 行列を入れ替えた表の描画】
+  // 6. 行列を入れ替えた表を描画
   // =============================================================
+
   const container = document.createElement('div');
-  container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
+
+  container.className =
+    "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
 
   let html = `
+    <div class="text-xs text-slate-500">
+      最小新ポジ数：${minNewPosCount}
+      ／ 該当パターン数：${rankedPatterns.length}
+    </div>
+
     <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
       <table class="w-full text-left text-sm border-collapse min-w-max">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap">
-              <span class="text-xs font-bold text-slate-600">ポジション</span>
+              <span class="text-xs font-bold text-slate-600">
+                ポジション
+              </span>
             </th>
   `;
 
-  rankedPatterns.forEach((p) => {
+  rankedPatterns.forEach(pattern => {
     html += `
       <th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap">
-        <span class="text-xs font-bold text-pink-600">${p.probability}%</span>
+        <span class="text-xs font-bold text-pink-600">
+          ${pattern.probability}%
+        </span>
       </th>
     `;
   });
 
-  html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
+  html += `
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+  `;
 
   stage.fixed.forEach((fixedMember, pIdx) => {
-    html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
-    
-    html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">${escapeHtml(fixedMember)}</td>`;
+    html += `
+      <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+        <td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">
+          ${escapeHtml(fixedMember)}
+        </td>
+    `;
 
     rankedPatterns.forEach(({ pattern }) => {
       const assignedMember = pattern[pIdx] || "-";
-      const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
-      const cellClass = isExp ? "text-slate-800 font-medium" : "text-amber-600 font-bold bg-amber-50/50";
-      
-      html += `<td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[100px] ${cellClass}">${escapeHtml(assignedMember)}</td>`;
+
+      const isExp =
+        (initialAttendingExpMap[pIdx] || [])
+          .includes(assignedMember);
+
+      const cellClass =
+        assignedMember === "-"
+          ? "text-slate-400"
+          : isExp
+            ? "text-slate-800 font-medium"
+            : "text-amber-600 font-bold bg-amber-50/50";
+
+      html += `
+        <td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[100px] ${cellClass}">
+          ${escapeHtml(assignedMember)}
+        </td>
+      `;
     });
 
     html += `</tr>`;
   });
 
-  html += `</tbody></table></div>`;
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `;
+
   container.innerHTML = html;
   positionsList.appendChild(container);
 }
-
+  
     /* --- メンバー詳細・各種統計ロジック --- */
 
     function openMemberDetail(memberName) {
