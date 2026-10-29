@@ -60,11 +60,6 @@
       <h1 class="text-xl font-bold flex items-center gap-2 cursor-pointer" onclick="goHome()">
         <i class="fa-solid fa-masks-theater"></i> 劇場公演 データサイト
       </h1>
-      <div class="flex items-center gap-2">
-        <button onclick="openStatsModal()" class="bg-pink-700 hover:bg-pink-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
-          <i class="fa-solid fa-chart-line"></i> 統計・機能
-        </button>
-      </div>
     </div>
     <!-- 検索バー ＆ サジェスト -->
     <div class="max-w-4xl mx-auto mt-3 relative">
@@ -85,9 +80,15 @@
       <section id="tab-calendar" class="tab-content">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
-              <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
-            </h2>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
+                <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
+              </h2>
+              <!-- 統計ボタンをカレンダーの横に配置 -->
+              <button onclick="openStatsModal()" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
+                <i class="fa-solid fa-chart-line"></i> 統計・データ
+              </button>
+            </div>
             <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
               <div class="bg-slate-100 p-0.5 rounded-lg border border-slate-200 flex text-[10px]">
                 <button id="viewListBtn" onclick="toggleCalendarView('list')" class="px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm">
@@ -183,7 +184,7 @@
             <i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i> ポジション予想
           </h2>
           <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または「・」区切りで入力してください。</label>
+            <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または・区切りで入力してください。</label>
             <textarea id="forecastInputText" rows="3" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう・鈴木くるみ・千葉恵里・永野芹佳・水島美結・向井地美音・村山彩希・山内瑞葵・山﨑空・秋山由奈・八木愛月..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
             <button onclick="runForecast()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow transition">
               予想を実行する
@@ -336,11 +337,13 @@
         <div id="milestoneList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- 演目別出演回数ランキング -->
+      <!-- 演目別出演回数ランキング (セレクトボックスを下部に配置) -->
       <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-        <div class="flex justify-between items-center">
-          <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-trophy text-pink-500 mr-1"></i> 演目別出演回数ランキング</h4>
-          <select id="statsStageRankingSelect" onchange="renderStatsStageRanking()" class="text-xs font-bold bg-white border border-slate-300 rounded px-2 py-1"></select>
+        <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1">
+          <i class="fa-solid fa-trophy text-pink-500"></i> 演目別出演回数ランキング
+        </h4>
+        <div>
+          <select id="statsStageRankingSelect" onchange="renderStatsStageRanking()" class="text-xs font-bold bg-white border border-slate-300 rounded px-3 py-1.5 w-full"></select>
         </div>
         <ol id="statsStageRankingList" class="space-y-1 text-xs max-h-48 overflow-y-auto pr-1 divide-y divide-slate-100"></ol>
       </div>
@@ -415,18 +418,26 @@
 
   <!-- JavaScript Logic -->
   <script>
+    // 指定されたMASTER_MEMBER_ORDER_BY_GROUPリストをそのまま反映
     const MASTER_MEMBER_ORDER_BY_GROUP = {
       AKB48: [
-        "秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀", "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純",
-        "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海",
-        "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜", "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優",
-        "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽"
+        "秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀", "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純", "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海", "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜", "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優", "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた", "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"
       ],
-      SKE48: ["相川暖花", "石黒友月", "伊藤虹々美", "入内嶋涼", "熊崎晴香", "倉島杏実", "野村実代", "原優寧", "鎌田菜月", "北川愛乃", "佐藤佳穂", "浅井裕華"],
-      NMB48: ["青原優花", "石山千尋", "泉綾乃", "板垣心和", "塩月希依音", "新澤菜央", "平山真衣", "坂田心咲", "桜田彩叶", "龍本弥生"],
-      HKT48: ["生野莉奈", "石松結菜", "市村愛里", "栗原紗英", "豊永阿紀", "渕上舞", "松永悠良", "梁瀬鈴雅", "山内祐奈"],
-      NGT48: ["清司麗菜", "西潟茉莉奈", "佐藤海里", "大塚七海", "三村妃乃", "北村優羽", "水津菜月", "杉本萌"],
-      STU48: ["甲斐心愛", "谷口茉妃菜", "兵頭葵", "福田朱里", "信濃宙花", "中村舞", "池田裕楽", "内海里音", "尾崎世里花"]
+      SKE48: [
+        "相川暖花", "石黒友月", "伊藤虹々美", "入内嶋涼", "熊崎晴香", "倉島杏実", "桒原椿", "坂本真凛", "杉本りいな", "鈴木恋奈", "野村実代", "原優寧", "松川みゆ", "南澤恋々", "山村さくら", "荒野姫楓", "伊藤実希", "井上瑠夏", "奥野心羽", "鎌田菜月", "北川愛乃", "雲井紗菜", "倉本羽菜", "近藤海琴", "佐藤佳穂", "篠原京香", "松本慈子", "青木莉樺", "赤堀君江", "浅井裕華", "井田玲音名", "太田彩夏", "太田愛恵", "大村杏", "河村優愛", "鈴木愛菜", "中坂美祐", "西井美桜", "長谷川雅", "森本くるみ", "高村紗弥", "川村昇子", "久保田怜", "佐々木希美", "立花菖", "田村真悠", "聖遥花", "宮本倫花", "横井志穂", "飯田ゆら", "池田有沙", "竹下茉莉花", "中尾楓華", "矢島凪"
+      ],
+      NMB48: [
+        "青原優花", "池帆乃香", "池田典愛", "石山千尋", "泉綾乃", "板垣心和", "内田愛彩", "岡腰星来", "衣笠彩実", "木根彩呂花", "黒島咲花", "坂下真心", "坂田心咲", "桜田彩叶", "塩月希依音", "澁谷愛紗南", "新澤菜央", "高橋ことね", "竹田京加", "龍本弥生", "田中美空", "田中ミリア", "中川朋香", "西島梨央", "西田帆花", "平山真衣", "福野杏実", "松岡さくら", "松本海日菜", "三鴨くるみ", "宮崎紗衣", "宮原心音", "宮本杏海", "村井悠莉", "山口美桜", "赤松昊", "桜井ひまり", "善家侑莉花", "高橋樹奈", "田中れい", "谷口詩乃", "西住美咲妃", "福原琴美", "藪内陽花", "和田承子"
+      ],
+      HKT48: [
+        "生野莉奈", "石川歩実優", "石橋颯", "石松結菜", "市村愛里", "北川陽彩", "栗原紗英", "渋井美奈", "豊永阿紀", "中野南実", "藤野心葉", "渕上舞", "松永悠良", "梁瀬鈴雅", "山内祐奈", "吉田めい", "龍頭綺音", "秋吉優花", "井澤美優", "石井彩音", "猪島莉玲亜", "猪原絆愛", "今村麻莉愛", "江浦優香", "江口心々華", "大庭凜咲", "栗山梨奈", "竹本くるみ", "立花心良", "田中伊桜莉", "長野らら", "福井可憐", "松本苺花", "森﨑冴彩", "安井妃奈", "青木日菜子", "呉優菜", "靏川那智", "山川万里愛"
+      ],
+      NGT48: [
+        "清司麗菜", "西潟茉莉奈", "佐藤海里", "大塚七海", "三村妃乃", "磯部瑠紅", "喜多花恵", "北村優羽", "水津菜月", "杉本萌", "磯崎菜々", "木本杏菜", "佐藤広花", "新沢葵唯", "高島柚愛", "西川晴菜", "安座間結", "阿達夢", "甲斐瑞季", "北澤百音", "佐藤柚花", "須藤凜華", "中田麻実", "皆川日和", "相木茉采", "猪股咲那", "大橋彩乃", "片山珠吏", "久我水羚", "佐藤歩夏", "平井柚葉", "細矢夏帆"
+      ],
+      STU48: [
+        "甲斐心愛", "谷口茉妃菜", "兵頭葵", "福田朱里", "信濃宙花", "中村舞", "池田裕楽", "内海里音", "尾崎世里花", "川又優菜", "工藤理子", "迫姫華", "高雄さやか", "原田清花", "宗雪里香", "吉田彩良", "渡辺菜月", "岡田あずみ", "岡村梨央", "久留島優果", "諸葛望愛", "新井梨杏", "石原侑奈", "奥田唯菜", "北澤苺", "濵田響", "森末妃奈", "石松陽菜", "井上久伶杏", "蕪竹真奈", "木原姫花世", "小松奈侑", "坂木叶愛", "坂崎愛", "島田紗香", "曽我部あこ", "髙村栞里", "田中奈菜子", "道保琉南", "野中莉央", "濵田美惟", "藤田愛結", "三好真綺", "屋木優菜", "横井結菜"
+      ]
     };
 
     let MASTER_MEMBER_ORDER = [...MASTER_MEMBER_ORDER_BY_GROUP.AKB48];
@@ -944,6 +955,42 @@
       }, 200);
     }
 
+    // ①リスト順ベース＋②初日を迎えた順（スケジュールの記載順）で一覧表・出演表のメンバーを生成する
+    function getSortedStageMembers(stage) {
+      const stageMembersSet = new Set();
+      const validShows = stage.schedules.filter(s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0));
+      
+      // スケジュールの記載順にメンバーを収集
+      const scheduleAppearanceOrder = [];
+      validShows.forEach(show => {
+        const arr = show.positionsArray && show.positionsArray.length > 0 ? show.positionsArray : show.membersArray;
+        if (arr) {
+          arr.forEach(m => {
+            if (m && m !== '-' && m !== '－') {
+              if (!stageMembersSet.has(m)) {
+                stageMembersSet.add(m);
+                scheduleAppearanceOrder.push(m);
+              }
+            }
+          });
+        }
+      });
+
+      // ① MASTER_MEMBER_ORDER の記載順に合致するものをまず並べ、その後に出演順で初登場したメンバーを追加
+      const sortedResult = [];
+      MASTER_MEMBER_ORDER.forEach(m => {
+        if (stageMembersSet.has(m)) {
+          sortedResult.push(m);
+        }
+      });
+      scheduleAppearanceOrder.forEach(m => {
+        if (!sortedResult.includes(m)) {
+          sortedResult.push(m);
+        }
+      });
+      return sortedResult;
+    }
+
     function renderPositions() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -965,7 +1012,16 @@
             if (m && m !== '-' && m !== '－') experiencedSet.add(m);
           }
         });
+        
+        // ①リスト順(MASTER_MEMBER_ORDER)に従いつつ、このポジションを経験したメンバーを抽出
         const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
+        validShows.forEach(show => {
+          const m = show.positionsArray?.[colIdx];
+          if (m && m !== '-' && m !== '－' && m !== fixedMember && !undersOrdered.includes(m)) {
+            undersOrdered.push(m);
+          }
+        });
+
         const initialMembers = fixedMember ? [fixedMember, ...undersOrdered] : undersOrdered;
         const orderedMembers = initialMembers.filter(m => m && m !== '-' && m !== '－');
         if (orderedMembers.length > 0) {
@@ -1015,7 +1071,17 @@
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
       const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
 
-      // 1番左の固定列ヘッダー用スペース
+      // ポジションごとにメンバーの初出演日を記録
+      const firstAppearanceByPosition = stage.fixed.map((_, idx) => {
+        const firstAppearance = new Map();
+        sortedShows.forEach((show, showIndex) => {
+          const member = String(show.positionsArray[idx] || '').trim();
+          if (!member || member === '-' || member === '－') return;
+          if (!firstAppearance.has(member)) firstAppearance.set(member, showIndex);
+        });
+        return firstAppearance;
+      });
+
       const numThFirst = document.createElement('th');
       numThFirst.className = "p-2.5 min-w-[110px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
       numThFirst.innerText = "ポジション";
@@ -1050,11 +1116,18 @@
         tdPos.innerText = fixedMember;
         tr.appendChild(tdPos);
 
-        sortedShows.forEach(show => {
+        sortedShows.forEach((show, showIndex) => {
           const member = String(show.positionsArray[pIdx] || '').trim();
           const td = document.createElement('td');
           td.className = "p-2.5 text-center border-r border-slate-100 text-xs";
           if (member && member !== '-' && member !== '－') {
+            const isFirstAppearance = firstAppearanceByPosition[pIdx].get(member) === showIndex;
+            const isInitialMember = member === stage.fixed[pIdx];
+            // 新ポジで入ったメンバーを薄く黄色で塗りつぶし（初日メンバーは塗りつぶさず）
+            if (isFirstAppearance && !isInitialMember) {
+              td.style.backgroundColor = '#FFFBEB';
+            }
+
             const span = document.createElement('span');
             span.className = "member-link text-xs";
             span.textContent = member;
@@ -1085,14 +1158,8 @@
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0 || (s.membersArray && s.membersArray.length > 0));
       const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
 
-      const membersSet = new Set();
-      sortedShows.forEach(s => {
-        if (s.positionsArray) s.positionsArray.forEach(m => { if (m && m !== '-' && m !== '－') membersSet.add(m); });
-        if (s.membersArray) s.membersArray.forEach(m => { if (m && m !== '-' && m !== '－') membersSet.add(m); });
-      });
-      stage.fixed.forEach(m => { if (m) membersSet.add(m); });
-      const memberList = MASTER_MEMBER_ORDER.filter(m => membersSet.has(m));
-      membersSet.forEach(m => { if (!memberList.includes(m)) memberList.push(m); });
+      // 出演表でも MASTER_MEMBER_ORDER および初登場順のリストを利用
+      const memberList = getSortedStageMembers(stage);
 
       const numThFirst = document.createElement('th');
       numThFirst.className = "p-2.5 min-w-[120px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
@@ -1130,6 +1197,7 @@
         });
 
         const tdMember = document.createElement('td');
+        // 左列固定(sticky-col-1)を付与
         tdMember.className = "p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 bg-white flex justify-between items-center";
         tdMember.innerHTML = `<span class="member-link" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span><span class="text-pink-600 text-[10px] ml-2">${totalCount}回</span>`;
         tr.appendChild(tdMember);
@@ -1419,7 +1487,7 @@
       members.forEach(m => {
         const isSelected = selectedCoappMembers.has(m);
         const btn = document.createElement('button');
-        type = 'button';
+        btn.type = 'button';
         btn.className = `px-2.5 py-1 rounded-full text-xs font-bold transition border ${isSelected ? 'bg-pink-600 text-white border-pink-600 shadow-sm' : 'bg-white text-slate-700 border-slate-300 hover:bg-pink-50'}`;
         btn.innerText = m;
         btn.onclick = () => {
@@ -1445,6 +1513,7 @@
         return members.every(m => itemMembers.has(m));
       });
 
+      // 最新のものが上のまま、若い日付の方が回数数字が大きくなるよう降順(新しい順)ソートしてインデックスを逆順に割り当て
       matchingShows.sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
 
       if (matchingShows.length === 0) {
@@ -1452,16 +1521,20 @@
         return;
       }
 
+      const totalCount = matchingShows.length;
       matchingShows.forEach((item, index) => {
         let stageTitleWithSub = `「${item.baseStageName}」`;
         if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += ` ${item.subTitle.trim()}`;
+
+        // タイムライン順で最新が総回数になるようにする（一番古い=最後の要素が1、一番新しい=最初の要素がtotalCount）
+        const perfNumber = totalCount - index;
 
         const div = document.createElement('div');
         div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
         div.onclick = () => jumpToSchedule(item.date, item.id);
         div.innerHTML = `
           <div class="flex items-center gap-2 text-xs">
-            <span class="font-bold text-pink-600">${index + 1}回</span>
+            <span class="font-bold text-pink-600">${perfNumber}回</span>
             <span class="text-slate-500 font-medium">${item.date}</span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater)}</span>
           </div>
@@ -1599,7 +1672,6 @@
         });
       }
 
-      // ランキング年セレクターの初期化
       const rankingYearSelect = document.getElementById('rankingYearSelect');
       if (rankingYearSelect.children.length === 0) {
         rankingYearSelect.appendChild(new Option('通算', 'ALL'));
@@ -1771,15 +1843,16 @@
 
       countItems.sort((a, b) => a.diff - b.diff);
       if (countItems.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-2">現在、次の大台まであと10回以内のメンバーはいません。</p>`;
+        container.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-2">現在、100回の大台まであと10回以内のメンバーはいません。</p>`;
         return;
       }
 
       countItems.forEach(item => {
         const div = document.createElement('div');
         div.className = "bg-white p-2 rounded border border-slate-200 flex justify-between items-center";
+        // ご要望により (〇回) の表記を完全に削除
         div.innerHTML = `
-          <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="closeStatsModal(); openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)} (${item.total}回)</span>
+          <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="closeStatsModal(); openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
           <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.nextMilestone}回まであと${item.diff}回</span>
         `;
         container.appendChild(div);
