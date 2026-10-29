@@ -202,7 +202,7 @@
       <section id="tab-coapp" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
           <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-users text-pink-500"></i> 共演した公演一覧検索 (複数選択可能)
+            <i class="fa-solid fa-users text-pink-500"></i> 共演検索
           </h2>
           <div class="flex items-center gap-2">
             <select id="coappGroupSelect" onchange="renderCoappMemberChips()" class="bg-slate-50 border border-slate-300 text-xs font-bold rounded-lg p-2 focus:outline-none">
@@ -213,7 +213,7 @@
               <option value="NGT48">NGT48</option>
               <option value="STU48">STU48</option>
             </select>
-            <span class="text-xs text-slate-500">メンバーを選択してください（複数可）</span>
+            <span class="text-xs text-slate-500">メンバーを選択してください。</span>
           </div>
           <div id="coappMemberChips" class="flex flex-wrap gap-1.5 p-2 border border-slate-200 rounded-lg bg-slate-50"></div>
           
@@ -222,7 +222,7 @@
           </div>
 
           <div id="coappResultArea" class="space-y-2 pt-2 border-t border-slate-100">
-            <h3 class="text-xs font-bold text-slate-700">【共通出演公演一覧】</h3>
+            <h3 class="text-xs font-bold text-slate-700">【共通公演一覧】</h3>
             <div id="coappResultList" class="space-y-2 max-h-96 overflow-y-auto pr-1">
               <p class="text-xs text-slate-400 text-center py-4">メンバーを選択して検索してください。</p>
             </div>
