@@ -1276,16 +1276,14 @@
       });
 
       // 【ポジション経験者一覧】
-      // 条件: 初日メンバーは入力メンバーに入っていなくても必ず表示する。
-      // ただし、初日メンバーが別ポジションに入ったのは抽出しない（アンダーとして別ポジションに重複させない）。
+      // 仕様: 初日メンバーは入力の有無に関わらず必ず1人目に配置。
+      // 入力メンバーの中で経験者を抽出。初日メンバーも入力メンバーに居る場合は2回登場する形になる。
       if (expListArea) {
         const rowDataList = getPositionRowDataList(stage);
         let maxCols = 0;
         rowDataList.forEach(item => {
           if (item.orderedMembers.length > maxCols) maxCols = item.orderedMembers.length;
         });
-
-        const allFixedMembers = new Set(rowDataList.map(r => r.fixedMember));
 
         const expListContainer = document.createElement('div');
         expListContainer.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3 mb-4";
@@ -1309,21 +1307,17 @@
         `;
 
         rowDataList.forEach(({ fixedMember, orderedMembers }, pIdx) => {
-          // 先頭は fixedMember（入力メンバー有無に関わらず必ず配置）
-          // 2番目以降のアンダー経験者は、inputSet.has(member) かつ 他のポジションの fixedMember ではないもの
-          const otherExperienced = orderedMembers.slice(1).filter(member => {
-            if (!member || member === '-' || member === '－') return false;
-            if (!inputSet.has(member)) return false;
-            if (allFixedMembers.has(member) && member !== fixedMember) return false; // 初日メンバーが別ポジションのアンダーとして混ざるのを防ぐ
-            return true;
-          });
+          // 入力メンバー（inputSet）に入っている経験者を抽出
+          const attendingExperienced = orderedMembers.filter(member => member && member !== '-' && member !== '－' && inputSet.has(member));
 
           const rowMembers = [];
+          // 1. 初日メンバー（固定）は入力状況に関わらず先頭に配置
           if (fixedMember && fixedMember !== '-' && fixedMember !== '－') {
             rowMembers.push(fixedMember);
           }
-          otherExperienced.forEach(m => {
-            if (!rowMembers.includes(m)) rowMembers.push(m);
+          // 2. 抽出された入力メンバーをそのまま並べる（初日メンバーが入力されていればここにも入るため2回登場する）
+          attendingExperienced.forEach(m => {
+            rowMembers.push(m);
           });
 
           expTableHtml += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
@@ -1500,7 +1494,6 @@
         if (rankedPatterns[0].probability < 0) rankedPatterns[0].probability = 0;
       }
 
-      // ポジション予想テーブルのフォントサイズを text-xs、セル幅を min-w-[100px] に統一
       const container = document.createElement('div');
       container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
       let html = `<div class="text-xs text-slate-500">最小新ポジ数：${minNewPosCount} ／ 該当パターン数：${rankedPatterns.length}</div>`;
@@ -1791,7 +1784,7 @@
         li.className = `flex justify-between items-center py-1.5 border-b border-slate-100 text-xs ${item.name === selectedMemberName ? 'bg-pink-50 font-bold' : ''}`;
         li.innerHTML = `
           <div class="flex items-center gap-2">
-            <span class="w-6 text-right font-bold text-slate-400">${item.rank}位</span>
+            <span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span>
             <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
           </div>
           <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
@@ -1838,7 +1831,7 @@
         li.className = "flex justify-between items-center py-1.5 border-b border-slate-100 text-xs";
         li.innerHTML = `
           <div class="flex items-center gap-2">
-            <span class="w-6 text-right font-bold text-slate-400">${item.rank}位</span>
+            <span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span>
             <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
           </div>
           <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
@@ -2010,7 +2003,7 @@
         li.className = "flex justify-between items-center py-1.5 border-b border-slate-100 text-xs";
         li.innerHTML = `
           <div class="flex items-center gap-2">
-            <span class="w-6 text-right font-bold text-slate-400">${item.rank}位</span>
+            <span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span>
             <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
           </div>
           <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
