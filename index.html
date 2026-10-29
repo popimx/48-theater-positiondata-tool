@@ -80,15 +80,9 @@
       <section id="tab-calendar" class="tab-content">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 mb-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <div class="flex items-center gap-2">
-              <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
-                <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
-              </h2>
-              <!-- 統計ボタンをカレンダーの横に配置 -->
-              <button onclick="openStatsModal()" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
-                <i class="fa-solid fa-chart-line"></i> 統計・データ
-              </button>
-            </div>
+            <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
+              <i class="fa-regular fa-calendar-days text-pink-500"></i> スケジュール
+            </h2>
             <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
               <div class="bg-slate-100 p-0.5 rounded-lg border border-slate-200 flex text-[10px]">
                 <button id="viewListBtn" onclick="toggleCalendarView('list')" class="px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm">
@@ -184,7 +178,7 @@
             <i class="fa-solid fa-wand-magic-sparkles text-pink-500"></i> ポジション予想
           </h2>
           <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または・区切りで入力してください。</label>
+            <label class="block text-xs font-bold text-slate-600">出演メンバーを「、」または「・」区切りで入力してください。</label>
             <textarea id="forecastInputText" rows="3" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう・鈴木くるみ・千葉恵里・永野芹佳・水島美結・向井地美音・村山彩希・山内瑞葵・山﨑空・秋山由奈・八木愛月..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
             <button onclick="runForecast()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm shadow transition">
               予想を実行する
@@ -252,6 +246,38 @@
           <div id="songPartsResult" class="space-y-3 pt-2 border-t border-slate-100"></div>
         </div>
       </section>
+
+      <!-- Tab 8: 統計 -->
+      <section id="tab-stats" class="tab-content hidden space-y-4">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
+          <h2 class="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-pink-500"></i> 特殊データ・統計一覧
+          </h2>
+          
+          <!-- カウントダウン -->
+          <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-hourglass-half text-pink-500 mr-1"></i> 出演回数カウントダウン (100回ごとの大台まであと10回以内)</h4>
+            <div id="countdownList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+          </div>
+
+          <!-- 節目達成日一覧 -->
+          <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-medal text-pink-500 mr-1"></i> 節目達成日一覧 (本日から1年以内に達成したメンバー)</h4>
+            <div id="milestoneList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- 演目別出演回数ランキング -->
+          <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <i class="fa-solid fa-trophy text-pink-500"></i> 演目別出演回数ランキング
+            </h4>
+            <div>
+              <select id="statsStageRankingSelect" onchange="renderStatsStageRanking()" class="text-xs font-bold bg-white border border-slate-300 rounded px-3 py-1.5 w-full"></select>
+            </div>
+            <ol id="statsStageRankingList" class="space-y-1 text-xs max-h-48 overflow-y-auto pr-1 divide-y divide-slate-100"></ol>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- メンバー詳細コンテンツ -->
@@ -294,7 +320,7 @@
             <h3 id="rankingSectionTitle" class="text-sm font-bold text-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-trophy text-pink-500"></i> 出演回数ランキング
             </h3>
-            <select id="rankingYearSelect" onchange="onRankingYearChange()" class="text-xs font-bold bg-slate-50 border border-slate-300 rounded px-2 py-1"></select>
+            <span id="rankingGroupBadge" class="text-xs font-bold bg-pink-50 text-pink-600 border border-pink-200 px-2 py-0.5 rounded">グループ限定</span>
           </div>
           <ol id="memberRankingList" class="space-y-1 text-xs divide-y divide-slate-100"></ol>
         </div>
@@ -314,45 +340,6 @@
       </div>
     </section>
   </main>
-
-  <!-- 統計・便利機能モーダル -->
-  <div id="statsModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-2xl w-full p-4 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-chart-line text-pink-500"></i> 特殊データ・統計一覧
-        </h3>
-        <button onclick="closeStatsModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      
-      <!-- カウントダウン -->
-      <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-        <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-hourglass-half text-pink-500 mr-1"></i> 出演回数カウントダウン (100回ごとの大台まであと10回以内)</h4>
-        <div id="countdownList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
-      </div>
-
-      <!-- 節目達成日一覧 -->
-      <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-        <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-medal text-pink-500 mr-1"></i> 節目達成日一覧 (本日から1年以内に達成したメンバー)</h4>
-        <div id="milestoneList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto pr-1"></div>
-      </div>
-
-      <!-- 演目別出演回数ランキング (セレクトボックスを下部に配置) -->
-      <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-        <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1">
-          <i class="fa-solid fa-trophy text-pink-500"></i> 演目別出演回数ランキング
-        </h4>
-        <div>
-          <select id="statsStageRankingSelect" onchange="renderStatsStageRanking()" class="text-xs font-bold bg-white border border-slate-300 rounded px-3 py-1.5 w-full"></select>
-        </div>
-        <ol id="statsStageRankingList" class="space-y-1 text-xs max-h-48 overflow-y-auto pr-1 divide-y divide-slate-100"></ol>
-      </div>
-
-      <div class="flex justify-end pt-2">
-        <button onclick="closeStatsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-lg text-xs transition">閉じる</button>
-      </div>
-    </div>
-  </div>
 
   <!-- スケジュール詳細ポップアップ モーダル -->
   <div id="scheduleModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -384,6 +371,9 @@
     <div id="navNormal" class="max-w-4xl mx-auto flex justify-around">
       <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn active flex-1 py-3 text-center text-xs font-semibold text-pink-600">
         <i class="fa-regular fa-calendar-days text-base block mb-0.5"></i> カレンダー
+      </button>
+      <button onclick="switchTab('stats')" id="nav-stats" class="nav-btn flex-1 py-3 text-center text-xs font-semibold text-slate-400">
+        <i class="fa-solid fa-chart-line text-base block mb-0.5"></i> 統計
       </button>
     </div>
     <div id="navStageDetail" class="hidden max-w-4xl mx-auto flex justify-around">
@@ -418,7 +408,6 @@
 
   <!-- JavaScript Logic -->
   <script>
-    // 指定されたMASTER_MEMBER_ORDER_BY_GROUPリストをそのまま反映
     const MASTER_MEMBER_ORDER_BY_GROUP = {
       AKB48: [
         "秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀", "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純", "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海", "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜", "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優", "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた", "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"
@@ -456,6 +445,26 @@
       return group;
     }
 
+    function getMemberGroup(memberName) {
+      for (const [group, members] of Object.entries(MASTER_MEMBER_ORDER_BY_GROUP)) {
+        if (members.includes(memberName)) return group;
+      }
+      // MASTER_MEMBER_ORDER_BY_GROUP にない場合は、一番出演回数が多い劇場のグループを取得
+      const theaterCounts = {};
+      ALL_SCHEDULE_DATA.forEach(item => {
+        const inShow = (item.membersArray && item.membersArray.includes(memberName)) || (item.positionsArray && item.positionsArray.includes(memberName));
+        if (inShow && item.theater) {
+          const g = normalizeGroupName(item.theater) || "AKB48";
+          theaterCounts[g] = (theaterCounts[g] || 0) + 1;
+        }
+      });
+      let topGroup = "AKB48", max = 0;
+      Object.keys(theaterCounts).forEach(g => {
+        if (theaterCounts[g] > max) { max = theaterCounts[g]; topGroup = g; }
+      });
+      return topGroup;
+    }
+
     function detectGroupFromMembers(memberNames) {
       const inputSet = new Set(memberNames);
       let bestGroup = null, bestScore = 0, tied = false;
@@ -475,7 +484,6 @@
     let currentScheduleFilter = "ALL";
     let selectedMemberName = null;
     let currentSelectedMemberYear = 'ALL';
-    let currentRankingYear = 'ALL';
     let showAllAppearanceRanking = false;
     let showAllCoappearanceRanking = false;
     let todayString = "";
@@ -755,6 +763,7 @@
         }
       }
       if (tabName === 'coapp') renderCoappMemberChips();
+      if (tabName === 'stats') renderStatsTab();
     }
 
     function filterSchedule(filter, button) {
@@ -955,15 +964,14 @@
       }, 200);
     }
 
-    // ①リスト順ベース＋②初日を迎えた順（スケジュールの記載順）で一覧表・出演表のメンバーを生成する
+    // ① MASTER_MEMBER_ORDER_BY_GROUP の記載順 ② その公演の初日を迎えた順 (スケジュールの【出演メンバー】記載順)
     function getSortedStageMembers(stage) {
       const stageMembersSet = new Set();
       const validShows = stage.schedules.filter(s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0));
       
-      // スケジュールの記載順にメンバーを収集
       const scheduleAppearanceOrder = [];
       validShows.forEach(show => {
-        const arr = show.positionsArray && show.positionsArray.length > 0 ? show.positionsArray : show.membersArray;
+        const arr = show.membersArray && show.membersArray.length > 0 ? show.membersArray : show.positionsArray;
         if (arr) {
           arr.forEach(m => {
             if (m && m !== '-' && m !== '－') {
@@ -976,7 +984,6 @@
         }
       });
 
-      // ① MASTER_MEMBER_ORDER の記載順に合致するものをまず並べ、その後に出演順で初登場したメンバーを追加
       const sortedResult = [];
       MASTER_MEMBER_ORDER.forEach(m => {
         if (stageMembersSet.has(m)) {
@@ -1013,7 +1020,6 @@
           }
         });
         
-        // ①リスト順(MASTER_MEMBER_ORDER)に従いつつ、このポジションを経験したメンバーを抽出
         const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
         validShows.forEach(show => {
           const m = show.positionsArray?.[colIdx];
@@ -1071,7 +1077,6 @@
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
       const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
 
-      // ポジションごとにメンバーの初出演日を記録
       const firstAppearanceByPosition = stage.fixed.map((_, idx) => {
         const firstAppearance = new Map();
         sortedShows.forEach((show, showIndex) => {
@@ -1123,7 +1128,6 @@
           if (member && member !== '-' && member !== '－') {
             const isFirstAppearance = firstAppearanceByPosition[pIdx].get(member) === showIndex;
             const isInitialMember = member === stage.fixed[pIdx];
-            // 新ポジで入ったメンバーを薄く黄色で塗りつぶし（初日メンバーは塗りつぶさず）
             if (isFirstAppearance && !isInitialMember) {
               td.style.backgroundColor = '#FFFBEB';
             }
@@ -1158,7 +1162,6 @@
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0 || (s.membersArray && s.membersArray.length > 0));
       const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
 
-      // 出演表でも MASTER_MEMBER_ORDER および初登場順のリストを利用
       const memberList = getSortedStageMembers(stage);
 
       const numThFirst = document.createElement('th');
@@ -1197,7 +1200,6 @@
         });
 
         const tdMember = document.createElement('td');
-        // 左列固定(sticky-col-1)を付与
         tdMember.className = "p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 bg-white flex justify-between items-center";
         tdMember.innerHTML = `<span class="member-link" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span><span class="text-pink-600 text-[10px] ml-2">${totalCount}回</span>`;
         tr.appendChild(tdMember);
@@ -1297,18 +1299,38 @@
         });
       });
 
+      // 【ポジション経験者一覧】を表形式 ＆ 1列目固定スクロールで出力
       if (expListArea) {
         const expListContainer = document.createElement('div');
-        expListContainer.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-2 mb-4";
-        let expListHtml = `<div class="font-bold text-slate-800 text-sm mb-2">【ポジション経験者の一覧】</div><div class="space-y-1 text-xs text-slate-700 font-mono">`;
+        expListContainer.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3 mb-4";
+        
+        let expTableHtml = `
+          <div class="font-bold text-slate-800 text-xs mb-1">【ポジション経験者一覧】</div>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner max-h-[300px]">
+            <table class="w-full text-left text-sm border-collapse min-w-max">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200">
+                  <th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap sticky-col-1 bg-slate-50 font-bold text-xs text-slate-600">ポジション</th>
+                  <th class="p-2.5 min-w-[200px] text-left pl-3 border-r border-slate-200 whitespace-nowrap font-bold text-xs text-slate-600">今回の出演経験者</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+        `;
+
         stage.fixed.forEach((fixedMember, pIdx) => {
           const rawExps = initialAttendingExpMap[pIdx] || [];
           const sortedExps = inputMemberList.filter(member => rawExps.includes(member));
-          const membersStr = sortedExps.length > 0 ? sortedExps.join('　') : "（経験者なし）";
-          expListHtml += `<div><span class="font-bold">${escapeHtml(fixedMember)}ポジ</span> ${escapeHtml(membersStr)}</div>`;
+          const membersStr = sortedExps.length > 0 ? sortedExps.join('・') : "（経験者なし）";
+          expTableHtml += `
+            <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+              <td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 sticky-col-1 bg-white">${escapeHtml(fixedMember)}</td>
+              <td class="p-2.5 text-left pl-3 border-r border-slate-100 text-xs text-slate-800 font-medium">${escapeHtml(membersStr)}</td>
+            </tr>
+          `;
         });
-        expListHtml += `</div>`;
-        expListContainer.innerHTML = expListHtml;
+
+        expTableHtml += `</tbody></table></div>`;
+        expListContainer.innerHTML = expTableHtml;
         expListArea.appendChild(expListContainer);
       }
 
@@ -1456,16 +1478,17 @@
         if (rankedPatterns[0].probability < 0) rankedPatterns[0].probability = 0;
       }
 
+      // 【ポジション予想】表の1列目（ポジション列）に sticky-col-1 を付与してスクロール固定
       const container = document.createElement('div');
       container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
       let html = `<div class="text-xs text-slate-500">最小新ポジ数：${minNewPosCount} ／ 該当パターン数：${rankedPatterns.length}</div>`;
-      html += `<div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner"><table class="w-full text-left text-sm border-collapse min-w-max"><thead><tr class="bg-slate-50 border-b border-slate-200"><th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap"><span class="text-xs font-bold text-slate-600">ポジション</span></th>`;
+      html += `<div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner max-h-[500px]"><table class="w-full text-left text-sm border-collapse min-w-max"><thead><tr class="bg-slate-50 border-b border-slate-200"><th class="p-2.5 min-w-[110px] text-center border-r border-slate-200 whitespace-nowrap sticky-col-1 bg-slate-50 font-bold text-xs text-slate-600">ポジション</th>`;
       rankedPatterns.forEach(pattern => {
         html += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap"><span class="text-xs font-bold text-pink-600">${pattern.probability}%</span></th>`;
       });
       html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
       stage.fixed.forEach((fixedMember, pIdx) => {
-        html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 bg-slate-50/50">${escapeHtml(fixedMember)}</td>`;
+        html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-2.5 text-center border-r border-slate-100 whitespace-nowrap min-w-[110px] font-bold text-slate-700 sticky-col-1 bg-white">${escapeHtml(fixedMember)}</td>`;
         rankedPatterns.forEach(({ pattern }) => {
           const assignedMember = pattern[pIdx] || "-";
           const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
@@ -1513,7 +1536,6 @@
         return members.every(m => itemMembers.has(m));
       });
 
-      // 最新のものが上のまま、若い日付の方が回数数字が大きくなるよう降順(新しい順)ソートしてインデックスを逆順に割り当て
       matchingShows.sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
 
       if (matchingShows.length === 0) {
@@ -1526,7 +1548,6 @@
         let stageTitleWithSub = `「${item.baseStageName}」`;
         if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += ` ${item.subTitle.trim()}`;
 
-        // タイムライン順で最新が総回数になるようにする（一番古い=最後の要素が1、一番新しい=最初の要素がtotalCount）
         const perfNumber = totalCount - index;
 
         const div = document.createElement('div');
@@ -1590,7 +1611,6 @@
 
       document.getElementById('detailMemberName').innerText = memberName;
       currentSelectedMemberYear = 'ALL';
-      currentRankingYear = 'ALL';
       showAllAppearanceRanking = false;
       showAllCoappearanceRanking = false;
 
@@ -1672,13 +1692,6 @@
         });
       }
 
-      const rankingYearSelect = document.getElementById('rankingYearSelect');
-      if (rankingYearSelect.children.length === 0) {
-        rankingYearSelect.appendChild(new Option('通算', 'ALL'));
-        for (let y = 2026; y >= 2005; y--) rankingYearSelect.appendChild(new Option(`${y}年`, y));
-        rankingYearSelect.value = currentRankingYear;
-      }
-
       renderMemberRankings();
 
       const historyList = document.getElementById('memberShowsHistoryList');
@@ -1717,23 +1730,22 @@
       }
     }
 
-    function onRankingYearChange() {
-      currentRankingYear = document.getElementById('rankingYearSelect').value;
-      renderMemberRankings();
-    }
-
     function renderMemberRankings() {
-      const targetYear = currentRankingYear;
+      const targetYear = currentSelectedMemberYear; // 年別タブと連動
+      const memberGroup = getMemberGroup(selectedMemberName);
+      
+      document.getElementById('rankingGroupBadge').innerText = `${memberGroup}限定 (${targetYear === 'ALL' ? '通算' : targetYear + '年'})`;
+
+      const groupMembers = MASTER_MEMBER_ORDER_BY_GROUP[memberGroup] || [];
       const yearPerfs = targetYear === 'ALL' ? ALL_SCHEDULE_DATA : ALL_SCHEDULE_DATA.filter(item => item.date.startsWith(targetYear));
 
       const appearanceCounts = {};
-      const allUnique = getAllUniqueMembers();
-      allUnique.forEach(m => { appearanceCounts[m] = 0; });
+      groupMembers.forEach(m => { appearanceCounts[m] = 0; });
 
       yearPerfs.forEach(item => {
         const uniqueInShow = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
         uniqueInShow.forEach(m => {
-          if (m && m !== "-" && m !== "－") appearanceCounts[m] = (appearanceCounts[m] || 0) + 1;
+          if (groupMembers.includes(m)) appearanceCounts[m] = (appearanceCounts[m] || 0) + 1;
         });
       });
 
@@ -1745,7 +1757,7 @@
       const displayRanking = showAllAppearanceRanking ? rankingArr : rankingArr.slice(0, 10);
       displayRanking.forEach((item, index) => {
         const li = document.createElement('li');
-        li.className = "flex justify-between items-center py-1.5 border-b border-slate-100 text-xs";
+        li.className = `flex justify-between items-center py-1.5 border-b border-slate-100 text-xs ${item.name === selectedMemberName ? 'bg-pink-50 font-bold' : ''}`;
         li.innerHTML = `
           <div class="flex items-center gap-2">
             <span class="w-6 text-right font-bold text-slate-400">${index + 1}</span>
@@ -1764,6 +1776,7 @@
         rankingList.appendChild(btn);
       }
 
+      // 共演回数ランキングも年別タブ(targetYear)と連動
       const coappCounts = {};
       const memberShows = yearPerfs.filter(item => {
         return (item.membersArray && item.membersArray.includes(selectedMemberName)) || (item.positionsArray && item.positionsArray.includes(selectedMemberName));
@@ -1814,15 +1827,10 @@
       });
     }
 
-    function openStatsModal() {
+    function renderStatsTab() {
       renderCountdownList();
       renderMilestoneList();
       renderStatsStageDropdown();
-      document.getElementById('statsModal').classList.remove('hidden');
-    }
-
-    function closeStatsModal() {
-      document.getElementById('statsModal').classList.add('hidden');
     }
 
     function renderCountdownList() {
@@ -1850,9 +1858,8 @@
       countItems.forEach(item => {
         const div = document.createElement('div');
         div.className = "bg-white p-2 rounded border border-slate-200 flex justify-between items-center";
-        // ご要望により (〇回) の表記を完全に削除
         div.innerHTML = `
-          <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="closeStatsModal(); openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
+          <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
           <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.nextMilestone}回まであと${item.diff}回</span>
         `;
         container.appendChild(div);
@@ -1902,10 +1909,10 @@
       achievements.forEach(ach => {
         const div = document.createElement('div');
         div.className = "bg-white p-2 rounded border border-slate-200 cursor-pointer hover:border-pink-300 transition space-y-0.5";
-        div.onclick = () => { closeStatsModal(); jumpToSchedule(ach.date, ach.id); };
+        div.onclick = () => jumpToSchedule(ach.date, ach.id);
         div.innerHTML = `
           <div class="font-bold text-slate-800 flex justify-between">
-            <span class="cursor-pointer hover:text-pink-600" onclick="event.stopPropagation(); closeStatsModal(); openMemberDetail('${escapeHtml(ach.name)}')">${escapeHtml(ach.name)}　${ach.milestone}回達成</span>
+            <span class="cursor-pointer hover:text-pink-600" onclick="event.stopPropagation(); openMemberDetail('${escapeHtml(ach.name)}')">${escapeHtml(ach.name)}　${ach.milestone}回達成</span>
             <span class="text-pink-600 text-[10px]">${ach.date}</span>
           </div>
           <div class="text-[10px] text-slate-500">${escapeHtml(ach.theater)} 「${escapeHtml(ach.stageName)}」公演</div>
@@ -1956,7 +1963,7 @@
         li.innerHTML = `
           <div class="flex items-center gap-2">
             <span class="w-6 text-right font-bold text-slate-400">${index + 1}</span>
-            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="closeStatsModal(); openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
           </div>
           <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
         `;
