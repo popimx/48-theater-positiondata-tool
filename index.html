@@ -609,22 +609,15 @@
         }
         let rawTitle = item.title || item.stage || "";
         let mainTitle = rawTitle, subTitle = item.event || item.subTitle || "";
-        
-        // 【修正】チーム名（例: チームS）と「かぎかっこ」を綺麗に分離・保持する
-        let baseStage = "";
-        const teamMatch = rawTitle.match(/^(.*?)(「.*?」|『.*?』)(?:\s*公演)?(?:\s+(.*))?$/);
-        if (teamMatch) {
-          const prefix = teamMatch[1].trim(); // 例: "チームS"
-          const bracketTitle = teamMatch[2];   // 例: "「僕の太陽」"
-          subTitle = subTitle || teamMatch[3] || "";
-          // 内部のベース名として、プレフィックスと括弧の中身を結合（括弧は保持しない、または区切る）
-          baseStage = prefix ? `${prefix}_${bracketTitle.replace(/「|」|『|』/g, '')}` : bracketTitle.replace(/「|」|『|』/g, '');
+
+        // 【修正】公演名からサブタイトル（初日・千秋楽など）を切り離し、ベース演目名を抽出
+        let baseStage = mainTitle;
+        const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?)(?:\s*公演)?(?:\s+(.*))?$/);
+        if (stageMatch) {
+          baseStage = stageMatch[1].trim(); // 例: "チームKII「シアターの女神」"
+          subTitle = subTitle || stageMatch[2] || "";
         } else {
-          if (!subTitle) {
-            const match = rawTitle.match(/^(「.*?」公演)(?:\s+(.*))?$/);
-            if (match) { mainTitle = match[1]; subTitle = match[2] || ""; }
-          }
-          baseStage = mainTitle.replace(/「|」|『|』/g, '').replace(/公演.*$/, '').trim();
+          baseStage = mainTitle.replace(/公演.*$/, '').trim();
         }
 
         let membersArr = Array.isArray(item.members) ? item.members.filter(m => m && m !== "-" && m !== "－") : [];
@@ -639,13 +632,22 @@
       });
     }
 
-    function generateGlobalStageDatabase() {
+      function generateGlobalStageDatabase() {
       GLOBAL_STAGE_DATABASE = {};
       ALL_SCHEDULE_DATA.forEach(item => {
         const base = item.baseStageName;
         if (!base) return;
         if (!GLOBAL_STAGE_DATABASE[base]) {
-          GLOBAL_STAGE_DATABASE[base] = { id: base, name: `「${base}」公演`, group: item.theater.replace("劇場", "").trim() || "AKB48", fixed: [], allMembers: new Set(), schedules: [] };
+          // 【修正】すでに「」が含まれていれば「公演」だけ付与、含まれていなければ「${base}」公演 とする
+          const stageDisplayName = base.includes("「") ? `${base}公演` : `「${base}」公演`;
+          GLOBAL_STAGE_DATABASE[base] = { 
+            id: base, 
+            name: stageDisplayName, 
+            group: item.theater.replace("劇場", "").trim() || "AKB48", 
+            fixed: [], 
+            allMembers: new Set(), 
+            schedules: [] 
+          };
         }
         GLOBAL_STAGE_DATABASE[base].schedules.push(item);
         item.membersArray.forEach(m => { if(m && m !== "-" && m !== "－") GLOBAL_STAGE_DATABASE[base].allMembers.add(m.trim()); });
@@ -658,13 +660,22 @@
       });
     }
 
-    function generateStageDatabase() {
+      function generateStageDatabase() {
       STAGE_DATABASE = {};
       SCHEDULE_DATA.forEach(item => {
         const base = item.baseStageName;
         if (!base) return;
         if (!STAGE_DATABASE[base]) {
-          STAGE_DATABASE[base] = { id: base, name: `「${base}」公演`, group: item.theater.replace("劇場", "").trim() || "AKB48", fixed: [], allMembers: new Set(), schedules: [] };
+          // 【修正】同様に「」の二重付与を防止
+          const stageDisplayName = base.includes("「") ? `${base}公演` : `「${base}」公演`;
+          STAGE_DATABASE[base] = { 
+            id: base, 
+            name: stageDisplayName, 
+            group: item.theater.replace("劇場", "").trim() || "AKB48", 
+            fixed: [], 
+            allMembers: new Set(), 
+            schedules: [] 
+          };
         }
         STAGE_DATABASE[base].schedules.push(item);
         item.membersArray.forEach(m => { if(m && m !== "-" && m !== "－") STAGE_DATABASE[base].allMembers.add(m.trim()); });
@@ -679,7 +690,7 @@
           if (firstShow) stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
         }
       });
-    }
+    }    
 
     function getAllUniqueMembers() {
       const set = new Set(MASTER_MEMBER_ORDER);
