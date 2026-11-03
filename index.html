@@ -596,7 +596,7 @@
       generateGlobalStageDatabase();
     }
 
-      function normalizeScheduleData(rawData) {
+    function normalizeScheduleData(rawData) {
       return rawData.map(item => {
         let rawDateStr = item.date || "";
         let datePart = "", timePart = item.time || "";
@@ -609,12 +609,12 @@
         }
         let rawTitle = item.title || item.stage || "";
         let mainTitle = rawTitle, subTitle = item.event || item.subTitle || "";
-
-        // 【修正】公演名からサブタイトル（初日・千秋楽など）を切り離し、ベース演目名を抽出
+        
+        // 公演名からサブタイトル（初日・千秋楽など）を切り離し、ベース演目名を抽出
         let baseStage = mainTitle;
         const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?)(?:\s*公演)?(?:\s+(.*))?$/);
         if (stageMatch) {
-          baseStage = stageMatch[1].trim(); // 例: "チームKII「シアターの女神」"
+          baseStage = stageMatch[1].trim(); 
           subTitle = subTitle || stageMatch[2] || "";
         } else {
           baseStage = mainTitle.replace(/公演.*$/, '').trim();
@@ -632,13 +632,12 @@
       });
     }
 
-      function generateGlobalStageDatabase() {
+    function generateGlobalStageDatabase() {
       GLOBAL_STAGE_DATABASE = {};
       ALL_SCHEDULE_DATA.forEach(item => {
         const base = item.baseStageName;
         if (!base) return;
         if (!GLOBAL_STAGE_DATABASE[base]) {
-          // 【修正】すでに「」が含まれていれば「公演」だけ付与、含まれていなければ「${base}」公演 とする
           const stageDisplayName = base.includes("「") ? `${base}公演` : `「${base}」公演`;
           GLOBAL_STAGE_DATABASE[base] = { 
             id: base, 
@@ -660,13 +659,12 @@
       });
     }
 
-      function generateStageDatabase() {
+    function generateStageDatabase() {
       STAGE_DATABASE = {};
       SCHEDULE_DATA.forEach(item => {
         const base = item.baseStageName;
         if (!base) return;
         if (!STAGE_DATABASE[base]) {
-          // 【修正】同様に「」の二重付与を防止
           const stageDisplayName = base.includes("「") ? `${base}公演` : `「${base}」公演`;
           STAGE_DATABASE[base] = { 
             id: base, 
@@ -690,7 +688,7 @@
           if (firstShow) stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
         }
       });
-    }    
+    }
 
     function getAllUniqueMembers() {
       const set = new Set(MASTER_MEMBER_ORDER);
@@ -1299,9 +1297,6 @@
         lastAppearedDateMap[pIdx] = {};
       });
 
-      // 【ポジション経験者一覧】
-      // 仕様: 初日メンバーは入力の有無に関わらず必ず1人目に配置。
-      // 入力メンバーの中で経験者を抽出。初日メンバーも入力メンバーに居る場合は2回登場する形になる。
       if (expListArea) {
         const rowDataList = getPositionRowDataList(stage);
         let maxCols = 0;
@@ -1331,15 +1326,12 @@
         `;
 
         rowDataList.forEach(({ fixedMember, orderedMembers }, pIdx) => {
-          // 入力メンバー（inputSet）に入っている経験者を抽出
           const attendingExperienced = orderedMembers.filter(member => member && member !== '-' && member !== '－' && inputSet.has(member));
 
           const rowMembers = [];
-          // 1. 初日メンバー（固定）は入力状況に関わらず先頭に配置
           if (fixedMember && fixedMember !== '-' && fixedMember !== '－') {
             rowMembers.push(fixedMember);
           }
-          // 2. 抽出された入力メンバーをそのまま並べる（初日メンバーが入力されていればここにも入るため2回登場する）
           attendingExperienced.forEach(m => {
             rowMembers.push(m);
           });
@@ -1584,7 +1576,7 @@
 
       const totalCount = matchingShows.length;
       matchingShows.forEach((item, index) => {
-        let stageTitleWithSub = `「${item.baseStageName}」`;
+        let stageTitleWithSub = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
         if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += ` ${item.subTitle.trim()}`;
 
         const perfNumber = totalCount - index;
@@ -1610,7 +1602,9 @@
       const stageSelect = document.getElementById('songStageSelect');
       stageSelect.innerHTML = '';
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
-        stageSelect.appendChild(new Option(`「${stageKey}」公演`, stageKey));
+        const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
+        const displayName = stageObj ? stageObj.name : (stageKey.includes("「") ? `${stageKey}公演` : `「${stageKey}」公演`);
+        stageSelect.appendChild(new Option(displayName, stageKey));
       });
       onSongStageChange();
     }
@@ -1720,6 +1714,7 @@
           Object.keys(info.positions).forEach(pName => posBreakdownArr.push(`${pName} ${info.positions[pName]}回`));
           const li = document.createElement('li');
           li.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1";
+          const stDisplayName = st.includes("(" || "「") ? `${st}公演` : `「${st}」公演`; // 安全用
           li.innerHTML = `
             <div class="flex justify-between items-center text-xs font-bold text-slate-800">
               <span>「${escapeHtml(st)}」公演</span>
@@ -1735,7 +1730,7 @@
 
       const historyList = document.getElementById('memberShowsHistoryList');
       historyList.innerHTML = '';
-      const historyPerfs = [...memberPerfs].sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + b.time));
+      const historyPerfs = [...memberPerfs].sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
       if (historyPerfs.length === 0) {
         historyList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">出演履歴がありません。</p>`;
       } else {
@@ -1747,7 +1742,7 @@
             if (pIdx !== -1) posName = (stageObj && stageObj.fixed && stageObj.fixed[pIdx]) ? stageObj.fixed[pIdx] : `Pos.${pIdx+1}`;
           }
           if (!posName) posName = memberName;
-          let stageTitleWithSub = `「${item.baseStageName}」`;
+          let stageTitleWithSub = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
           if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += ` ${item.subTitle.trim()}`;
 
           const div = document.createElement('div');
@@ -1791,7 +1786,6 @@
       const rankingArr = Object.keys(appearanceCounts).filter(m => appearanceCounts[m] > 0).map(m => ({ name: m, count: appearanceCounts[m] }));
       sortMemberRankings(rankingArr);
 
-      // 同率順位の計算
       let currentRank = 1;
       rankingArr.forEach((item, index, arr) => {
         if (index > 0 && item.count < arr[index - 1].count) {
@@ -1838,7 +1832,6 @@
       const coappArr = Object.keys(coappCounts).map(m => ({ name: m, count: coappCounts[m] }));
       sortMemberRankings(coappArr);
 
-      // 同率順位の計算（共演）
       let currentCoappRank = 1;
       coappArr.forEach((item, index, arr) => {
         if (index > 0 && item.count < arr[index - 1].count) {
@@ -1963,6 +1956,7 @@
       }
 
       achievements.forEach(ach => {
+        const stageDisplayTitle = ach.stageName.includes("「") ? `${ach.stageName}公演` : `「${ach.stageName}」公演`;
         const div = document.createElement('div');
         div.className = "bg-white p-2 rounded border border-slate-200 cursor-pointer hover:border-pink-300 transition space-y-0.5";
         div.onclick = () => jumpToSchedule(ach.date, ach.id);
@@ -1971,7 +1965,7 @@
             <span class="cursor-pointer hover:text-pink-600" onclick="event.stopPropagation(); openMemberDetail('${escapeHtml(ach.name)}')">${escapeHtml(ach.name)}　${ach.milestone}回達成</span>
             <span class="text-pink-600 text-[10px]">${ach.date}</span>
           </div>
-          <div class="text-[10px] text-slate-500">${escapeHtml(ach.theater)} 「${escapeHtml(ach.stageName)}」公演</div>
+          <div class="text-[10px] text-slate-500">${escapeHtml(ach.theater)} ${escapeHtml(stageDisplayTitle)}</div>
         `;
         container.appendChild(div);
       });
@@ -1982,7 +1976,9 @@
       if (select.children.length > 0) return;
       select.innerHTML = '';
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
-        select.appendChild(new Option(`「${stageKey}」公演`, stageKey));
+        const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
+        const displayName = stageObj ? stageObj.name : (stageKey.includes("「") ? `${stageKey}公演` : `「${stageKey}」公演`);
+        select.appendChild(new Option(displayName, stageKey));
       });
       renderStatsStageRanking();
     }
@@ -2008,7 +2004,6 @@
         return a.name.localeCompare(b.name, 'ja');
       });
 
-      // 同率順位の計算
       let currentRank = 1;
       arr.forEach((item, index, self) => {
         if (index > 0 && item.count < self[index - 1].count) {
@@ -2050,7 +2045,8 @@
       dataSource.forEach(item => {
         if (item.baseStageName && !stageSet.has(item.baseStageName)) {
           stageSet.add(item.baseStageName);
-          if (item.baseStageName.toLowerCase().includes(query) || `「${item.baseStageName}」公演`.toLowerCase().includes(query)) {
+          const fullTitle = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
+          if (item.baseStageName.toLowerCase().includes(query) || fullTitle.toLowerCase().includes(query)) {
             stageMatches.push(item.baseStageName);
           }
         }
@@ -2067,13 +2063,14 @@
 
       suggestBox.innerHTML = '';
       stageMatches.forEach(stageKey => {
+        const displayLabel = stageKey.includes("「") ? `${stageKey}公演` : `「${stageKey}」公演`;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'w-full text-left px-4 py-2.5 hover:bg-pink-50 flex items-center justify-between transition border-b border-slate-100 last:border-none';
         btn.innerHTML = `
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-masks-theater text-pink-500 text-xs"></i>
-            <span class="font-bold text-slate-700">「${escapeHtml(stageKey)}」公演</span>
+            <span class="font-bold text-slate-700">${escapeHtml(displayLabel)}</span>
           </div>
           <span class="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded font-bold">演目</span>
         `;
