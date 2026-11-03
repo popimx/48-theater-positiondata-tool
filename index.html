@@ -1577,7 +1577,7 @@
       const totalCount = matchingShows.length;
       matchingShows.forEach((item, index) => {
         let stageTitleWithSub = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
-        if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += ` ${item.subTitle.trim()}`;
+        if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `  ${item.subTitle.trim()}`;
 
         const perfNumber = totalCount - index;
 
@@ -1714,10 +1714,13 @@
           Object.keys(info.positions).forEach(pName => posBreakdownArr.push(`${pName} ${info.positions[pName]}回`));
           const li = document.createElement('li');
           li.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1";
-          const stDisplayName = st.includes("(" || "「") ? `${st}公演` : `「${st}」公演`; // 安全用
+          
+          // 二重括弧防止の判定
+          const stDisplayName = st.includes("「") ? `${st}公演` : `「${st}」公演`;
+          
           li.innerHTML = `
             <div class="flex justify-between items-center text-xs font-bold text-slate-800">
-              <span>「${escapeHtml(st)}」公演</span>
+              <span>${escapeHtml(stDisplayName)}</span>
               <span class="text-pink-600 font-bold ml-auto">${info.total}回</span>
             </div>
             <div class="text-[10px] text-slate-500 font-medium">${escapeHtml(posBreakdownArr.join('　'))}</div>
@@ -1742,8 +1745,10 @@
             if (pIdx !== -1) posName = (stageObj && stageObj.fixed && stageObj.fixed[pIdx]) ? stageObj.fixed[pIdx] : `Pos.${pIdx+1}`;
           }
           if (!posName) posName = memberName;
+          
           let stageTitleWithSub = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
-          if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += ` ${item.subTitle.trim()}`;
+          // 公演名とイベント名の間に半角スペース2個分を付与
+          if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `  ${item.subTitle.trim()}`;
 
           const div = document.createElement('div');
           div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
