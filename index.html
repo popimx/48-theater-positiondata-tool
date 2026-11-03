@@ -596,7 +596,7 @@
       generateGlobalStageDatabase();
     }
 
-    function normalizeScheduleData(rawData) {
+      function normalizeScheduleData(rawData) {
       return rawData.map(item => {
         let rawDateStr = item.date || "";
         let datePart = "", timePart = item.time || "";
@@ -609,11 +609,24 @@
         }
         let rawTitle = item.title || item.stage || "";
         let mainTitle = rawTitle, subTitle = item.event || item.subTitle || "";
-        if (!subTitle) {
-          const match = rawTitle.match(/^(「.*?」公演)(?:\s+(.*))?$/);
-          if (match) { mainTitle = match[1]; subTitle = match[2] || ""; }
+        
+        // 【修正】チーム名（例: チームS）と「かぎかっこ」を綺麗に分離・保持する
+        let baseStage = "";
+        const teamMatch = rawTitle.match(/^(.*?)(「.*?」|『.*?』)(?:\s*公演)?(?:\s+(.*))?$/);
+        if (teamMatch) {
+          const prefix = teamMatch[1].trim(); // 例: "チームS"
+          const bracketTitle = teamMatch[2];   // 例: "「僕の太陽」"
+          subTitle = subTitle || teamMatch[3] || "";
+          // 内部のベース名として、プレフィックスと括弧の中身を結合（括弧は保持しない、または区切る）
+          baseStage = prefix ? `${prefix}_${bracketTitle.replace(/「|」|『|』/g, '')}` : bracketTitle.replace(/「|」|『|』/g, '');
+        } else {
+          if (!subTitle) {
+            const match = rawTitle.match(/^(「.*?」公演)(?:\s+(.*))?$/);
+            if (match) { mainTitle = match[1]; subTitle = match[2] || ""; }
+          }
+          baseStage = mainTitle.replace(/「|」|『|』/g, '').replace(/公演.*$/, '').trim();
         }
-        let baseStage = mainTitle.replace(/「|」|『|』/g, '').replace(/公演.*$/, '').trim();
+
         let membersArr = Array.isArray(item.members) ? item.members.filter(m => m && m !== "-" && m !== "－") : [];
         let posArr = Array.isArray(item.positions) ? item.positions : [];
         return {
