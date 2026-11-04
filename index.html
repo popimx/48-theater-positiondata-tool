@@ -1748,7 +1748,7 @@
           
           let stageTitleWithSub = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
           // 公演名とイベント名の間に半角スペース2個分を付与
-          if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `  ${item.subTitle.trim()}`;
+          if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `   ${item.subTitle.trim()}`;
 
           const div = document.createElement('div');
           div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
