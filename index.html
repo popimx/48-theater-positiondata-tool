@@ -1314,8 +1314,8 @@
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200">
         `;
-        
-        for (let i = 0; i < maxCols; i++) {
+
+          for (let i = 0; i <= maxCols; i++) {
           expTableHtml += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">${i === 0 ? '初日' : `${i}人目`}</th>`;
         }
 
@@ -1336,8 +1336,11 @@
             rowMembers.push(m);
           });
 
+          if (rowMembers.length === 0) return;
+
           expTableHtml += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
-          for (let i = 0; i < maxCols; i++) {
+          
+          for (let i = 0; i <= maxCols; i++) {
             const member = rowMembers[i];
             if (member) {
               if (!initialAttendingExpMap[pIdx].includes(member)) {
@@ -1351,15 +1354,11 @@
                 lastAppearedDateMap[pIdx][member] = sortedDates[0] || 0;
               } else { lastAppearedDateMap[pIdx][member] = 0; }
 
-              const isFixed = (i === 0);
-              
-              // 【変更点】初日（i=0）の場合、今回の出演メンバー(inputSet)に含まれているか判定
               let cellBg = "";
-              if (isFixed) {
-                const isAttending = inputSet.has(member);
-                cellBg = isAttending ? "bg-pink-100/60 font-bold" : ""; // 含まれていなければ無色（""）、含まれていればピンク
+              if (i === 0) {
+                cellBg = "";
               } else {
-                cellBg = "bg-pink-50/50"; // 2人目以降（経験者側）
+                cellBg = "bg-pink-50/50";
               }
 
               expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap ${cellBg}"><span class="member-link text-xs font-bold" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span></td>`;
