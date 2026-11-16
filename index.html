@@ -596,7 +596,7 @@
       generateGlobalStageDatabase();
     }
 
-    function normalizeScheduleData(rawData) {
+      function normalizeScheduleData(rawData) {
       return rawData.map(item => {
         let rawDateStr = item.date || "";
         let datePart = "", timePart = item.time || "";
@@ -610,16 +610,24 @@
         let rawTitle = item.title || item.stage || "";
         let mainTitle = rawTitle, subTitle = item.event || item.subTitle || "";
         
-        // 公演名からサブタイトル（初日・千秋楽など）を切り離し、ベース演目名を抽出
-        let baseStage = mainTitle;
-        const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?)(?:\s*公演)?(?:\s+(.*))?$/);
+        // ★修正: 「(12人)」などの人数表記やバリエーションをベース演目名に含めるように調整
+        // 例: HKT48 研究生「ラムネの飲み方」公演 (12人) -> 別々のベースとして認識させる
+        let baseStage = mainTitle.trim();
+        
+        // 初日や千秋楽などのイベント名（subTitle）を分離しつつ、人数などのバージョン情報はベース名に残す
+        // または、タイトル全体から「初日」「千秋楽」などの特定ワード以外はベース名として保持する
+        const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?(?:\s*\(\d+人\))?)(?:\s+公演)?(?:\s+(初日|千秋楽|生誕祭|卒業公演.*))?$/);
         if (stageMatch) {
           baseStage = stageMatch[1].trim(); 
           subTitle = subTitle || stageMatch[2] || "";
         } else {
-          baseStage = mainTitle.replace(/公演.*$/, '').trim();
+          // 「初日」「千秋楽」などを後ろから切り離す
+          baseStage = mainTitle.replace(/\s+(初日|千秋楽|生誕祭|卒業公演.*)$/, '').trim();
         }
 
+        // 末尾の「公演」という文字の重複や揺れを綺麗にする（ただし (12人) などは残す）
+        // ※「HKT48 研究生「ラムネの飲み方」公演 (12人)」の場合、baseStageをそのまま活かす
+        
         let membersArr = Array.isArray(item.members) ? item.members.filter(m => m && m !== "-" && m !== "－") : [];
         let posArr = Array.isArray(item.positions) ? item.positions : [];
         return {
