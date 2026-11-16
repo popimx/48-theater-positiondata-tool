@@ -596,7 +596,7 @@
       generateGlobalStageDatabase();
     }
 
-      function normalizeScheduleData(rawData) {
+    function normalizeScheduleData(rawData) {
       return rawData.map(item => {
         let rawDateStr = item.date || "";
         let datePart = "", timePart = item.time || "";
@@ -610,24 +610,16 @@
         let rawTitle = item.title || item.stage || "";
         let mainTitle = rawTitle, subTitle = item.event || item.subTitle || "";
         
-        // ★修正: 「(12人)」などの人数表記やバリエーションをベース演目名に含めるように調整
-        // 例: HKT48 研究生「ラムネの飲み方」公演 (12人) -> 別々のベースとして認識させる
+        // 公演名からサブタイトル（初日・千秋楽など）を切り離し、人数表記などはベース演目名に残す
         let baseStage = mainTitle.trim();
-        
-        // 初日や千秋楽などのイベント名（subTitle）を分離しつつ、人数などのバージョン情報はベース名に残す
-        // または、タイトル全体から「初日」「千秋楽」などの特定ワード以外はベース名として保持する
-        const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?(?:\s*\(\d+人\))?)(?:\s+公演)?(?:\s+(初日|千秋楽|生誕祭|卒業公演.*))?$/);
+        const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?(?:\s*公演)?(?:\s*\(\d+人\))?)(?:\s+(初日|千秋楽|生誕祭|卒業公演.*))?$/);
         if (stageMatch) {
           baseStage = stageMatch[1].trim(); 
           subTitle = subTitle || stageMatch[2] || "";
         } else {
-          // 「初日」「千秋楽」などを後ろから切り離す
           baseStage = mainTitle.replace(/\s+(初日|千秋楽|生誕祭|卒業公演.*)$/, '').trim();
         }
 
-        // 末尾の「公演」という文字の重複や揺れを綺麗にする（ただし (12人) などは残す）
-        // ※「HKT48 研究生「ラムネの飲み方」公演 (12人)」の場合、baseStageをそのまま活かす
-        
         let membersArr = Array.isArray(item.members) ? item.members.filter(m => m && m !== "-" && m !== "－") : [];
         let posArr = Array.isArray(item.positions) ? item.positions : [];
         return {
@@ -640,13 +632,21 @@
       });
     }
 
+    function formatStageTitle(baseName) {
+      if (!baseName) return "";
+      if (baseName.includes("公演")) {
+        return baseName;
+      }
+      return baseName.includes("「") ? `${baseName}公演` : `「${baseName}」公演`;
+    }
+
     function generateGlobalStageDatabase() {
       GLOBAL_STAGE_DATABASE = {};
       ALL_SCHEDULE_DATA.forEach(item => {
         const base = item.baseStageName;
         if (!base) return;
         if (!GLOBAL_STAGE_DATABASE[base]) {
-          const stageDisplayName = base.includes("「") ? `${base}公演` : `「${base}」公演`;
+          const stageDisplayName = formatStageTitle(base);
           GLOBAL_STAGE_DATABASE[base] = { 
             id: base, 
             name: stageDisplayName, 
@@ -673,7 +673,7 @@
         const base = item.baseStageName;
         if (!base) return;
         if (!STAGE_DATABASE[base]) {
-          const stageDisplayName = base.includes("「") ? `${base}公演` : `「${base}」公演`;
+          const stageDisplayName = formatStageTitle(base);
           STAGE_DATABASE[base] = { 
             id: base, 
             name: stageDisplayName, 
@@ -1592,7 +1592,7 @@
 
       const totalCount = matchingShows.length;
       matchingShows.forEach((item, index) => {
-        let stageTitleWithSub = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
+        let stageTitleWithSub = formatStageTitle(item.baseStageName);
         if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `  ${item.subTitle.trim()}`;
 
         const perfNumber = totalCount - index;
@@ -1619,7 +1619,7 @@
       stageSelect.innerHTML = '';
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
         const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
-        const displayName = stageObj ? stageObj.name : (stageKey.includes("「") ? `${stageKey}公演` : `「${stageKey}」公演`);
+        const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
         stageSelect.appendChild(new Option(displayName, stageKey));
       });
       onSongStageChange();
@@ -1731,8 +1731,7 @@
           const li = document.createElement('li');
           li.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1";
           
-          // 二重括弧防止の判定
-          const stDisplayName = st.includes("「") ? `${st}公演` : `「${st}」公演`;
+          const stDisplayName = formatStageTitle(st);
           
           li.innerHTML = `
             <div class="flex justify-between items-center text-xs font-bold text-slate-800">
@@ -1762,8 +1761,7 @@
           }
           if (!posName) posName = memberName;
           
-          let stageTitleWithSub = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
-          // 公演名とイベント名の間に半角スペース2個分を付与
+          let stageTitleWithSub = formatStageTitle(item.baseStageName);
           if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `   ${item.subTitle.trim()}`;
 
           const div = document.createElement('div');
@@ -1977,7 +1975,7 @@
       }
 
       achievements.forEach(ach => {
-        const stageDisplayTitle = ach.stageName.includes("「") ? `${ach.stageName}公演` : `「${ach.stageName}」公演`;
+        const stageDisplayTitle = formatStageTitle(ach.stageName);
         const div = document.createElement('div');
         div.className = "bg-white p-2 rounded border border-slate-200 cursor-pointer hover:border-pink-300 transition space-y-0.5";
         div.onclick = () => jumpToSchedule(ach.date, ach.id);
@@ -1998,7 +1996,7 @@
       select.innerHTML = '';
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
         const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
-        const displayName = stageObj ? stageObj.name : (stageKey.includes("「") ? `${stageKey}公演` : `「${stageKey}」公演`);
+        const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
         select.appendChild(new Option(displayName, stageKey));
       });
       renderStatsStageRanking();
@@ -2066,7 +2064,7 @@
       dataSource.forEach(item => {
         if (item.baseStageName && !stageSet.has(item.baseStageName)) {
           stageSet.add(item.baseStageName);
-          const fullTitle = item.baseStageName.includes("「") ? `${item.baseStageName}公演` : `「${item.baseStageName}」公演`;
+          const fullTitle = formatStageTitle(item.baseStageName);
           if (item.baseStageName.toLowerCase().includes(query) || fullTitle.toLowerCase().includes(query)) {
             stageMatches.push(item.baseStageName);
           }
@@ -2084,7 +2082,7 @@
 
       suggestBox.innerHTML = '';
       stageMatches.forEach(stageKey => {
-        const displayLabel = stageKey.includes("「") ? `${stageKey}公演` : `「${stageKey}」公演`;
+        const displayLabel = formatStageTitle(stageKey);
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'w-full text-left px-4 py-2.5 hover:bg-pink-50 flex items-center justify-between transition border-b border-slate-100 last:border-none';
