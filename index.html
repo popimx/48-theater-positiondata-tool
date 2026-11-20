@@ -23,7 +23,7 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     .member-link { color: #111827; font-weight: 500; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
     .member-link:hover { opacity: 0.7; color: #db2777; }
-    
+
     /* カレンダーグリッド用スタイル */
     .cal-grid {
       display: grid;
@@ -43,7 +43,7 @@
     }
     .cal-cell.other-month { background-color: #f8fafc; color: #94a3b8; }
     .cal-cell.today { background-color: #fdf2f8; }
-    
+
     /* 表の列固定用 */
     .sticky-col-1 {
       position: sticky;
@@ -51,20 +51,70 @@
       background-color: #ffffff;
       z-index: 10;
     }
+
+    /* 歌割り・ダンス追従ビューア用 */
+    .song-stage-box {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #0f172a;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+    .song-stage-box video,
+    .song-stage-box canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .song-stage-box canvas {
+      pointer-events: none;
+    }
+    .person-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .person-filter-chip.active {
+      background: #db2777;
+      border-color: #db2777;
+      color: #ffffff;
+    }
+    .person-filter-chip img {
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+      object-fit: cover;
+      background: #e2e8f0;
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans">
   <!-- Header -->
   <header class="bg-pink-600 text-white p-4 shadow-md sticky top-0 z-40">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
-      <h1 class="text-xl font-bold flex items-center gap-2 cursor-pointer" onclick="goHome()">
-        <i class="fa-solid fa-masks-theater"></i> 劇場公演 データサイト
+      <h1 class="text-xl font-bold flex items-center gap-2">
+        <span id="theaterMaskIcon" onclick="onTheaterMaskTap(event)" title="劇場公演 データサイト" class="inline-flex items-center justify-center cursor-pointer select-none px-1 py-0.5 rounded hover:bg-pink-500/50 transition">
+          <i class="fa-solid fa-masks-theater"></i>
+        </span>
+        <span class="cursor-pointer" onclick="goHome()">劇場公演 データサイト</span>
       </h1>
     </div>
     <!-- 検索バー ＆ サジェスト -->
     <div class="max-w-4xl mx-auto mt-3 relative">
       <div class="relative">
-        <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名 で検索" 
+        <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名 で検索"
                class="w-full pl-9 pr-4 py-2 bg-white text-slate-800 text-sm rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-pink-300">
         <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
       </div>
@@ -110,7 +160,7 @@
             <button onclick="filterSchedule('NGT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NGT48劇場</button>
             <button onclick="filterSchedule('STU48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">STU48劇場</button>
           </div>
-          
+
           <div id="calendarList" class="space-y-3"></div>
           <div id="calendarGrid" class="hidden"></div>
         </div>
@@ -216,7 +266,7 @@
             <span class="text-xs text-slate-500">メンバーを選択してください。</span>
           </div>
           <div id="coappMemberChips" class="flex flex-wrap gap-1.5 p-2 border border-slate-200 rounded-lg bg-slate-50"></div>
-          
+
           <div class="pt-2">
             <button onclick="searchCoappearances()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 rounded-lg text-xs shadow transition">共演公演を検索する</button>
           </div>
@@ -230,20 +280,127 @@
         </div>
       </section>
 
-      <!-- Tab 7: 歌割り -->
+      <!-- Tab 7: 歌割り（ダンス追従＆同期歌詞ビューア＋🎭2回タップで開く作成パネル） -->
       <section id="tab-songparts" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
-          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-music text-pink-500"></i> 歌割りを確認できるページ
-          </h2>
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-music text-pink-500"></i> 歌割り・フォーメーション再生
+            </h2>
+            <span id="authorModeBadge" class="hidden text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+              <i class="fa-solid fa-sliders mr-1"></i> 作成・解析パネル表示中
+            </span>
+          </div>
+
+          <!-- 曲選択＆再生コントロール（閲覧者向けメインUI） -->
           <div class="space-y-2">
             <label class="block text-xs font-bold text-slate-600">演目と楽曲を選択</label>
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-2">
               <select id="songStageSelect" onchange="onSongStageChange()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
-              <select id="songTrackSelect" onchange="renderSongParts()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
+              <select id="songTrackSelect" onchange="onSongTrackChange()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
+            </div>
+            <div id="songDataStatus" class="text-[11px] text-slate-500"></div>
+          </div>
+
+          <!-- person 選択チップ（骨格判定できたpersonのみ表示・選択するとそのpersonだけ表示） -->
+          <div class="space-y-1.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-bold text-slate-600">表示メンバー（person選択で単独表示）</span>
+              <div class="flex items-center gap-3 text-[11px] text-slate-500">
+                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowAvatar" checked> 顔写真</label>
+                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowName" checked> 名前</label>
+                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowPos" checked> 立ち位置</label>
+              </div>
+            </div>
+            <div id="songPersonChips" class="flex flex-wrap gap-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200 min-h-[42px] items-center">
+              <span class="text-xs text-slate-400">骨格判定されたpersonデータがある曲を選ぶと表示されます。</span>
             </div>
           </div>
-          <div id="songPartsResult" class="space-y-3 pt-2 border-t border-slate-100"></div>
+
+          <!-- 動画＋追従Canvas -->
+          <div class="space-y-2">
+            <div class="song-stage-box" id="songStageBox">
+              <video id="songVideo" playsinline preload="metadata"></video>
+              <canvas id="songOverlayCanvas"></canvas>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              <div class="flex items-center gap-2">
+                <button type="button" id="songPlayBtn" onclick="toggleSongPlayback()" class="bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow transition inline-flex items-center gap-1.5">
+                  <i class="fa-solid fa-play" id="songPlayIcon"></i> <span id="songPlayLabel">再生</span>
+                </button>
+                <span id="songTimeLabel" class="text-xs font-mono text-slate-600">00:00.0 / 00:00.0</span>
+              </div>
+              <div id="songViewerNotice" class="text-[11px] text-slate-500"></div>
+            </div>
+          </div>
+
+          <!-- 動画下の同期歌詞 -->
+          <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2 border border-slate-800">
+            <div class="text-[11px] font-bold text-pink-400 flex items-center justify-between">
+              <span><i class="fa-solid fa-closed-captioning mr-1"></i> 同期歌詞</span>
+              <span id="songCurrentPosSummary" class="text-slate-300 font-normal"></span>
+            </div>
+            <div id="songCurrentLyric" class="text-base sm:text-lg font-bold leading-relaxed min-h-[28px]">再生すると歌詞が同期表示されます</div>
+            <div id="songNextLyric" class="text-xs text-slate-400">次: -</div>
+            <div id="songLyricSeekList" class="flex flex-wrap gap-1.5 pt-1"></div>
+          </div>
+
+          <!-- 左上🎭を2回タップしたときだけ表示される作成・解析パネル -->
+          <div id="songAuthorPanel" class="hidden space-y-4 pt-4 border-t-2 border-dashed border-amber-300 bg-amber-50/40 p-3.5 rounded-xl">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-person-running text-pink-600"></i> ローカル動画 人物検出・骨格解析＆データ出力
+              </h3>
+              <button type="button" onclick="setAuthorMode(false)" class="text-xs text-slate-500 hover:text-slate-800 font-bold">閉じる</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                <label class="block font-bold text-slate-700">1. 定点動画ファイルを選択</label>
+                <input type="file" id="localDanceVideoInput" accept="video/*" onchange="onLocalDanceVideoSelected(this)" class="block w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
+                <div class="flex items-center gap-2 pt-1">
+                  <label class="text-slate-600">解析サンプリング:</label>
+                  <select id="analysisFpsSelect" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-slate-50">
+                    <option value="5">5 fps（高速・軽量）</option>
+                    <option value="10" selected>10 fps（推奨）</option>
+                    <option value="15">15 fps（なめらか）</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                <label class="block font-bold text-slate-700">2. 骨格判定を実行（骨格が取れたpersonのみ抽出）</label>
+                <button type="button" id="runPoseAnalysisBtn" onclick="runPoseAnalysisOnVideo()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-3 rounded-lg text-xs transition">
+                  <i class="fa-solid fa-microchip mr-1"></i> 骨格解析を実行
+                </button>
+                <div id="poseAnalysisProgress" class="text-[11px] text-slate-600 font-medium">動画を読み込んで実行してください。</div>
+              </div>
+            </div>
+
+            <!-- 骨格判定できたpersonごとの編集（名前・顔写真差し替え・立ち位置） -->
+            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+              <div class="text-xs font-bold text-slate-700">3. 骨格判定された person の設定（名前・顔写真・立ち位置）</div>
+              <div id="detectedPersonEditor" class="space-y-2 text-xs">
+                <p class="text-slate-400">骨格解析を実行すると、検出されたpersonがここに表示されます。</p>
+              </div>
+            </div>
+
+            <!-- 歌詞タイムライン編集（LRC / 1行1フレーズ） -->
+            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+              <label class="block text-xs font-bold text-slate-700">4. 同期歌詞（LRC形式 `[00:05.00] 歌詞` または `秒数|歌詞`）</label>
+              <textarea id="songLyricsEditor" rows="4" oninput="syncLyricsFromEditor()" placeholder="[00:00.00] イントロ&#10;[00:04.50] 最初の歌詞フレーズ" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
+            </div>
+
+            <!-- JSONダウンロード＆この画面へ即反映 -->
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="exportSongTrackingJson()" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition">
+                <i class="fa-solid fa-download mr-1"></i> 解析JSONをダウンロード（./data/songs/配置用）
+              </button>
+              <button type="button" onclick="saveCurrentSongToSessionMemory()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-3 rounded-lg text-xs transition">
+                この曲データとして確定
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -253,7 +410,7 @@
           <h2 class="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
             <i class="fa-solid fa-chart-line text-pink-500"></i> 統計
           </h2>
-          
+
           <!-- カウントダウン -->
           <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-hourglass-half text-pink-500 mr-1"></i> 大台達成カウントダウン</h4>
@@ -490,6 +647,26 @@
     let perfTableMode = 'circle';
     let selectedCoappMembers = new Set();
 
+    // 🎭 2回タップで切り替わる作成・解析モード状態
+    let isAuthorModeActive = false;
+    let lastMaskTapTime = 0;
+
+    // 歌割り・ダンス追従ビューアの状態
+    let songMemoryStore = {}; // セッション内で確定・解析した曲データ { [songKey]: songPackage }
+    let activeSongData = null;
+    let selectedSongPersonId = null; // null = 骨格判定できたperson全員、文字列 = そのpersonだけ表示
+    let songAvatarImages = {};
+    let localUploadedVideoUrl = null;
+    let poseLandmarkerInstance = null;
+
+    const DEFAULT_SONGS_BY_STAGE = [
+      "M1. overture",
+      "M2. 夢のポップスター",
+      "M3. 青春のフラッグ",
+      "M4. 君と僕の関係",
+      "M5. 希望的リフレイン"
+    ];
+
     const FALLBACK_SCHEDULE_2026 = [
       {
         id: "akb_260807",
@@ -523,7 +700,11 @@
       initYearMonthDropdowns();
       await loadAllYearsScheduleData();
       await onDateChange();
-      
+      renderSongStageDropdown();
+      startSongOverlayLoop();
+
+      window.addEventListener("resize", resizeSongOverlayCanvas);
+
       document.addEventListener('click', (e) => {
         const suggestBox = document.getElementById('searchSuggest');
         const searchInput = document.getElementById('searchInput');
@@ -531,17 +712,51 @@
       });
     });
 
+    // 左上の🎭マークを2回叩いたときの処理
+    function onTheaterMaskTap(event) {
+      if (event) event.stopPropagation();
+      const now = Date.now();
+      if (now - lastMaskTapTime <= 500) {
+        lastMaskTapTime = 0;
+        setAuthorMode(!isAuthorModeActive);
+        // 歌割りタブを表示してすぐに使えるようにする
+        document.getElementById('mainTabsContainer').classList.remove('hidden');
+        document.getElementById('memberDetailContainer').classList.add('hidden');
+        if (!currentStageKey) {
+          const firstKey = Object.keys(GLOBAL_STAGE_DATABASE)[0] || "夢のポップスター";
+          currentStageKey = firstKey;
+          document.getElementById('navNormal').classList.add('hidden');
+          document.getElementById('navMemberSearching').classList.add('hidden');
+          document.getElementById('navStageDetail').classList.remove('hidden');
+          document.getElementById('navStageDetail').classList.add('flex');
+          renderSongStageDropdown();
+        }
+        switchTab('songparts');
+      } else {
+        lastMaskTapTime = now;
+      }
+    }
+
+    function setAuthorMode(active) {
+      isAuthorModeActive = !!active;
+      const panel = document.getElementById('songAuthorPanel');
+      const badge = document.getElementById('authorModeBadge');
+      if (panel) panel.classList.toggle('hidden', !isAuthorModeActive);
+      if (badge) badge.classList.toggle('hidden', !isAuthorModeActive);
+      updateSongViewerNotice();
+    }
+
     function initYearMonthDropdowns() {
       const yearSelect = document.getElementById("yearSelect");
       const monthSelect = document.getElementById("monthSelect");
       yearSelect.innerHTML = ''; monthSelect.innerHTML = '';
       for (let y = 2026; y >= 2005; y--) yearSelect.appendChild(new Option(`${y}年`, y));
       for (let m = 1; m <= 12; m++) monthSelect.appendChild(new Option(`${m}月`, m < 10 ? `0${m}` : `${m}`));
-      
+
       const now = new Date();
       yearSelect.value = now.getFullYear();
       monthSelect.value = (now.getMonth() + 1).toString().padStart(2, '0');
-      
+
       const yStr = now.getFullYear();
       const mStr = (now.getMonth() + 1).toString().padStart(2, '0');
       const dStr = now.getDate().toString().padStart(2, '0');
@@ -609,12 +824,11 @@
         }
         let rawTitle = item.title || item.stage || "";
         let mainTitle = rawTitle, subTitle = item.event || item.subTitle || "";
-        
-        // 公演名からサブタイトル（初日・千秋楽など）を切り離し、人数表記などはベース演目名に残す
+
         let baseStage = mainTitle.trim();
         const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?(?:\s*公演)?(?:\s*\(\d+人\))?)(?:\s+(初日|千秋楽|生誕祭|卒業公演.*))?$/);
         if (stageMatch) {
-          baseStage = stageMatch[1].trim(); 
+          baseStage = stageMatch[1].trim();
           subTitle = subTitle || stageMatch[2] || "";
         } else {
           baseStage = mainTitle.replace(/\s+(初日|千秋楽|生誕祭|卒業公演.*)$/, '').trim();
@@ -647,13 +861,13 @@
         if (!base) return;
         if (!GLOBAL_STAGE_DATABASE[base]) {
           const stageDisplayName = formatStageTitle(base);
-          GLOBAL_STAGE_DATABASE[base] = { 
-            id: base, 
-            name: stageDisplayName, 
-            group: item.theater.replace("劇場", "").trim() || "AKB48", 
-            fixed: [], 
-            allMembers: new Set(), 
-            schedules: [] 
+          GLOBAL_STAGE_DATABASE[base] = {
+            id: base,
+            name: stageDisplayName,
+            group: item.theater.replace("劇場", "").trim() || "AKB48",
+            fixed: [],
+            allMembers: new Set(),
+            schedules: []
           };
         }
         GLOBAL_STAGE_DATABASE[base].schedules.push(item);
@@ -674,13 +888,13 @@
         if (!base) return;
         if (!STAGE_DATABASE[base]) {
           const stageDisplayName = formatStageTitle(base);
-          STAGE_DATABASE[base] = { 
-            id: base, 
-            name: stageDisplayName, 
-            group: item.theater.replace("劇場", "").trim() || "AKB48", 
-            fixed: [], 
-            allMembers: new Set(), 
-            schedules: [] 
+          STAGE_DATABASE[base] = {
+            id: base,
+            name: stageDisplayName,
+            group: item.theater.replace("劇場", "").trim() || "AKB48",
+            fixed: [],
+            allMembers: new Set(),
+            schedules: []
           };
         }
         STAGE_DATABASE[base].schedules.push(item);
@@ -793,8 +1007,850 @@
       }
       if (tabName === 'coapp') renderCoappMemberChips();
       if (tabName === 'stats') renderStatsTab();
+      if (tabName === 'songparts') {
+        resizeSongOverlayCanvas();
+        if (!document.getElementById('songStageSelect').options.length) {
+          renderSongStageDropdown();
+        }
+      }
     }
 
+    /* =========================================================================
+       歌割りタブ：曲選択＆再生ビューア ＋ 骨格判定できたperson追従 ＋ 同期歌詞
+       ========================================================================= */
+    function getSongStorageKey(stageKey, trackName) {
+      return `${stageKey || 'default'}__${trackName || 'track'}`;
+    }
+
+    function makeDefaultAvatarDataUrl(label, colorHex) {
+      const safeChar = String(label || 'P').slice(0, 1);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="${colorHex}"/><text x="40" y="50" font-size="34" font-family="sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">${safeChar}</text></svg>`;
+      return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+    }
+
+    function renderSongStageDropdown() {
+      const stageSelect = document.getElementById('songStageSelect');
+      if (!stageSelect) return;
+      const previousStage = currentStageKey || stageSelect.value;
+      stageSelect.innerHTML = '';
+
+      const keys = Object.keys(GLOBAL_STAGE_DATABASE);
+      if (keys.length > 0) {
+        keys.forEach(stageKey => {
+          const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
+          const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
+          stageSelect.appendChild(new Option(displayName, stageKey));
+        });
+      } else {
+        stageSelect.appendChild(new Option("「夢のポップスター」公演", "夢のポップスター"));
+      }
+
+      if (previousStage && Array.from(stageSelect.options).some(o => o.value === previousStage)) {
+        stageSelect.value = previousStage;
+      }
+      onSongStageChange();
+    }
+
+    function onSongStageChange() {
+      const stageKey = document.getElementById('songStageSelect').value;
+      currentStageKey = stageKey;
+      const trackSelect = document.getElementById('songTrackSelect');
+      trackSelect.innerHTML = '';
+
+      const stageObj = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
+      const tracks = (stageObj && Array.isArray(stageObj.songs) && stageObj.songs.length > 0)
+        ? stageObj.songs
+        : DEFAULT_SONGS_BY_STAGE;
+
+      tracks.forEach(t => trackSelect.appendChild(new Option(t, t)));
+      onSongTrackChange();
+    }
+
+    async function onSongTrackChange() {
+      const stageKey = document.getElementById('songStageSelect').value;
+      const trackName = document.getElementById('songTrackSelect').value;
+      const key = getSongStorageKey(stageKey, trackName);
+      selectedSongPersonId = null;
+
+      // 1. セッション内で解析・確定済みのデータがあれば優先
+      if (songMemoryStore[key]) {
+        applySongTrackingData(songMemoryStore[key], "セッション内の解析データ");
+        return;
+      }
+
+      // 2. 外部JSON（例: ./data/songs/夢のポップスター_M2._夢のポップスター.json）があれば取得
+      const safeFileSlug = encodeURIComponent(key);
+      try {
+        const res = await fetch(`./data/songs/${safeFileSlug}.json`);
+        if (res.ok) {
+          const jsonData = await res.json();
+          if (jsonData && jsonData.members && Array.isArray(jsonData.frames)) {
+            songMemoryStore[key] = jsonData;
+            applySongTrackingData(jsonData, "保存済みJSONデータ");
+            return;
+          }
+        }
+      } catch (_) {
+        // 静的ファイル未配置時は未解析状態へ
+      }
+
+      applySongTrackingData(null, "未解析（骨格判定されたpersonデータなし）");
+    }
+
+    function applySongTrackingData(data, sourceLabel) {
+      activeSongData = data;
+      songAvatarImages = {};
+
+      const statusEl = document.getElementById('songDataStatus');
+      const lyricsEditor = document.getElementById('songLyricsEditor');
+
+      if (!data) {
+        statusEl.textContent = `状態: ${sourceLabel} — 再生ボタンを押すと動画が再生されます（顔写真追従は骨格判定されたpersonのみ表示）。`;
+        if (lyricsEditor && !lyricsEditor.value.trim()) {
+          lyricsEditor.value = "[00:00.00] イントロ\n[00:04.00] 歌詞を入力してください";
+        }
+        renderSongPersonChips();
+        renderSongLyricSeekButtons();
+        updateSongViewerNotice();
+        return;
+      }
+
+      // 骨格判定された person (detectedByPose !== false) のみ抽出
+      const validMembers = {};
+      Object.entries(data.members || {}).forEach(([pid, info]) => {
+        if (info && info.detectedByPose !== false) {
+          validMembers[pid] = info;
+          const img = new Image();
+          img.src = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
+          songAvatarImages[pid] = img;
+        }
+      });
+      data._validMembers = validMembers;
+
+      if (data.videoUrl) {
+        const videoEl = document.getElementById('songVideo');
+        if (videoEl.getAttribute('src') !== data.videoUrl) {
+          videoEl.src = data.videoUrl;
+          videoEl.load();
+        }
+      }
+
+      if (lyricsEditor && Array.isArray(data.lyrics)) {
+        lyricsEditor.value = data.lyrics.map(l => `[${formatLrcTimestamp(l.start)}] ${l.text}`).join("\n");
+      }
+
+      const count = Object.keys(validMembers).length;
+      statusEl.textContent = `状態: ${sourceLabel} ／ 骨格判定されたperson: ${count}名`;
+
+      renderSongPersonChips();
+      renderSongLyricSeekButtons();
+      updateSongViewerNotice();
+    }
+
+    function updateSongViewerNotice() {
+      const noticeEl = document.getElementById('songViewerNotice');
+      if (!noticeEl) return;
+      const hasVideoSrc = !!document.getElementById('songVideo').currentSrc || !!document.getElementById('songVideo').getAttribute('src');
+      if (!hasVideoSrc && !isAuthorModeActive) {
+        noticeEl.textContent = "※ 動画ファイル未設定の曲です（🎭を2回タップしてローカル動画を読み込むと再生・骨格解析ができます）";
+      } else if (selectedSongPersonId && activeSongData?._validMembers?.[selectedSongPersonId]) {
+        noticeEl.textContent = `絞り込み中: ${activeSongData._validMembers[selectedSongPersonId].name} のみ表示`;
+      } else {
+        noticeEl.textContent = "";
+      }
+    }
+
+    function renderSongPersonChips() {
+      const container = document.getElementById('songPersonChips');
+      container.innerHTML = '';
+
+      const validMembers = activeSongData?._validMembers || {};
+      const entries = Object.entries(validMembers);
+
+      if (entries.length === 0) {
+        container.innerHTML = `<span class="text-xs text-slate-400">骨格判定されたpersonデータがありません。</span>`;
+        return;
+      }
+
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      allBtn.className = `person-filter-chip ${selectedSongPersonId === null ? 'active' : ''}`;
+      allBtn.textContent = `全員 (${entries.length})`;
+      allBtn.onclick = () => {
+        selectedSongPersonId = null;
+        renderSongPersonChips();
+        updateSongViewerNotice();
+      };
+      container.appendChild(allBtn);
+
+      entries.forEach(([pid, info]) => {
+        const avatarSrc = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `person-filter-chip ${selectedSongPersonId === pid ? 'active' : ''}`;
+        btn.innerHTML = `<img src="${avatarSrc}" alt="${escapeHtml(info.name || pid)}"><span>${escapeHtml(info.name || pid)}</span>`;
+        btn.onclick = () => {
+          selectedSongPersonId = (selectedSongPersonId === pid) ? null : pid;
+          renderSongPersonChips();
+          updateSongViewerNotice();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function toggleSongPlayback() {
+      const video = document.getElementById('songVideo');
+      if (!video.src && !video.currentSrc) {
+        updateSongViewerNotice();
+        return;
+      }
+      if (video.paused) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    }
+
+    function formatClock(sec) {
+      if (!Number.isFinite(sec) || sec < 0) return "00:00.0";
+      const mins = Math.floor(sec / 60);
+      const rem = (sec % 60).toFixed(1).padStart(4, "0");
+      return `${String(mins).padStart(2, "0")}:${rem}`;
+    }
+
+    function formatLrcTimestamp(sec) {
+      const safe = Math.max(0, Number(sec) || 0);
+      const mins = Math.floor(safe / 60);
+      const secs = (safe % 60).toFixed(2).padStart(5, "0");
+      return `${String(mins).padStart(2, "0")}:${secs}`;
+    }
+
+    function parseLyricsText(rawText) {
+      const lines = String(rawText || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const parsed = [];
+      lines.forEach((line, idx) => {
+        const lrcMatch = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.+)$/);
+        if (lrcMatch) {
+          const start = parseInt(lrcMatch[1], 10) * 60 + parseFloat(lrcMatch[2]);
+          parsed.push({ start, end: start + 5.0, text: lrcMatch[3].trim() });
+          return;
+        }
+        const pipeMatch = line.match(/^(\d+(?:\.\d+)?)\s*\|\s*(.+)$/);
+        if (pipeMatch) {
+          const start = parseFloat(pipeMatch[1]);
+          parsed.push({ start, end: start + 5.0, text: pipeMatch[2].trim() });
+          return;
+        }
+        const start = idx * 4.0;
+        parsed.push({ start, end: start + 4.0, text: line });
+      });
+      parsed.sort((a, b) => a.start - b.start);
+      for (let i = 0; i < parsed.length; i++) {
+        if (i < parsed.length - 1) {
+          parsed[i].end = Math.max(parsed[i].start + 0.5, parsed[i + 1].start - 0.05);
+        } else {
+          parsed[i].end = parsed[i].start + 6.0;
+        }
+      }
+      return parsed;
+    }
+
+    function syncLyricsFromEditor() {
+      const raw = document.getElementById('songLyricsEditor').value;
+      const parsed = parseLyricsText(raw);
+      if (!activeSongData) {
+        activeSongData = {
+          members: {},
+          _validMembers: {},
+          frames: [],
+          lyrics: parsed
+        };
+      } else {
+        activeSongData.lyrics = parsed;
+      }
+      renderSongLyricSeekButtons();
+    }
+
+    function renderSongLyricSeekButtons() {
+      const listEl = document.getElementById('songLyricSeekList');
+      listEl.innerHTML = '';
+      const lyrics = activeSongData?.lyrics || [];
+      lyrics.forEach((line, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'song-lyric-btn text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition';
+        btn.dataset.idx = idx;
+        btn.textContent = `${line.start.toFixed(1)}s ${line.text}`;
+        btn.onclick = () => {
+          const video = document.getElementById('songVideo');
+          if (video.currentSrc || video.src) {
+            video.currentTime = line.start + 0.02;
+            video.play().catch(() => {});
+          }
+        };
+        listEl.appendChild(btn);
+      });
+    }
+
+    function resizeSongOverlayCanvas() {
+      const canvas = document.getElementById('songOverlayCanvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function getInterpolatedSongTracks(t) {
+      if (!activeSongData || !Array.isArray(activeSongData.frames) || activeSongData.frames.length === 0) {
+        return [];
+      }
+      const validMembers = activeSongData._validMembers || {};
+      const frames = activeSongData.frames;
+
+      let prev = frames[0];
+      let next = frames[frames.length - 1];
+      if (t <= prev.t) {
+        return (prev.tracks || []).filter(tr => !!validMembers[tr.id]);
+      }
+      if (t >= next.t) {
+        return (next.tracks || []).filter(tr => !!validMembers[tr.id]);
+      }
+
+      for (let i = 0; i < frames.length - 1; i++) {
+        if (t >= frames[i].t && t <= frames[i + 1].t) {
+          prev = frames[i];
+          next = frames[i + 1];
+          break;
+        }
+      }
+
+      const span = Math.max(0.0001, next.t - prev.t);
+      const ratio = (t - prev.t) / span;
+
+      return (prev.tracks || [])
+        .filter(tr => !!validMembers[tr.id])
+        .map(pTrack => {
+          const nTrack = (next.tracks || []).find(item => item.id === pTrack.id);
+          if (!nTrack) return pTrack;
+          return {
+            id: pTrack.id,
+            x: pTrack.x + (nTrack.x - pTrack.x) * ratio,
+            y: pTrack.y + (nTrack.y - pTrack.y) * ratio,
+            footX: (pTrack.footX ?? pTrack.x) + ((nTrack.footX ?? nTrack.x) - (pTrack.footX ?? pTrack.x)) * ratio,
+            footY: (pTrack.footY ?? Math.min(0.92, pTrack.y + 0.35)) + ((nTrack.footY ?? Math.min(0.92, nTrack.y + 0.35)) - (pTrack.footY ?? Math.min(0.92, pTrack.y + 0.35))) * ratio,
+            pos: ratio < 0.5 ? pTrack.pos : (nTrack.pos || pTrack.pos)
+          };
+        });
+    }
+
+    function startSongOverlayLoop() {
+      const frameLoop = () => {
+        const video = document.getElementById('songVideo');
+        const playIcon = document.getElementById('songPlayIcon');
+        const playLabel = document.getElementById('songPlayLabel');
+        const timeLabel = document.getElementById('songTimeLabel');
+
+        if (video && playIcon && playLabel) {
+          if (!video.paused) {
+            playIcon.className = "fa-solid fa-pause";
+            playLabel.textContent = "一時停止";
+          } else {
+            playIcon.className = "fa-solid fa-play";
+            playLabel.textContent = "再生";
+          }
+          const cur = video.currentTime || 0;
+          const dur = Number.isFinite(video.duration) ? video.duration : 0;
+          if (timeLabel) timeLabel.textContent = `${formatClock(cur)} / ${formatClock(dur)}`;
+          renderSongOverlay(cur);
+          updateSongLyricsDisplay(cur);
+        }
+        requestAnimationFrame(frameLoop);
+      };
+      requestAnimationFrame(frameLoop);
+    }
+
+    function renderSongOverlay(t) {
+      const canvas = document.getElementById('songOverlayCanvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const ctx = canvas.getContext('2d');
+      const w = rect.width;
+      const h = rect.height;
+      ctx.clearRect(0, 0, w, h);
+
+      if (!activeSongData || !activeSongData._validMembers) return;
+
+      let tracks = getInterpolatedSongTracks(t);
+      if (selectedSongPersonId) {
+        tracks = tracks.filter(tr => tr.id === selectedSongPersonId);
+      }
+
+      const showAvatar = document.getElementById('optShowAvatar')?.checked ?? true;
+      const showName = document.getElementById('optShowName')?.checked ?? true;
+      const showPos = document.getElementById('optShowPos')?.checked ?? true;
+
+      const posSummaryParts = [];
+
+      tracks.forEach(tr => {
+        const member = activeSongData._validMembers[tr.id];
+        if (!member) return;
+
+        const color = member.color || "#db2777";
+        const name = member.name || tr.id;
+        const px = tr.x * w;
+        const py = tr.y * h;
+        const fx = (tr.footX ?? tr.x) * w;
+        const fy = (tr.footY ?? Math.min(0.92, tr.y + 0.35)) * h;
+
+        if (showPos && tr.pos) {
+          posSummaryParts.push(`${name}: ${tr.pos}`);
+        }
+
+        // 1. 顔写真追従
+        if (showAvatar) {
+          const radius = 22;
+          const avatarY = Math.max(radius + 6, py - 42);
+          const img = songAvatarImages[tr.id];
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(px, avatarY, radius, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+
+          if (img && img.complete && img.naturalWidth > 0) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(px, avatarY, radius - 2, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(img, px - radius, avatarY - radius, radius * 2, radius * 2);
+            ctx.restore();
+          }
+
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = color;
+          ctx.beginPath();
+          ctx.arc(px, avatarY, radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 2. 名前表示
+        if (showName) {
+          const nameY = Math.max(36, py - 10);
+          ctx.save();
+          ctx.font = "bold 12px sans-serif";
+          const textW = ctx.measureText(name).width;
+          const boxW = textW + 14;
+          const boxH = 20;
+          ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+          ctx.beginPath();
+          ctx.roundRect(px - boxW / 2, nameY - boxH / 2, boxW, boxH, 6);
+          ctx.fill();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(name, px, nameY);
+          ctx.restore();
+        }
+
+        // 3. 足元の立ち位置番号表示
+        if (showPos && tr.pos) {
+          ctx.save();
+          ctx.font = "bold 11px sans-serif";
+          const label = String(tr.pos);
+          const boxW = ctx.measureText(label).width + 12;
+          const boxH = 20;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.roundRect(fx - boxW / 2, fy - boxH / 2, boxW, boxH, 6);
+          ctx.fill();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(label, fx, fy);
+          ctx.restore();
+        }
+      });
+
+      const summaryEl = document.getElementById('songCurrentPosSummary');
+      if (summaryEl) {
+        summaryEl.textContent = posSummaryParts.join(" / ");
+      }
+    }
+
+    function updateSongLyricsDisplay(t) {
+      const currentEl = document.getElementById('songCurrentLyric');
+      const nextEl = document.getElementById('songNextLyric');
+      if (!currentEl || !nextEl) return;
+
+      const lyrics = activeSongData?.lyrics || [];
+      const activeIdx = lyrics.findIndex(line => t >= line.start && t <= line.end);
+
+      if (activeIdx !== -1) {
+        currentEl.textContent = lyrics[activeIdx].text;
+        nextEl.textContent = lyrics[activeIdx + 1] ? `次: ${lyrics[activeIdx + 1].text}` : "次: -";
+      } else {
+        const upcoming = lyrics.find(line => t < line.start);
+        currentEl.textContent = lyrics.length > 0 ? "♪" : "再生すると歌詞が同期表示されます";
+        nextEl.textContent = upcoming ? `次: ${upcoming.text}` : "次: -";
+      }
+
+      document.querySelectorAll('.song-lyric-btn').forEach((btn, idx) => {
+        const isActive = idx === activeIdx;
+        btn.classList.toggle('bg-pink-600', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('border-pink-400', isActive);
+      });
+    }
+
+    /* =========================================================================
+       作成・解析パネル：ローカル動画 → 骨格判定できたpersonのみ抽出 → JSON出力
+       ========================================================================= */
+    function onLocalDanceVideoSelected(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (localUploadedVideoUrl) {
+        URL.revokeObjectURL(localUploadedVideoUrl);
+      }
+      localUploadedVideoUrl = URL.createObjectURL(file);
+      const video = document.getElementById('songVideo');
+      video.src = localUploadedVideoUrl;
+      video.load();
+      document.getElementById('poseAnalysisProgress').textContent = `動画「${file.name}」を読み込みました。「骨格解析を実行」を押してください。`;
+      updateSongViewerNotice();
+    }
+
+    async function ensurePoseLandmarkerLoaded() {
+      if (poseLandmarkerInstance) return poseLandmarkerInstance;
+      try {
+        const vision = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm");
+        const { PoseLandmarker, FilesetResolver } = vision;
+        const filesetResolver = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+        );
+        poseLandmarkerInstance = await PoseLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+            delegate: "GPU"
+          },
+          runningMode: "IMAGE",
+          numPoses: 6,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        return poseLandmarkerInstance;
+      } catch (err) {
+        console.warn("MediaPipe初期化フォールバック:", err);
+        return null;
+      }
+    }
+
+    function cropFaceAvatarFromVideo(videoEl, landmarks, colorHex, fallbackName) {
+      try {
+        // MediaPipe Pose: 0=nose, 2=leftEye, 5=rightEye, 7=leftEar, 8=rightEar
+        const nose = landmarks?.[0];
+        if (!nose || (nose.visibility ?? 1) < 0.35) {
+          return makeDefaultAvatarDataUrl(fallbackName, colorHex);
+        }
+        const vw = videoEl.videoWidth || 640;
+        const vh = videoEl.videoHeight || 360;
+        const cx = nose.x * vw;
+        const cy = nose.y * vh;
+        const size = Math.max(48, Math.min(vw, vh) * 0.14);
+        const sx = Math.max(0, Math.min(vw - size, cx - size / 2));
+        const sy = Math.max(0, Math.min(vh - size, cy - size * 0.55));
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 96;
+        tempCanvas.height = 96;
+        const tctx = tempCanvas.getContext('2d');
+        tctx.drawImage(videoEl, sx, sy, size, size, 0, 0, 96, 96);
+        return tempCanvas.toDataURL("image/png");
+      } catch (_) {
+        return makeDefaultAvatarDataUrl(fallbackName, colorHex);
+      }
+    }
+
+    function computePositionLabelFromFootX(footX) {
+      // 画面横位置（0.0〜1.0）から簡易立ち位置番号を算出
+      const slot = Math.max(1, Math.min(8, Math.round(footX * 7) + 1));
+      return `POS ${slot}`;
+    }
+
+    async function runPoseAnalysisOnVideo() {
+      const video = document.getElementById('songVideo');
+      const progressEl = document.getElementById('poseAnalysisProgress');
+      const btn = document.getElementById('runPoseAnalysisBtn');
+
+      if (!video.src && !video.currentSrc) {
+        progressEl.textContent = "先にローカル動画ファイルを選択してください。";
+        return;
+      }
+
+      if (!Number.isFinite(video.duration) || video.duration <= 0) {
+        await new Promise(resolve => {
+          video.addEventListener("loadedmetadata", resolve, { once: true });
+        });
+      }
+
+      btn.disabled = true;
+      progressEl.textContent = "骨格モデルを準備中...";
+      const landmarker = await ensurePoseLandmarkerLoaded();
+
+      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 10;
+      const stepSec = 1 / targetFps;
+      const duration = Math.min(video.duration, 180); // 安全上限3分
+      const wasPaused = video.paused;
+      video.pause();
+
+      const palette = ["#db2777", "#0284c7", "#7c3aed", "#059669", "#d97706", "#e11d48"];
+      const detectedPersons = {}; // pid -> { id, name, color, avatar, detectedByPose: true }
+      const frames = [];
+
+      // 簡易トラッキング用（前フレームの重心距離でperson_1..person_Nを維持）
+      let prevTracks = [];
+      let nextPersonSeq = 1;
+
+      for (let t = 0; t <= duration; t += stepSec) {
+        const seekTime = Number(t.toFixed(2));
+        video.currentTime = seekTime;
+        await new Promise(resolve => {
+          const onSeeked = () => {
+            video.removeEventListener("seeked", onSeeked);
+            resolve();
+          };
+          video.addEventListener("seeked", onSeeked);
+        });
+
+        let poseList = [];
+        if (landmarker) {
+          const res = landmarker.detect(video);
+          poseList = Array.isArray(res?.landmarks) ? res.landmarks : [];
+        }
+
+        const frameTracks = [];
+        poseList.forEach(lm => {
+          if (!Array.isArray(lm) || lm.length < 29) return;
+          // 主要関節（鼻0, 左肩11, 右肩12, 左股関節23, 右股関節24）の信頼度チェック
+          const keyIndices = [0, 11, 12, 23, 24];
+          const avgVis = keyIndices.reduce((acc, idx) => acc + (lm[idx]?.visibility ?? 0.8), 0) / keyIndices.length;
+          if (avgVis < 0.45) return; // 骨格判定が取れていないノイズは除外
+
+          const nose = lm[0];
+          const leftAnkle = lm[27];
+          const rightAnkle = lm[28];
+          const x = Math.max(0.05, Math.min(0.95, nose.x));
+          const y = Math.max(0.12, Math.min(0.85, nose.y));
+          const footX = Math.max(0.05, Math.min(0.95, ((leftAnkle?.x ?? nose.x) + (rightAnkle?.x ?? nose.x)) / 2));
+          const footY = Math.max(0.2, Math.min(0.95, ((leftAnkle?.y ?? (y + 0.35)) + (rightAnkle?.y ?? (y + 0.35))) / 2));
+
+          // 直前フレームと最も近いpersonを紐づけ
+          let matchedId = null;
+          let bestDist = 0.18;
+          prevTracks.forEach(pt => {
+            if (frameTracks.some(ft => ft.id === pt.id)) return;
+            const dist = Math.hypot(pt.x - x, pt.y - y);
+            if (dist < bestDist) {
+              bestDist = dist;
+              matchedId = pt.id;
+            }
+          });
+
+          if (!matchedId) {
+            matchedId = `person_${nextPersonSeq++}`;
+            const color = palette[(nextPersonSeq - 2) % palette.length];
+            const defaultName = `メンバー${nextPersonSeq - 1}`;
+            detectedPersons[matchedId] = {
+              id: matchedId,
+              name: defaultName,
+              color,
+              avatar: cropFaceAvatarFromVideo(video, lm, color, defaultName),
+              detectedByPose: true
+            };
+          }
+
+          frameTracks.push({
+            id: matchedId,
+            x,
+            y,
+            footX,
+            footY,
+            pos: computePositionLabelFromFootX(footX)
+          });
+        });
+
+        if (frameTracks.length > 0) {
+          frames.push({ t: seekTime, tracks: frameTracks });
+          prevTracks = frameTracks;
+        }
+
+        const pct = Math.min(100, Math.round((seekTime / Math.max(0.1, duration)) * 100));
+        progressEl.textContent = `骨格解析中... ${pct}%（骨格判定されたperson: ${Object.keys(detectedPersons).length}名）`;
+      }
+
+      if (!wasPaused) {
+        video.play().catch(() => {});
+      }
+      btn.disabled = false;
+
+      const personCount = Object.keys(detectedPersons).length;
+      if (personCount === 0) {
+        progressEl.textContent = "骨格が明確に検出された人物がありませんでした。照明や全身の映り込みをご確認ください。";
+        return;
+      }
+
+      const stageKey = document.getElementById('songStageSelect').value;
+      const trackName = document.getElementById('songTrackSelect').value;
+      const pkg = {
+        songId: getSongStorageKey(stageKey, trackName),
+        stageKey,
+        trackName,
+        videoUrl: localUploadedVideoUrl || video.src || "",
+        fps: targetFps,
+        members: detectedPersons,
+        lyrics: parseLyricsText(document.getElementById('songLyricsEditor').value),
+        frames
+      };
+
+      songMemoryStore[pkg.songId] = pkg;
+      applySongTrackingData(pkg, "骨格解析完了（骨格判定されたpersonのみ抽出）");
+      renderDetectedPersonEditor();
+      progressEl.textContent = `完了：骨格判定された ${personCount} 名のpersonを抽出し、${frames.length} フレームを記録しました。`;
+    }
+
+    function renderDetectedPersonEditor() {
+      const editorEl = document.getElementById('detectedPersonEditor');
+      editorEl.innerHTML = '';
+      const validMembers = activeSongData?._validMembers || {};
+      const entries = Object.entries(validMembers);
+
+      if (entries.length === 0) {
+        editorEl.innerHTML = `<p class="text-slate-400">骨格解析を実行すると、検出されたpersonがここに表示されます。</p>`;
+        return;
+      }
+
+      entries.forEach(([pid, info]) => {
+        const row = document.createElement('div');
+        row.className = "flex flex-wrap items-center gap-2 p-2 rounded border border-slate-200 bg-slate-50";
+        const avatarSrc = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
+        row.innerHTML = `
+          <img src="${avatarSrc}" alt="${escapeHtml(info.name || pid)}" class="w-9 h-9 rounded-full object-cover border border-slate-300">
+          <span class="font-mono text-[11px] text-slate-500">${escapeHtml(pid)}</span>
+          <input type="text" value="${escapeHtml(info.name || pid)}" onchange="updatePersonName('${escapeHtml(pid)}', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-white flex-1 min-w-[120px]" placeholder="名前">
+          <label class="cursor-pointer bg-white hover:bg-pink-50 border border-slate-300 rounded px-2 py-1 text-[11px] font-bold text-slate-700">
+            顔写真変更 <input type="file" accept="image/*" class="hidden" onchange="updatePersonAvatarFile('${escapeHtml(pid)}', this)">
+          </label>
+        `;
+        editorEl.appendChild(row);
+      });
+    }
+
+    function updatePersonName(pid, newName) {
+      if (!activeSongData?.members?.[pid]) return;
+      const trimmed = String(newName || '').trim() || pid;
+      activeSongData.members[pid].name = trimmed;
+      if (activeSongData._validMembers?.[pid]) {
+        activeSongData._validMembers[pid].name = trimmed;
+      }
+      renderSongPersonChips();
+    }
+
+    function updatePersonAvatarFile(pid, input) {
+      const file = input.files && input.files[0];
+      if (!file || !activeSongData?.members?.[pid]) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        activeSongData.members[pid].avatar = dataUrl;
+        if (activeSongData._validMembers?.[pid]) {
+          activeSongData._validMembers[pid].avatar = dataUrl;
+        }
+        const img = new Image();
+        img.src = dataUrl;
+        songAvatarImages[pid] = img;
+        renderSongPersonChips();
+        renderDetectedPersonEditor();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function buildExportableSongJson() {
+      const stageKey = document.getElementById('songStageSelect').value;
+      const trackName = document.getElementById('songTrackSelect').value;
+      const key = getSongStorageKey(stageKey, trackName);
+      const base = activeSongData || songMemoryStore[key] || {
+        members: {},
+        frames: [],
+        lyrics: []
+      };
+
+      // 骨格判定されたpersonのみを書き出す
+      const filteredMembers = {};
+      Object.entries(base.members || {}).forEach(([pid, info]) => {
+        if (info && info.detectedByPose !== false) {
+          filteredMembers[pid] = {
+            id: pid,
+            name: info.name || pid,
+            color: info.color || "#db2777",
+            avatar: info.avatar || "",
+            detectedByPose: true
+          };
+        }
+      });
+
+      const validIds = new Set(Object.keys(filteredMembers));
+      const filteredFrames = (base.frames || []).map(fr => ({
+        t: fr.t,
+        tracks: (fr.tracks || []).filter(tr => validIds.has(tr.id))
+      }));
+
+      return {
+        songId: key,
+        stageKey,
+        trackName,
+        fps: base.fps || 10,
+        members: filteredMembers,
+        lyrics: parseLyricsText(document.getElementById('songLyricsEditor').value),
+        frames: filteredFrames
+      };
+    }
+
+    function saveCurrentSongToSessionMemory() {
+      const pkg = buildExportableSongJson();
+      if (localUploadedVideoUrl) {
+        pkg.videoUrl = localUploadedVideoUrl;
+      }
+      songMemoryStore[pkg.songId] = pkg;
+      applySongTrackingData(pkg, "確定済み曲データ");
+      alert("この曲のデータを反映しました。");
+    }
+
+    function exportSongTrackingJson() {
+      const pkg = buildExportableSongJson();
+      const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${encodeURIComponent(pkg.songId)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /* =========================================================================
+       既存サイトロジック（カレンダー・一覧表・日別表・出演表・予想・共演・統計）
+       ========================================================================= */
     function filterSchedule(filter, button) {
       currentScheduleFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -930,7 +1986,7 @@
       }
       document.getElementById('modalTitle').innerText = titleText;
       document.getElementById('modalDate').innerText = `${item.date} ${item.time || ''}`;
-      
+
       const listEl = document.getElementById('modalMemberList');
       const posCountEl = document.getElementById('modalPosCount');
       listEl.innerHTML = '';
@@ -996,7 +2052,7 @@
     function getSortedStageMembers(stage) {
       const stageMembersSet = new Set();
       const validShows = stage.schedules.filter(s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0));
-      
+
       const scheduleAppearanceOrder = [];
       validShows.forEach(show => {
         const arr = show.membersArray && show.membersArray.length > 0 ? show.membersArray : show.positionsArray;
@@ -1039,7 +2095,7 @@
             if (m && m !== '-' && m !== '－') experiencedSet.add(m);
           }
         });
-        
+
         const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
         validShows.forEach(show => {
           const m = show.positionsArray?.[colIdx];
@@ -1314,7 +2370,7 @@
 
         const expListContainer = document.createElement('div');
         expListContainer.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3 mb-4";
-        
+
         let expTableHtml = `
           <div class="font-bold text-slate-800 text-xs mb-1">【ポジション経験者一覧】</div>
           <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
@@ -1323,7 +2379,7 @@
                 <tr class="bg-slate-50 border-b border-slate-200">
         `;
 
-          for (let i = 0; i <= maxCols; i++) {
+        for (let i = 0; i <= maxCols; i++) {
           expTableHtml += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">${i === 0 ? '初日' : `${i}人目`}</th>`;
         }
 
@@ -1347,7 +2403,7 @@
           if (rowMembers.length === 0) return;
 
           expTableHtml += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
-          
+
           for (let i = 0; i <= maxCols; i++) {
             const member = rowMembers[i];
             if (member) {
@@ -1362,13 +2418,7 @@
                 lastAppearedDateMap[pIdx][member] = sortedDates[0] || 0;
               } else { lastAppearedDateMap[pIdx][member] = 0; }
 
-              let cellBg = "";
-              if (i === 0) {
-                cellBg = "";
-              } else {
-                cellBg = "bg-pink-50/50";
-              }
-
+              let cellBg = i === 0 ? "" : "bg-pink-50/50";
               expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap ${cellBg}"><span class="member-link text-xs font-bold" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span></td>`;
             } else {
               expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap"></td>`;
@@ -1614,41 +2664,6 @@
       });
     }
 
-    function renderSongStageDropdown() {
-      const stageSelect = document.getElementById('songStageSelect');
-      stageSelect.innerHTML = '';
-      Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
-        const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
-        const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
-        stageSelect.appendChild(new Option(displayName, stageKey));
-      });
-      onSongStageChange();
-    }
-
-    function onSongStageChange() {
-      const stageKey = document.getElementById('songStageSelect').value;
-      const trackSelect = document.getElementById('songTrackSelect');
-      trackSelect.innerHTML = '';
-      const dummyTracks = ["M1. overture", "M2. ピース!", "M3. 女の子の第六感", "M4. 青春のフラッグ", "M5. ユニットメドレー"];
-      dummyTracks.forEach(t => trackSelect.appendChild(new Option(t, t)));
-      renderSongParts();
-    }
-
-    function renderSongParts() {
-      const resultArea = document.getElementById('songPartsResult');
-      resultArea.innerHTML = `
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 text-xs">
-          <div class="font-bold text-slate-700">【歌割り・ポジション構成】</div>
-          <div class="grid grid-cols-2 gap-2">
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">センター</span>小栗有以・山内瑞葵</div>
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">フロント</span>佐藤綺星・千葉恵里</div>
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">ユニット</span>秋山由奈・八木愛月</div>
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">コーラス / 全員</span>出演メンバー全員</div>
-          </div>
-        </div>
-      `;
-    }
-
     function openMemberDetail(memberName) {
       selectedMemberName = memberName;
       document.getElementById('mainTabsContainer').classList.add('hidden');
@@ -1683,7 +2698,7 @@
         yearCounts[y] = (yearCounts[y] || 0) + 1;
       });
       const yearsSorted = Object.keys(yearCounts).sort((a, b) => b.localeCompare(a));
-      
+
       const yearlyList = document.getElementById('yearlyBreakdownList');
       yearlyList.innerHTML = '';
       const allBtn = document.createElement('button');
@@ -1730,9 +2745,9 @@
           Object.keys(info.positions).forEach(pName => posBreakdownArr.push(`${pName} ${info.positions[pName]}回`));
           const li = document.createElement('li');
           li.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1";
-          
+
           const stDisplayName = formatStageTitle(st);
-          
+
           li.innerHTML = `
             <div class="flex justify-between items-center text-xs font-bold text-slate-800">
               <span>${escapeHtml(stDisplayName)}</span>
@@ -1760,7 +2775,7 @@
             if (pIdx !== -1) posName = (stageObj && stageObj.fixed && stageObj.fixed[pIdx]) ? stageObj.fixed[pIdx] : `Pos.${pIdx+1}`;
           }
           if (!posName) posName = memberName;
-          
+
           let stageTitleWithSub = formatStageTitle(item.baseStageName);
           if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `   ${item.subTitle.trim()}`;
 
@@ -1786,7 +2801,7 @@
     function renderMemberRankings() {
       const targetYear = currentSelectedMemberYear;
       const memberGroup = getMemberGroup(selectedMemberName);
-      
+
       document.getElementById('rankingGroupBadge').innerText = `${memberGroup}限定 (${targetYear === 'ALL' ? '通算' : targetYear + '年'})`;
 
       const groupMembers = MASTER_MEMBER_ORDER_BY_GROUP[memberGroup] || [];
@@ -2060,7 +3075,7 @@
       const query = val.trim().toLowerCase();
       const stageSet = new Set(), stageMatches = [];
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
-      
+
       dataSource.forEach(item => {
         if (item.baseStageName && !stageSet.has(item.baseStageName)) {
           stageSet.add(item.baseStageName);
