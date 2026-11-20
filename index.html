@@ -368,7 +368,7 @@
           <div id="songAuthorPanel" class="hidden space-y-4 pt-4 border-t-2 border-dashed border-amber-300 bg-amber-50/40 p-3.5 rounded-xl">
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-person-running text-pink-600"></i> 定点動画 骨格解析＆振り付け・フォーメーションデータ出力（60fps高速・最大6分対応）
+                <i class="fa-solid fa-person-running text-pink-600"></i> 定点動画 骨格解析＆振り付け・フォーメーションデータ出力（120fps超高速・高精度・最大6分対応）
               </h3>
               <button type="button" onclick="setAuthorMode(false)" class="text-xs text-slate-500 hover:text-slate-800 font-bold">閉じる</button>
             </div>
@@ -380,21 +380,20 @@
                 <div class="flex items-center gap-2 pt-1">
                   <label class="text-slate-600">解析サンプリング:</label>
                   <select id="analysisFpsSelect" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-slate-50">
-                    <option value="12">12 fps（標準）</option>
-                    <option value="18">18 fps（高精度）</option>
-                    <option value="24">24 fps（映画・基準高精細）</option>
+                    <option value="24">24 fps（映画・標準高精細）</option>
                     <option value="30">30 fps（放送・高精細）</option>
-                    <option value="60" selected>60 fps（高速・最高精度）</option>
+                    <option value="60">60 fps（滑らか高精細）</option>
+                    <option value="120" selected>120 fps（超高速・最高精度）</option>
                   </select>
                 </div>
               </div>
 
               <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-                <label class="block font-bold text-slate-700">2. 高速骨格解析を実行</label>
+                <label class="block font-bold text-slate-700">2. 超高速・高精度骨格解析を実行</label>
                 <button type="button" id="runPoseAnalysisBtn" onclick="runPoseAnalysisOnVideo()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-3 rounded-lg text-xs transition">
-                  <i class="fa-solid fa-microchip mr-1"></i> 骨格解析を実行
+                  <i class="fa-solid fa-microchip mr-1"></i> 120fps骨格解析を実行
                 </button>
-                <div id="poseAnalysisProgress" class="text-[11px] text-slate-600 font-medium">動画を読み込んで実行してください（60fps高速・最大6分対応）。</div>
+                <div id="poseAnalysisProgress" class="text-[11px] text-slate-600 font-medium">動画を読み込んで実行してください（120fps超高速・高精度・最大6分対応）。</div>
               </div>
             </div>
 
@@ -1246,6 +1245,7 @@
       }
     }
 
+    // 二分探索で高速に前後フレームを特定し線形補間
     function getInterpolatedSongTracks(t) {
       if (!activeSongData || !Array.isArray(activeSongData.frames) || activeSongData.frames.length === 0) {
         return [];
@@ -1260,16 +1260,23 @@
         return (frames[frames.length - 1].tracks || []).filter(tr => !!validMembers[tr.id]);
       }
 
-      let prev = frames[0];
-      let next = frames[frames.length - 1];
-      for (let i = 0; i < frames.length - 1; i++) {
-        if (t >= frames[i].t && t <= frames[i + 1].t) {
-          prev = frames[i];
-          next = frames[i + 1];
+      let lo = 0;
+      let hi = frames.length - 2;
+      let foundIdx = 0;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (t >= frames[mid].t && t <= frames[mid + 1].t) {
+          foundIdx = mid;
           break;
+        } else if (t < frames[mid].t) {
+          hi = mid - 1;
+        } else {
+          lo = mid + 1;
         }
       }
 
+      const prev = frames[foundIdx];
+      const next = frames[foundIdx + 1];
       const span = Math.max(0.0001, next.t - prev.t);
       const ratio = (t - prev.t) / span;
 
@@ -1313,21 +1320,34 @@
 
     function getRecentJointTrails(personId, currentT, lookbackSec = 0.28) {
       if (!activeSongData?.frames) return [];
+      const frames = activeSongData.frames;
+      if (frames.length === 0) return [];
+
+      // 二分探索で開始インデックスを高速特定
+      const startT = currentT - lookbackSec;
+      let lo = 0;
+      let hi = frames.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (frames[mid].t < startT) lo = mid + 1;
+        else hi = mid;
+      }
+
       const points = [];
-      for (const fr of activeSongData.frames) {
-        if (fr.t >= currentT - lookbackSec && fr.t <= currentT) {
-          const tr = (fr.tracks || []).find(item => item.id === personId);
-          if (tr) {
-            points.push({
-              t: fr.t,
-              lw: tr.joints?.leftIndex || tr.joints?.leftWrist || { x: tr.x - 0.02, y: tr.y + 0.09 },
-              rw: tr.joints?.rightIndex || tr.joints?.rightWrist || { x: tr.x + 0.02, y: tr.y + 0.09 },
-              la: tr.joints?.leftFootIndex || tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.01, y: tr.footY ?? (tr.y + 0.22) },
-              ra: tr.joints?.rightFootIndex || tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.01, y: tr.footY ?? (tr.y + 0.22) },
-              footX: tr.footX ?? tr.x,
-              footY: tr.footY ?? (tr.y + 0.22)
-            });
-          }
+      for (let i = lo; i < frames.length; i++) {
+        const fr = frames[i];
+        if (fr.t > currentT) break;
+        const tr = (fr.tracks || []).find(item => item.id === personId);
+        if (tr) {
+          points.push({
+            t: fr.t,
+            lw: tr.joints?.leftIndex || tr.joints?.leftWrist || { x: tr.x - 0.02, y: tr.y + 0.09 },
+            rw: tr.joints?.rightIndex || tr.joints?.rightWrist || { x: tr.x + 0.02, y: tr.y + 0.09 },
+            la: tr.joints?.leftFootIndex || tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.01, y: tr.footY ?? (tr.y + 0.22) },
+            ra: tr.joints?.rightFootIndex || tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.01, y: tr.footY ?? (tr.y + 0.22) },
+            footX: tr.footX ?? tr.x,
+            footY: tr.footY ?? (tr.y + 0.22)
+          });
         }
       }
       return points;
@@ -1469,7 +1489,6 @@
       ctx.restore();
     }
 
-    // 16人が1列になってもひとりひとりの動きがわかるよう、小型スケールに最適化
     function drawGirlDancer(ctx, tr, member, w, h, t, visibleCount = 16) {
       const j = tr.joints || {};
       const dressColor = member.color || "#db2777";
@@ -1484,7 +1503,6 @@
       const rawFy = (tr.footY ?? Math.min(0.9, tr.y + 0.22)) * h;
       const fy = Math.max(hy + 28, Math.min(h * 0.9, rawFy));
 
-      // 16人並んだときの1人あたりピッチ（w / 16）を考慮してさらに小型化
       const pitchFactor = Math.max(0.45, Math.min(0.85, (w / Math.max(12, visibleCount)) / 52));
       const idealHeight = Math.max(34, Math.min(h * 0.22, fy - hy, 92));
       const scale = Math.max(0.42, Math.min(0.72, (idealHeight / 92) * (0.72 + pitchFactor * 0.28)));
@@ -1661,7 +1679,7 @@
       ctx.stroke();
       ctx.restore();
 
-      // 5. 両腕＆手のひら・指先（振り付けの腕の角度・位置を明瞭に表示）
+      // 5. 両腕＆手のひら・指先
       drawTaperedLimb(ctx, ls, le, upperArmR, foreArmR, skinColor);
       drawTaperedLimb(ctx, le, lw, foreArmR, foreArmR * 0.76, skinColor);
       drawGirlHand(ctx, lw, li, lp, lt, foreArmR * 1.35, skinColor);
@@ -1836,8 +1854,11 @@
         }
 
         if (showTrail) {
-          const historyPts = getRecentJointTrails(tr.id, t, 0.28);
-          historyPts.forEach((pt, pIdx) => {
+          const historyPts = getRecentJointTrails(tr.id, t, 0.26);
+          // 120fpsでも描画負荷が膨らまないよう残像ポイント数を最大16点に間引き
+          const stride = Math.max(1, Math.floor(historyPts.length / 16));
+          for (let pIdx = 0; pIdx < historyPts.length; pIdx += stride) {
+            const pt = historyPts[pIdx];
             const alpha = Math.max(0.08, ((pIdx + 1) / Math.max(1, historyPts.length)) * 0.42);
             ctx.save();
             ctx.fillStyle = color;
@@ -1845,11 +1866,11 @@
             [pt.lw, pt.rw, pt.la, pt.ra].forEach(jp => {
               if (!jp) return;
               ctx.beginPath();
-              ctx.arc(jp.x * w, Math.min(h * 0.91, jp.y * h), 2.3, 0, Math.PI * 2);
+              ctx.arc(jp.x * w, Math.min(h * 0.91, jp.y * h), 2.1, 0, Math.PI * 2);
               ctx.fill();
             });
             ctx.restore();
-          });
+          }
 
           if (showFormation && historyPts.length >= 2) {
             ctx.save();
@@ -1857,12 +1878,13 @@
             ctx.globalAlpha = 0.55;
             ctx.lineWidth = 1.6;
             ctx.beginPath();
-            historyPts.forEach((pt, pIdx) => {
+            for (let pIdx = 0; pIdx < historyPts.length; pIdx += stride) {
+              const pt = historyPts[pIdx];
               const px = pt.footX * w;
               const py = Math.min(h * 0.9, pt.footY * h);
               if (pIdx === 0) ctx.moveTo(px, py);
               else ctx.lineTo(px, py);
-            });
+            }
             ctx.stroke();
             ctx.restore();
           }
@@ -1872,7 +1894,6 @@
           drawGirlDancer(ctx, tr, member, w, h, t, visibleCount);
         }
 
-        // 16人1列時も重なりにくい小型顔写真バッジ
         if (showAvatar) {
           const radius = isCrowded ? 7.5 : 9.5;
           const avatarY = Math.max(radius + 6, hy - (isCrowded ? 14 : 18));
@@ -1898,7 +1919,6 @@
           ctx.restore();
         }
 
-        // 名前バッジ（多人数時は互い違いの高さにして重なりを軽減）
         if (showName) {
           const stagger = isCrowded && (idx % 2 === 1) ? -10 : 0;
           const nameY = (showAvatar ? Math.max(15, hy - (isCrowded ? 26 : 32)) : Math.max(15, hy - 14)) + stagger;
@@ -1919,7 +1939,6 @@
           ctx.restore();
         }
 
-        // 足元の立ち位置（8〜0〜8）
         if (showPos) {
           ctx.save();
           ctx.font = isCrowded ? "bold 7.5px sans-serif" : "bold 8.5px sans-serif";
@@ -1969,11 +1988,13 @@
       const totalDur = Math.max(duration || 0, frames.length ? frames[frames.length - 1].t : 0, 1);
 
       if (frames.length > 0) {
+        const stride = Math.max(1, Math.floor(frames.length / Math.max(120, Math.floor(w))));
         ctx.save();
         ctx.fillStyle = "rgba(219, 39, 119, 0.35)";
         ctx.beginPath();
         ctx.moveTo(0, h);
-        frames.forEach(fr => {
+        for (let i = 0; i < frames.length; i += stride) {
+          const fr = frames[i];
           const tracks = fr.tracks || [];
           const ratio = tracks.length > 0
             ? tracks.filter(tr => (tr.facing || "front") === "front").length / tracks.length
@@ -1981,7 +2002,7 @@
           const x = Math.min(w, (fr.t / totalDur) * w);
           const y = h - ratio * (h - 10) - 4;
           ctx.lineTo(x, y);
-        });
+        }
         ctx.lineTo(w, h);
         ctx.closePath();
         ctx.fill();
@@ -1989,16 +2010,17 @@
         ctx.strokeStyle = "#f472b6";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        frames.forEach((fr, idx) => {
+        for (let i = 0; i < frames.length; i += stride) {
+          const fr = frames[i];
           const tracks = fr.tracks || [];
           const ratio = tracks.length > 0
             ? tracks.filter(tr => (tr.facing || "front") === "front").length / tracks.length
             : 0;
           const x = Math.min(w, (fr.t / totalDur) * w);
           const y = h - ratio * (h - 10) - 4;
-          if (idx === 0) ctx.moveTo(x, y);
+          if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
-        });
+        }
         ctx.stroke();
         ctx.restore();
       }
@@ -2049,7 +2071,7 @@
       const video = document.getElementById('songVideo');
       video.src = localUploadedVideoUrl;
       video.load();
-      document.getElementById('poseAnalysisProgress').textContent = `動画「${file.name}」を読み込みました（60fps高速・最大6分対応）。「骨格解析を実行」を押してください。`;
+      document.getElementById('poseAnalysisProgress').textContent = `動画「${file.name}」を読み込みました（120fps超高速・高精度・最大6分対応）。「120fps骨格解析を実行」を押してください。`;
       updateSongViewerNotice();
     }
 
@@ -2072,9 +2094,9 @@
           },
           runningMode: mode,
           numPoses: 16,
-          minPoseDetectionConfidence: 0.32,
-          minPosePresenceConfidence: 0.32,
-          minTrackingConfidence: 0.32
+          minPoseDetectionConfidence: 0.34,
+          minPosePresenceConfidence: 0.34,
+          minTrackingConfidence: 0.36
         });
         poseLandmarkerMode = mode;
         return poseLandmarkerInstance;
@@ -2131,10 +2153,10 @@
       }
     }
 
-    // 高速シーク待機（タイムアウトガード付きで60fps・6分解析を高速化）
+    // 超高速シーク待機（120fps解析向けに許容誤差とタイムアウトを極小化）
     function waitForVideoSeek(video, seekTime) {
       return new Promise(resolve => {
-        if (Math.abs((video.currentTime || 0) - seekTime) < 0.008 && video.readyState >= 2) {
+        if (Math.abs((video.currentTime || 0) - seekTime) < 0.0035 && video.readyState >= 2) {
           resolve();
           return;
         }
@@ -2147,10 +2169,10 @@
           resolve();
         };
         const onSeeked = () => finish();
-        const timer = setTimeout(finish, 85);
+        const timer = setTimeout(finish, 28);
         video.addEventListener("seeked", onSeeked, { once: true });
         try {
-          if (typeof video.fastSeek === "function" && Math.abs((video.currentTime || 0) - seekTime) > 0.25) {
+          if (typeof video.fastSeek === "function" && Math.abs((video.currentTime || 0) - seekTime) > 0.3) {
             video.fastSeek(seekTime);
           } else {
             video.currentTime = seekTime;
@@ -2176,7 +2198,7 @@
 
       btn.disabled = true;
       virtualPlaying = false;
-      progressEl.textContent = "60fps高速骨格モデルを準備中...";
+      progressEl.textContent = "120fps超高速・高精度骨格モデルを準備中...";
       const landmarker = await ensurePoseLandmarkerLoaded("VIDEO");
       if (!landmarker) {
         progressEl.textContent = "骨格推定モデルの読み込みに失敗しました。ネットワークやブラウザ環境をご確認ください。";
@@ -2184,7 +2206,7 @@
         return;
       }
 
-      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 60;
+      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 120;
       const stepSec = 1 / targetFps;
       // 6分（360秒）まで動画を読み込んで解析
       const duration = Math.min(video.duration, 360);
@@ -2197,9 +2219,11 @@
       let nextSeq = 1;
       let lastTimestampMs = -1;
       let frameCounter = 0;
+      const uiUpdateStride = Math.max(15, Math.round(targetFps * 0.5));
+      const smoothAlpha = targetFps >= 100 ? 0.88 : (targetFps >= 50 ? 0.8 : 0.75);
 
       for (let t = 0; t <= duration; t += stepSec) {
-        const seekTime = Number(t.toFixed(4));
+        const seekTime = Number(t.toFixed(5));
         await waitForVideoSeek(video, seekTime);
 
         let timestampMs = Math.round(seekTime * 1000);
@@ -2208,8 +2232,9 @@
 
         const res = landmarker.detectForVideo(video, timestampMs);
         const poseList = Array.isArray(res?.landmarks) ? res.landmarks : [];
-        const frameTracks = [];
 
+        // 1. 検出された全骨格の特徴量を抽出
+        const candidates = [];
         poseList.forEach(lm => {
           if (!Array.isArray(lm) || lm.length < 33) return;
           const keyIndices = [0, 11, 12, 23, 24];
@@ -2226,26 +2251,52 @@
 
           const torsoX = ((ls?.x ?? nose.x) + (rs?.x ?? nose.x) + (lh?.x ?? nose.x) + (rh?.x ?? nose.x)) / 4;
           const torsoY = ((ls?.y ?? nose.y) + (rs?.y ?? nose.y) + (lh?.y ?? nose.y) + (rh?.y ?? nose.y)) / 4;
+          const shoulderW = Math.hypot((ls?.x ?? 0) - (rs?.x ?? 0), (ls?.y ?? 0) - (rs?.y ?? 0));
 
           const x = Math.max(0.03, Math.min(0.97, nose.x));
           const y = Math.max(0.08, Math.min(0.84, nose.y));
           const footX = Math.max(0.03, Math.min(0.97, ((la?.x ?? torsoX) + (ra?.x ?? torsoX)) / 2));
           const footY = Math.max(0.2, Math.min(0.9, ((la?.y ?? (y + 0.22)) + (ra?.y ?? (y + 0.22))) / 2));
 
-          let matchedTrack = null;
-          let bestScore = 0.2;
-          activeMemoryTracks.forEach(mt => {
-            if (frameTracks.some(ft => ft.id === mt.id)) return;
-            const headDist = Math.hypot(mt.x - x, mt.y - y);
-            const torsoDist = Math.hypot((mt.torsoX ?? mt.x) - torsoX, (mt.torsoY ?? mt.y) - torsoY);
-            const score = headDist * 0.4 + torsoDist * 0.6;
-            if (score < bestScore) {
-              bestScore = score;
-              matchedTrack = mt;
+          candidates.push({ lm, nose, x, y, torsoX, torsoY, shoulderW, footX, footY });
+        });
+
+        // 2. 速度ベクトル予測＋体格一致度を用いたグローバル最適ペアリング（交差・フォーメーション移動に強い）
+        const pairs = [];
+        candidates.forEach((cand, cIdx) => {
+          activeMemoryTracks.forEach((mt, mIdx) => {
+            const dtTrack = Math.max(0.008, seekTime - (mt.lastSeenT ?? seekTime));
+            const predX = mt.x + (mt.vx || 0) * dtTrack;
+            const predY = mt.y + (mt.vy || 0) * dtTrack;
+            const predTorsoX = (mt.torsoX ?? mt.x) + (mt.vx || 0) * dtTrack;
+            const predTorsoY = (mt.torsoY ?? mt.y) + (mt.vy || 0) * dtTrack;
+
+            const headDist = Math.hypot(predX - cand.x, predY - cand.y);
+            const torsoDist = Math.hypot(predTorsoX - cand.torsoX, predTorsoY - cand.torsoY);
+            const sizeDiff = Math.abs((mt.shoulderW ?? cand.shoulderW) - cand.shoulderW);
+            const cost = headDist * 0.35 + torsoDist * 0.55 + sizeDiff * 0.25;
+
+            if (cost < 0.16) {
+              pairs.push({ cIdx, mIdx, cost });
             }
           });
+        });
+        pairs.sort((a, b) => a.cost - b.cost);
 
+        const matchedCandToTrack = new Map();
+        const usedTracks = new Set();
+        pairs.forEach(pair => {
+          if (!matchedCandToTrack.has(pair.cIdx) && !usedTracks.has(pair.mIdx)) {
+            matchedCandToTrack.set(pair.cIdx, activeMemoryTracks[pair.mIdx]);
+            usedTracks.add(pair.mIdx);
+          }
+        });
+
+        const frameTracks = [];
+        candidates.forEach((cand, cIdx) => {
+          const matchedTrack = matchedCandToTrack.get(cIdx) || null;
           const matchedId = matchedTrack ? matchedTrack.id : `person_${nextSeq++}`;
+
           if (!matchedTrack) {
             const idx = nextSeq - 2;
             const color = palette[idx % palette.length];
@@ -2256,15 +2307,14 @@
               color,
               hairStyle: HAIR_STYLES[idx % HAIR_STYLES.length],
               hairColor: HAIR_COLORS[idx % HAIR_COLORS.length],
-              avatar: cropFaceAvatarFromVideo(video, lm, color, name),
+              avatar: cropFaceAvatarFromVideo(video, cand.lm, color, name),
               detectedByPose: true
             };
           }
 
-          const smoothAlpha = 0.78;
           const prevJoints = matchedTrack?.joints || {};
           const p = (idx, key) => {
-            const cur = lm[idx];
+            const cur = cand.lm[idx];
             if (!cur) return prevJoints[key] || null;
             const raw = { x: cur.x, y: cur.y };
             const prev = prevJoints[key];
@@ -2275,17 +2325,26 @@
             };
           };
 
-          const faceInfo = estimateFaceFacingFromLandmarks(lm);
-          const posLabel = formatStandingPos8to0to8(footX);
+          const smoothedX = matchedTrack ? matchedTrack.x + (cand.x - matchedTrack.x) * smoothAlpha : cand.x;
+          const smoothedY = matchedTrack ? matchedTrack.y + (cand.y - matchedTrack.y) * smoothAlpha : cand.y;
+          const dtStep = Math.max(0.008, seekTime - (matchedTrack?.lastSeenT ?? seekTime));
+          const vx = matchedTrack ? Math.max(-1.5, Math.min(1.5, (smoothedX - matchedTrack.x) / dtStep)) : 0;
+          const vy = matchedTrack ? Math.max(-1.5, Math.min(1.5, (smoothedY - matchedTrack.y) / dtStep)) : 0;
+
+          const faceInfo = estimateFaceFacingFromLandmarks(cand.lm);
+          const posLabel = formatStandingPos8to0to8(cand.footX);
 
           frameTracks.push({
             id: matchedId,
-            x: matchedTrack ? matchedTrack.x + (x - matchedTrack.x) * smoothAlpha : x,
-            y: matchedTrack ? matchedTrack.y + (y - matchedTrack.y) * smoothAlpha : y,
-            torsoX,
-            torsoY,
-            footX: matchedTrack ? (matchedTrack.footX ?? matchedTrack.x) + (footX - (matchedTrack.footX ?? matchedTrack.x)) * smoothAlpha : footX,
-            footY: matchedTrack ? (matchedTrack.footY ?? (matchedTrack.y + 0.22)) + (footY - (matchedTrack.footY ?? (matchedTrack.y + 0.22))) * smoothAlpha : footY,
+            x: smoothedX,
+            y: smoothedY,
+            vx,
+            vy,
+            torsoX: cand.torsoX,
+            torsoY: cand.torsoY,
+            shoulderW: cand.shoulderW,
+            footX: matchedTrack ? (matchedTrack.footX ?? matchedTrack.x) + (cand.footX - (matchedTrack.footX ?? matchedTrack.x)) * smoothAlpha : cand.footX,
+            footY: matchedTrack ? (matchedTrack.footY ?? (matchedTrack.y + 0.22)) + (cand.footY - (matchedTrack.footY ?? (matchedTrack.y + 0.22))) * smoothAlpha : cand.footY,
             pos: posLabel,
             facing: faceInfo.facing,
             eyeOffsetX: faceInfo.eyeOffsetX,
@@ -2320,7 +2379,7 @@
           frames.push({ t: seekTime, tracks: frameTracks });
           const currentIds = new Set(frameTracks.map(ft => ft.id));
           const carried = activeMemoryTracks
-            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.65);
+            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.55);
           activeMemoryTracks = [
             ...frameTracks.map(ft => ({ ...ft, lastSeenT: seekTime })),
             ...carried
@@ -2328,9 +2387,9 @@
         }
 
         frameCounter++;
-        if (frameCounter % 15 === 0 || seekTime >= duration - stepSec) {
+        if (frameCounter % uiUpdateStride === 0 || seekTime >= duration - stepSec) {
           const pct = Math.min(100, Math.round((seekTime / Math.max(0.1, duration)) * 100));
-          progressEl.textContent = `60fps高速解析中... ${pct}%（${formatClock(seekTime)} / ${formatClock(duration)}・検出: ${Object.keys(detectedPersons).length}名）`;
+          progressEl.textContent = `${targetFps}fps超高速・高精度解析中... ${pct}%（${formatClock(seekTime)} / ${formatClock(duration)}・検出: ${Object.keys(detectedPersons).length}名）`;
           await new Promise(r => setTimeout(r, 0));
         }
       }
@@ -2357,7 +2416,7 @@
 
       songMemoryStore[pkg.songId] = pkg;
       virtualTime = 0;
-      applySongTrackingData(pkg, `${targetFps}fps高速骨格解析完了`);
+      applySongTrackingData(pkg, `${targetFps}fps超高速・高精度解析完了`);
       progressEl.textContent = `完了：${targetFps}fpsで ${personCount} 名のpersonを抽出し、${frames.length} フレーム（最大6分対応）のデータを生成しました。`;
     }
 
@@ -2463,7 +2522,7 @@
         songId: key,
         stageKey,
         trackName,
-        fps: base.fps || 60,
+        fps: base.fps || 120,
         members: filteredMembers,
         lyrics: parseLyricsText(document.getElementById('songLyricsEditor').value),
         frames: filteredFrames
