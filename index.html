@@ -54,7 +54,7 @@
       position: relative;
       width: 100%;
       aspect-ratio: 16 / 9;
-      background: #0b1020;
+      background: radial-gradient(circle at 50% 25%, #1e1b4b 0%, #0b1020 75%);
       border-radius: 0.75rem 0.75rem 0 0;
       overflow: hidden;
       border: 1px solid #1e293b;
@@ -289,12 +289,12 @@
         </div>
       </section>
 
-      <!-- Tab 7: 歌割り（動き・フォーメーション加工描画＋person選択＋下部同期歌詞） -->
+      <!-- Tab 7: 歌割り（女の子キャラダンス再現＋フォーメーション＋下部同期歌詞） -->
       <section id="tab-songparts" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
             <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-music text-pink-500"></i> 歌割り・ダンス動き＆フォーメーション可視化
+              <i class="fa-solid fa-music text-pink-500"></i> 歌割り・ダンス振り付け＆フォーメーション再現
             </h2>
             <span id="authorModeBadge" class="hidden text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
               <i class="fa-solid fa-sliders mr-1"></i> 解析・編集パネル表示中
@@ -316,10 +316,10 @@
             <div class="flex flex-wrap items-center justify-between gap-2">
               <span class="text-xs font-bold text-slate-600">表示メンバー（person選択で単独表示）</span>
               <div class="flex flex-wrap items-center gap-2.5 text-[11px] text-slate-600">
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowStick" checked> 骨格・向き</label>
+                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowDancer" checked> 女の子ダンス</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowTrail" checked> 手足残像</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowFormation" checked> フォーメーション</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowAvatar" checked> 顔写真</label>
+                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowAvatar" checked> 顔写真バッジ</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowName" checked> 名前</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowPos" checked> 立ち位置</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer text-slate-400"><input type="checkbox" id="optShowRawVideo"> 元映像透かし</label>
@@ -330,7 +330,7 @@
             </div>
           </div>
 
-          <!-- 加工モーションCanvas ＋ 推移帯Canvas -->
+          <!-- 女の子ダンサーCanvas ＋ 推移帯Canvas -->
           <div class="space-y-1">
             <div class="motion-stage-box" id="songStageBox">
               <video id="songVideo" playsinline preload="metadata" class="opacity-0"></video>
@@ -368,7 +368,7 @@
           <div id="songAuthorPanel" class="hidden space-y-4 pt-4 border-t-2 border-dashed border-amber-300 bg-amber-50/40 p-3.5 rounded-xl">
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-person-running text-pink-600"></i> 定点動画 骨格解析＆動き・フォーメーションデータ出力
+                <i class="fa-solid fa-person-running text-pink-600"></i> 定点動画 骨格解析＆振り付け・フォーメーションデータ出力
               </h3>
               <button type="button" onclick="setAuthorMode(false)" class="text-xs text-slate-500 hover:text-slate-800 font-bold">閉じる</button>
             </div>
@@ -380,15 +380,15 @@
                 <div class="flex items-center gap-2 pt-1">
                   <label class="text-slate-600">解析サンプリング:</label>
                   <select id="analysisFpsSelect" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-slate-50">
-                    <option value="5">5 fps（高速）</option>
-                    <option value="10" selected>10 fps（推奨）</option>
-                    <option value="15">15 fps（なめらか）</option>
+                    <option value="10">10 fps（標準）</option>
+                    <option value="15" selected>15 fps（推奨・手足なめらか）</option>
+                    <option value="24">24 fps（高精度）</option>
                   </select>
                 </div>
               </div>
 
               <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-                <label class="block font-bold text-slate-700">2. 骨格解析を実行（骨格判定できたpersonのみ抽出）</label>
+                <label class="block font-bold text-slate-700">2. 骨格解析を実行（手首・指先・足先まで抽出）</label>
                 <button type="button" id="runPoseAnalysisBtn" onclick="runPoseAnalysisOnVideo()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-3 rounded-lg text-xs transition">
                   <i class="fa-solid fa-microchip mr-1"></i> 骨格解析を実行
                 </button>
@@ -397,7 +397,7 @@
             </div>
 
             <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-              <div class="text-xs font-bold text-slate-700">3. 骨格判定された person の設定（名前・顔写真差し替え）</div>
+              <div class="text-xs font-bold text-slate-700">3. 骨格判定された person の設定（名前・髪型・衣装カラー・顔写真差し替え）</div>
               <div id="detectedPersonEditor" class="space-y-2 text-xs">
                 <p class="text-slate-400">骨格解析を実行すると、検出されたpersonがここに表示されます。</p>
               </div>
@@ -650,11 +650,14 @@
     let songAvatarImages = {};
     let localUploadedVideoUrl = null;
     let poseLandmarkerInstance = null;
+    let poseLandmarkerMode = null;
 
-    // 動画なし・停止中でも解析済みデータを再生・シークするための仮想クロック状態
     let virtualPlaying = false;
     let virtualTime = 0;
     let lastRafTimestamp = null;
+
+    const HAIR_STYLES = ["twintail", "ponytail", "long", "bob"];
+    const HAIR_COLORS = ["#1e1b18", "#3b2314", "#4a2c18", "#27272a", "#5c3317", "#1f2937"];
 
     const DEFAULT_SONGS_BY_STAGE = [
       "M1. overture",
@@ -884,7 +887,7 @@
     }
 
     /* =========================================================================
-       歌割りタブ：骨格・顔の向き・手足残像・フォーメーション移動・帯グラフ描画
+       歌割りタブ：女の子ダンサー振り付け再現＆フォーメーション移動描画
        ========================================================================= */
     function getSongStorageKey(stageKey, trackName) {
       return `${stageKey || 'default'}__${trackName || 'track'}`;
@@ -961,7 +964,7 @@
       const lyricsEditor = document.getElementById('songLyricsEditor');
 
       if (!data) {
-        statusEl.textContent = `状態: ${sourceLabel} — 再生ボタンを押すと再生されます（動き・フォーメーション加工は骨格判定されたpersonのみ表示）。`;
+        statusEl.textContent = `状態: ${sourceLabel} — 再生ボタンを押すと再生されます（骨格判定されたpersonのみ表示）。`;
         if (lyricsEditor && !lyricsEditor.value.trim()) {
           lyricsEditor.value = "[00:00.00] イントロ\n[00:04.00] 歌詞を入力してください";
         }
@@ -973,9 +976,13 @@
       }
 
       const validMembers = {};
-      Object.entries(data.members || {}).forEach(([pid, info]) => {
+      Object.entries(data.members || {}).forEach(([pid, info], idx) => {
         if (info && info.detectedByPose !== false) {
-          validMembers[pid] = info;
+          validMembers[pid] = {
+            ...info,
+            hairStyle: info.hairStyle || HAIR_STYLES[idx % HAIR_STYLES.length],
+            hairColor: info.hairColor || HAIR_COLORS[idx % HAIR_COLORS.length]
+          };
           const img = new Image();
           img.src = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
           songAvatarImages[pid] = img;
@@ -1276,7 +1283,8 @@
 
           if (pTrack.joints && nTrack.joints) {
             merged.joints = {};
-            Object.keys(pTrack.joints).forEach(jKey => {
+            const allKeys = new Set([...Object.keys(pTrack.joints), ...Object.keys(nTrack.joints)]);
+            allKeys.forEach(jKey => {
               const pj = pTrack.joints[jKey];
               const nj = nTrack.joints[jKey] || pj;
               if (pj && nj) {
@@ -1293,7 +1301,7 @@
         });
     }
 
-    function getRecentJointTrails(personId, currentT, lookbackSec = 0.45) {
+    function getRecentJointTrails(personId, currentT, lookbackSec = 0.4) {
       if (!activeSongData?.frames) return [];
       const points = [];
       for (const fr of activeSongData.frames) {
@@ -1302,10 +1310,10 @@
           if (tr) {
             points.push({
               t: fr.t,
-              lw: tr.joints?.leftWrist || { x: tr.x - 0.04, y: tr.y + 0.14 },
-              rw: tr.joints?.rightWrist || { x: tr.x + 0.04, y: tr.y + 0.14 },
-              la: tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.02, y: tr.footY ?? (tr.y + 0.35) },
-              ra: tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.02, y: tr.footY ?? (tr.y + 0.35) },
+              lw: tr.joints?.leftIndex || tr.joints?.leftWrist || { x: tr.x - 0.04, y: tr.y + 0.14 },
+              rw: tr.joints?.rightIndex || tr.joints?.rightWrist || { x: tr.x + 0.04, y: tr.y + 0.14 },
+              la: tr.joints?.leftFootIndex || tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.02, y: tr.footY ?? (tr.y + 0.35) },
+              ra: tr.joints?.rightFootIndex || tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.02, y: tr.footY ?? (tr.y + 0.35) },
               footX: tr.footX ?? tr.x,
               footY: tr.footY ?? (tr.y + 0.35)
             });
@@ -1358,6 +1366,397 @@
       requestAnimationFrame(loop);
     }
 
+    /* =========================================================================
+       女の子ダンサー描画エンジン（関節座標から手・腕・スカート・脚・靴・髪を再現）
+       ========================================================================= */
+    function drawTaperedLimb(ctx, p1, p2, r1, r2, fillStyle, strokeStyle = null) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 0.5) {
+        ctx.beginPath();
+        ctx.arc(p1.x, p1.y, r1, 0, Math.PI * 2);
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+        return;
+      }
+      const nx = -dy / len;
+      const ny = dx / len;
+      const angle = Math.atan2(dy, dx);
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x + nx * r1, p1.y + ny * r1);
+      ctx.lineTo(p2.x + nx * r2, p2.y + ny * r2);
+      ctx.arc(p2.x, p2.y, r2, angle + Math.PI / 2, angle - Math.PI / 2, true);
+      ctx.lineTo(p1.x - nx * r1, p1.y - ny * r1);
+      ctx.arc(p1.x, p1.y, r1, angle - Math.PI / 2, angle + Math.PI / 2, true);
+      ctx.closePath();
+
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+      if (strokeStyle) {
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+    }
+
+    function drawGirlHand(ctx, wrist, indexTip, pinkyTip, thumbTip, handScale, skinColor) {
+      const tipX = indexTip ? (indexTip.x + (pinkyTip ? pinkyTip.x : indexTip.x)) / 2 : wrist.x;
+      const tipY = indexTip ? (indexTip.y + (pinkyTip ? pinkyTip.y : indexTip.y)) / 2 : wrist.y;
+      const dx = tipX - wrist.x;
+      const dy = tipY - wrist.y;
+      const dist = Math.hypot(dx, dy);
+
+      const angle = dist > 1.5 ? Math.atan2(dy, dx) : Math.PI / 2;
+      const palmLen = Math.max(handScale * 1.15, Math.min(handScale * 1.8, dist * 1.1));
+      const palmW = handScale * 0.62;
+
+      ctx.save();
+      ctx.translate(wrist.x, wrist.y);
+      ctx.rotate(angle);
+
+      // 手のひら＋指先シルエット
+      ctx.fillStyle = skinColor;
+      ctx.strokeStyle = "#d99b82";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(0, -palmW * 0.5, palmLen, palmW, palmW * 0.45);
+      ctx.fill();
+      ctx.stroke();
+
+      // 親指のニュアンス
+      if (thumbTip) {
+        const localThumbY = ((thumbTip.y - wrist.y) * Math.cos(angle) - (thumbTip.x - wrist.x) * Math.sin(angle)) >= 0 ? 1 : -1;
+        ctx.beginPath();
+        ctx.ellipse(palmLen * 0.35, localThumbY * palmW * 0.52, palmLen * 0.28, palmW * 0.24, localThumbY * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawGirlBoot(ctx, ankle, heel, footIndex, legRadius, dressColor) {
+      const toeX = footIndex ? footIndex.x : ankle.x;
+      const toeY = footIndex ? footIndex.y : ankle.y + legRadius * 1.6;
+      const heelX = heel ? heel.x : ankle.x;
+      const heelY = heel ? heel.y : ankle.y + legRadius * 0.8;
+
+      ctx.save();
+      // ソックス上端のフリル
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(ankle.x, ankle.y, legRadius * 1.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ブーツ本体（かかと〜足首〜つま先）
+      ctx.fillStyle = "#f8fafc";
+      ctx.strokeStyle = dressColor;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(ankle.x - legRadius * 0.9, ankle.y);
+      ctx.lineTo(heelX - legRadius * 0.8, heelY + legRadius * 0.5);
+      ctx.lineTo(toeX + legRadius * 0.6, toeY + legRadius * 0.35);
+      ctx.quadraticCurveTo(toeX + legRadius * 1.1, toeY - legRadius * 0.4, ankle.x + legRadius * 0.9, ankle.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawGirlDancer(ctx, tr, member, w, h, t) {
+      const j = tr.joints || {};
+      const dressColor = member.color || "#db2777";
+      const hairColor = member.hairColor || "#2b1b17";
+      const hairStyle = member.hairStyle || "twintail";
+      const skinColor = "#ffe4d6";
+      const skinShade = "#f6cbb7";
+
+      const hx = tr.x * w;
+      const hy = tr.y * h;
+      const fx = (tr.footX ?? tr.x) * w;
+      const fy = (tr.footY ?? Math.min(0.92, tr.y + 0.35)) * h;
+
+      // 身長スケール（画面内の実骨格サイズに連動）
+      const bodyH = Math.max(58, Math.min(240, fy - hy));
+      const scale = bodyH / 120;
+      const headR = Math.max(8, 11.5 * scale);
+      const upperArmR = Math.max(2.6, 3.6 * scale);
+      const foreArmR = Math.max(2.1, 2.9 * scale);
+      const thighR = Math.max(3.4, 4.8 * scale);
+      const calfR = Math.max(2.4, 3.4 * scale);
+
+      const pt = (joint, fallbackX, fallbackY) => ({
+        x: (joint?.x ?? fallbackX) * w,
+        y: (joint?.y ?? fallbackY) * h
+      });
+
+      const ls = pt(j.leftShoulder, tr.x - 0.045, tr.y + 0.075);
+      const rs = pt(j.rightShoulder, tr.x + 0.045, tr.y + 0.075);
+      const shoulderMid = { x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 };
+
+      const lh = pt(j.leftHip, tr.x - 0.032, tr.y + 0.19);
+      const rh = pt(j.rightHip, tr.x + 0.032, tr.y + 0.19);
+      const hipMid = { x: (lh.x + rh.x) / 2, y: (lh.y + rh.y) / 2 };
+
+      const le = pt(j.leftElbow, tr.x - 0.07, tr.y + 0.14);
+      const re = pt(j.rightElbow, tr.x + 0.07, tr.y + 0.14);
+      const lw = pt(j.leftWrist, tr.x - 0.09, tr.y + 0.21);
+      const rw = pt(j.rightWrist, tr.x + 0.09, tr.y + 0.21);
+
+      const li = j.leftIndex ? { x: j.leftIndex.x * w, y: j.leftIndex.y * h } : null;
+      const ri = j.rightIndex ? { x: j.rightIndex.x * w, y: j.rightIndex.y * h } : null;
+      const lp = j.leftPinky ? { x: j.leftPinky.x * w, y: j.leftPinky.y * h } : null;
+      const rp = j.rightPinky ? { x: j.rightPinky.x * w, y: j.rightPinky.y * h } : null;
+      const lt = j.leftThumb ? { x: j.leftThumb.x * w, y: j.leftThumb.y * h } : null;
+      const rt = j.rightThumb ? { x: j.rightThumb.x * w, y: j.rightThumb.y * h } : null;
+
+      const lk = pt(j.leftKnee, tr.x - 0.03, tr.y + 0.27);
+      const rk = pt(j.rightKnee, tr.x + 0.03, tr.y + 0.27);
+      const la = pt(j.leftAnkle, tr.x - 0.03, tr.y + 0.35);
+      const ra = pt(j.rightAnkle, tr.x + 0.03, tr.y + 0.35);
+
+      const lHeel = j.leftHeel ? { x: j.leftHeel.x * w, y: j.leftHeel.y * h } : null;
+      const rHeel = j.rightHeel ? { x: j.rightHeel.x * w, y: j.rightHeel.y * h } : null;
+      const lFoot = j.leftFootIndex ? { x: j.leftFootIndex.x * w, y: j.leftFootIndex.y * h } : null;
+      const rFoot = j.rightFootIndex ? { x: j.rightFootIndex.x * w, y: j.rightFootIndex.y * h } : null;
+
+      const facing = tr.facing || "front";
+      const torsoAngle = Math.atan2(hipMid.y - shoulderMid.y, hipMid.x - shoulderMid.x) - Math.PI / 2;
+
+      ctx.save();
+
+      // 0. 足元のステージスポットライト影
+      ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+      ctx.beginPath();
+      ctx.ellipse(fx, fy + 3 * scale, 18 * scale, 5 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 1. 後ろ髪（頭の背面に描く）
+      const hairSway = Math.sin(t * 6 + hx * 0.03) * 3 * scale;
+      ctx.fillStyle = hairColor;
+      if (hairStyle === "twintail") {
+        // 左右ツインテール
+        [-1, 1].forEach(side => {
+          ctx.beginPath();
+          ctx.moveTo(hx + side * headR * 0.75, hy - headR * 0.3);
+          ctx.quadraticCurveTo(
+            hx + side * (headR * 1.85) + hairSway,
+            hy + headR * 0.6,
+            hx + side * (headR * 1.45) + hairSway * 1.4,
+            hy + headR * 2.3
+          );
+          ctx.quadraticCurveTo(
+            hx + side * (headR * 0.85),
+            hy + headR * 1.5,
+            hx + side * headR * 0.65,
+            hy + headR * 0.1
+          );
+          ctx.closePath();
+          ctx.fill();
+        });
+      } else if (hairStyle === "ponytail") {
+        const sideDir = facing === "side" ? -(tr.eyeOffsetX || 0.6) : 0.7;
+        ctx.beginPath();
+        ctx.moveTo(hx + sideDir * headR * 0.4, hy - headR * 0.5);
+        ctx.quadraticCurveTo(
+          hx + sideDir * headR * 1.8 + hairSway,
+          hy + headR * 0.2,
+          hx + sideDir * headR * 1.5 + hairSway * 1.3,
+          hy + headR * 2.1
+        );
+        ctx.quadraticCurveTo(
+          hx + sideDir * headR * 0.8,
+          hy + headR * 1.1,
+          hx + sideDir * headR * 0.3,
+          hy - headR * 0.1
+        );
+        ctx.closePath();
+        ctx.fill();
+      } else if (hairStyle === "long") {
+        ctx.beginPath();
+        ctx.moveTo(hx - headR * 1.05, hy - headR * 0.2);
+        ctx.lineTo(hx - headR * 1.35 + hairSway, hy + headR * 2.4);
+        ctx.lineTo(hx + headR * 1.35 + hairSway, hy + headR * 2.4);
+        ctx.lineTo(hx + headR * 1.05, hy - headR * 0.2);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // ボブ
+        ctx.beginPath();
+        ctx.arc(hx, hy + headR * 0.15, headR * 1.18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 2. 両脚（太もも＋すね＋ステージブーツ）
+      drawTaperedLimb(ctx, lh, lk, thighR, calfR * 1.05, skinShade);
+      drawTaperedLimb(ctx, lk, la, calfR * 1.05, calfR * 0.82, skinColor);
+      drawGirlBoot(ctx, la, lHeel, lFoot, calfR, dressColor);
+
+      drawTaperedLimb(ctx, rh, rk, thighR, calfR * 1.05, skinShade);
+      drawTaperedLimb(ctx, rk, ra, calfR * 1.05, calfR * 0.82, skinColor);
+      drawGirlBoot(ctx, ra, rHeel, rFoot, calfR, dressColor);
+
+      // 3. 胴体（アイドル衣装トップス＋ウエストリボン）
+      const waistWidth = Math.max(9 * scale, Math.hypot(rh.x - lh.x, rh.y - lh.y) * 0.92);
+      const shoulderWidth = Math.max(12 * scale, Math.hypot(rs.x - ls.x, rs.y - ls.y) * 0.95);
+
+      ctx.fillStyle = dressColor;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(shoulderMid.x - shoulderWidth * 0.5, shoulderMid.y);
+      ctx.lineTo(shoulderMid.x + shoulderWidth * 0.5, shoulderMid.y);
+      ctx.lineTo(hipMid.x + waistWidth * 0.46, hipMid.y);
+      ctx.lineTo(hipMid.x - waistWidth * 0.46, hipMid.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 胸元の白襟・リボンアクセント
+      if (facing !== "back") {
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(shoulderMid.x - shoulderWidth * 0.25, shoulderMid.y);
+        ctx.lineTo(shoulderMid.x + shoulderWidth * 0.25, shoulderMid.y);
+        ctx.lineTo(shoulderMid.x, shoulderMid.y + 8 * scale);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 4. フレアスカート（腰の角度・動きに合わせて広がる）
+      const skirtLen = Math.max(14 * scale, bodyH * 0.19);
+      const skirtTopW = waistWidth * 0.52;
+      const skirtBotW = Math.max(18 * scale, waistWidth * 1.38);
+
+      ctx.save();
+      ctx.translate(hipMid.x, hipMid.y);
+      ctx.rotate(torsoAngle);
+
+      // 白ペチコート（下のフリル）
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(-skirtTopW, 0);
+      ctx.lineTo(skirtTopW, 0);
+      ctx.lineTo(skirtBotW * 1.04, skirtLen * 1.08);
+      ctx.lineTo(-skirtBotW * 1.04, skirtLen * 1.08);
+      ctx.closePath();
+      ctx.fill();
+
+      // メインカラーフレアスカート
+      ctx.fillStyle = dressColor;
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(-skirtTopW, 0);
+      ctx.lineTo(skirtTopW, 0);
+      ctx.lineTo(skirtBotW, skirtLen);
+      ctx.quadraticCurveTo(0, skirtLen + 4 * scale, -skirtBotW, skirtLen);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // スカートのプリーツ線
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1;
+      [-0.45, 0, 0.45].forEach(ratio => {
+        ctx.beginPath();
+        ctx.moveTo(skirtTopW * ratio, 1);
+        ctx.lineTo(skirtBotW * ratio, skirtLen);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      // 5. 両腕（パフスリーブ袖＋上腕＋前腕＋手のひら・指先）
+      // 左腕
+      drawTaperedLimb(ctx, ls, le, upperArmR, foreArmR, skinColor);
+      drawTaperedLimb(ctx, le, lw, foreArmR, foreArmR * 0.78, skinColor);
+      drawGirlHand(ctx, lw, li, lp, lt, foreArmR * 1.6, skinColor);
+      // 左パフスリーブ
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(ls.x, ls.y, upperArmR * 1.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 右腕
+      drawTaperedLimb(ctx, rs, re, upperArmR, foreArmR, skinColor);
+      drawTaperedLimb(ctx, re, rw, foreArmR, foreArmR * 0.78, skinColor);
+      drawGirlHand(ctx, rw, ri, rp, rt, foreArmR * 1.6, skinColor);
+      // 右パフスリーブ
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(rs.x, rs.y, upperArmR * 1.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 6. 首＆頭部（前髪・表情・向き表現）
+      drawTaperedLimb(ctx, shoulderMid, { x: hx, y: hy + headR * 0.6 }, 3 * scale, 2.8 * scale, skinShade);
+
+      ctx.beginPath();
+      ctx.arc(hx, hy, headR, 0, Math.PI * 2);
+      ctx.fillStyle = facing === "back" ? hairColor : skinColor;
+      ctx.fill();
+
+      if (facing === "back") {
+        // 後ろ向き：後ろ髪全体＋髪飾りリボン
+        ctx.fillStyle = hairColor;
+        ctx.beginPath();
+        ctx.arc(hx, hy, headR * 1.06, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = dressColor;
+        ctx.beginPath();
+        ctx.arc(hx - 4 * scale, hy - headR * 0.7, 3 * scale, 0, Math.PI * 2);
+        ctx.arc(hx + 4 * scale, hy - headR * 0.7, 3 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // 前髪
+        ctx.fillStyle = hairColor;
+        ctx.beginPath();
+        ctx.arc(hx, hy - headR * 0.12, headR * 1.05, Math.PI * 1.02, Math.PI * 1.98);
+        ctx.lineTo(hx + headR * 0.5, hy - headR * 0.15);
+        ctx.lineTo(hx, hy - headR * 0.35);
+        ctx.lineTo(hx - headR * 0.5, hy - headR * 0.15);
+        ctx.closePath();
+        ctx.fill();
+
+        // 目・チーク・口（正面／横向き）
+        const eyeShift = facing === "side" ? (tr.eyeOffsetX ?? 0.5) * headR * 0.45 : 0;
+        ctx.fillStyle = "#1e1b18";
+        if (facing === "front") {
+          ctx.beginPath();
+          ctx.arc(hx - headR * 0.34, hy + headR * 0.08, 1.8 * scale, 0, Math.PI * 2);
+          ctx.arc(hx + headR * 0.34, hy + headR * 0.08, 1.8 * scale, 0, Math.PI * 2);
+          ctx.fill();
+
+          // チーク
+          ctx.fillStyle = "rgba(244, 114, 182, 0.45)";
+          ctx.beginPath();
+          ctx.arc(hx - headR * 0.48, hy + headR * 0.26, 2.2 * scale, 0, Math.PI * 2);
+          ctx.arc(hx + headR * 0.48, hy + headR * 0.26, 2.2 * scale, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 笑顔の口
+          ctx.strokeStyle = "#e11d48";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(hx, hy + headR * 0.32, 2.2 * scale, 0.15 * Math.PI, 0.85 * Math.PI);
+          ctx.stroke();
+        } else {
+          // 横向き
+          ctx.beginPath();
+          ctx.arc(hx + eyeShift, hy + headR * 0.08, 1.9 * scale, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 髪飾りリボン
+        ctx.fillStyle = dressColor;
+        ctx.beginPath();
+        ctx.arc(hx + headR * 0.72, hy - headR * 0.68, 3 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
     function renderSongMotionStage(t, duration) {
       const canvas = document.getElementById('songOverlayCanvas');
       if (!canvas) return;
@@ -1369,9 +1768,9 @@
       const h = rect.height;
       ctx.clearRect(0, 0, w, h);
 
-      // 背景グリッド（定点ステージの床面ガイド）
+      // ステージ床パース＆グリッド
       ctx.save();
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.14)";
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
       ctx.lineWidth = 1;
       for (let gx = 0.1; gx <= 0.9; gx += 0.2) {
         ctx.beginPath();
@@ -1379,6 +1778,11 @@
         ctx.lineTo(gx * w, h);
         ctx.stroke();
       }
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.88);
+      ctx.lineTo(w, h * 0.88);
+      ctx.strokeStyle = "rgba(244, 114, 182, 0.25)";
+      ctx.stroke();
       ctx.restore();
 
       if (!activeSongData || !activeSongData._validMembers) return;
@@ -1388,7 +1792,14 @@
         ? allTracks.filter(tr => tr.id === selectedSongPersonId)
         : allTracks;
 
-      const showStick = document.getElementById('optShowStick')?.checked ?? true;
+      // 奥行き順（足元Yが小さい＝奥にいるメンバーを先に描き、手前のメンバーを手前に重ねる）
+      const sortedVisibleTracks = [...visibleTracks].sort((a, b) => {
+        const ay = a.footY ?? (a.y + 0.35);
+        const by = b.footY ?? (b.y + 0.35);
+        return ay - by;
+      });
+
+      const showDancer = document.getElementById('optShowDancer')?.checked ?? true;
       const showTrail = document.getElementById('optShowTrail')?.checked ?? true;
       const showFormation = document.getElementById('optShowFormation')?.checked ?? true;
       const showAvatar = document.getElementById('optShowAvatar')?.checked ?? true;
@@ -1396,8 +1807,8 @@
       const showPos = document.getElementById('optShowPos')?.checked ?? true;
 
       // フォーメーションの左右広がりと足元ライン描画
-      if (showFormation && visibleTracks.length > 0) {
-        const feet = visibleTracks.map(tr => ({
+      if (showFormation && sortedVisibleTracks.length > 0) {
+        const feet = sortedVisibleTracks.map(tr => ({
           fx: (tr.footX ?? tr.x) * w,
           fy: (tr.footY ?? Math.min(0.92, tr.y + 0.35)) * h,
           color: activeSongData._validMembers[tr.id]?.color || "#38bdf8"
@@ -1427,19 +1838,18 @@
           ctx.fill();
           ctx.fillStyle = "#7dd3fc";
           ctx.font = "bold 11px sans-serif";
-          ctx.fillText(`フォーメーション幅: ${spreadRatio} (${visibleTracks.length}人)`, 20, 28);
+          ctx.fillText(`フォーメーション幅: ${spreadRatio} (${sortedVisibleTracks.length}人)`, 20, 28);
           ctx.restore();
         }
       }
 
       const posSummary = [];
       let frontCount = 0;
-
       allTracks.forEach(tr => {
         if ((tr.facing || "front") === "front") frontCount++;
       });
 
-      visibleTracks.forEach(tr => {
+      sortedVisibleTracks.forEach(tr => {
         const member = activeSongData._validMembers[tr.id];
         if (!member) return;
         const color = member.color || "#e11d48";
@@ -1453,18 +1863,18 @@
           posSummary.push(`${name}:${tr.pos}`);
         }
 
-        // 手首・足首の残像と移動軌跡
+        // 手先・足先の残像とフォーメーション移動軌跡
         if (showTrail) {
-          const historyPts = getRecentJointTrails(tr.id, t, 0.45);
+          const historyPts = getRecentJointTrails(tr.id, t, 0.4);
           historyPts.forEach((pt, idx) => {
-            const alpha = Math.max(0.08, ((idx + 1) / Math.max(1, historyPts.length)) * 0.45);
+            const alpha = Math.max(0.08, ((idx + 1) / Math.max(1, historyPts.length)) * 0.48);
             ctx.save();
             ctx.fillStyle = color;
             ctx.globalAlpha = alpha;
             [pt.lw, pt.rw, pt.la, pt.ra].forEach(jp => {
               if (!jp) return;
               ctx.beginPath();
-              ctx.arc(jp.x * w, jp.y * h, 4.5, 0, Math.PI * 2);
+              ctx.arc(jp.x * w, jp.y * h, 4, 0, Math.PI * 2);
               ctx.fill();
             });
             ctx.restore();
@@ -1473,8 +1883,8 @@
           if (showFormation && historyPts.length >= 2) {
             ctx.save();
             ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.55;
-            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.6;
+            ctx.lineWidth = 2.2;
             ctx.beginPath();
             historyPts.forEach((pt, idx) => {
               const px = pt.footX * w;
@@ -1487,79 +1897,14 @@
           }
         }
 
-        // 棒人間（骨格）＋ 顔の向き（正面／横／後ろ）
-        if (showStick) {
-          const j = tr.joints || {};
-          const ls = j.leftShoulder || { x: tr.x - 0.045, y: tr.y + 0.08 };
-          const rs = j.rightShoulder || { x: tr.x + 0.045, y: tr.y + 0.08 };
-          const hipCenter = { x: (ls.x + rs.x) / 2, y: tr.y + 0.20 };
-          const lh = j.leftHip || { x: hipCenter.x - 0.03, y: hipCenter.y };
-          const rh = j.rightHip || { x: hipCenter.x + 0.03, y: hipCenter.y };
-          const le = j.leftElbow || { x: ls.x - 0.03, y: ls.y + 0.07 };
-          const re = j.rightElbow || { x: rs.x + 0.03, y: rs.y + 0.07 };
-          const lw = j.leftWrist || { x: le.x - 0.02, y: le.y + 0.07 };
-          const rw = j.rightWrist || { x: re.x + 0.02, y: re.y + 0.07 };
-          const lk = j.leftKnee || { x: lh.x - 0.02, y: (lh.y + fy / h) / 2 };
-          const rk = j.rightKnee || { x: rh.x + 0.02, y: (rh.y + fy / h) / 2 };
-          const la = j.leftAnkle || { x: lk.x, y: fy / h };
-          const ra = j.rightAnkle || { x: rk.x, y: fy / h };
-
-          const seg = (p1, p2) => {
-            if (!p1 || !p2) return;
-            ctx.beginPath();
-            ctx.moveTo(p1.x * w, p1.y * h);
-            ctx.lineTo(p2.x * w, p2.y * h);
-            ctx.stroke();
-          };
-
-          ctx.save();
-          ctx.strokeStyle = "#e2e8f0";
-          ctx.lineWidth = 3;
-          ctx.lineCap = "round";
-          seg(ls, rs);
-          seg({ x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 }, hipCenter);
-          seg(ls, le); seg(le, lw);
-          seg(rs, re); seg(re, rw);
-          seg(lh, lk); seg(lk, la);
-          seg(rh, rk); seg(rk, ra);
-          ctx.restore();
-
-          const facing = tr.facing || "front";
-          const headR = 11;
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(hx, hy, headR, 0, Math.PI * 2);
-          if (facing === "front") {
-            ctx.fillStyle = color;
-          } else if (facing === "side") {
-            ctx.fillStyle = "#f8fafc";
-          } else {
-            ctx.fillStyle = "#451a03";
-          }
-          ctx.fill();
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = "#ffffff";
-          ctx.stroke();
-
-          if (facing === "front") {
-            ctx.fillStyle = "#ffffff";
-            ctx.beginPath();
-            ctx.arc(hx - 3.5, hy - 1, 2, 0, Math.PI * 2);
-            ctx.arc(hx + 3.5, hy - 1, 2, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (facing === "side") {
-            const shift = (tr.eyeOffsetX ?? 0.5) * 6;
-            ctx.fillStyle = "#0f172a";
-            ctx.beginPath();
-            ctx.arc(hx + shift, hy - 1, 2.2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          ctx.restore();
+        // 女の子ダンサー描画（振り付け・スカート・手先・足先）
+        if (showDancer) {
+          drawGirlDancer(ctx, tr, member, w, h, t);
         }
 
-        // 顔写真追従
+        // 顔写真バッジ追従
         if (showAvatar) {
-          const radius = 17;
+          const radius = 15;
           const avatarY = Math.max(radius + 8, hy - 34);
           const img = songAvatarImages[tr.id];
           ctx.save();
@@ -1575,7 +1920,7 @@
             ctx.drawImage(img, hx - radius, avatarY - radius, radius * 2, radius * 2);
             ctx.restore();
           }
-          ctx.lineWidth = 2.5;
+          ctx.lineWidth = 2;
           ctx.strokeStyle = color;
           ctx.beginPath();
           ctx.arc(hx, avatarY, radius, 0, Math.PI * 2);
@@ -1585,7 +1930,7 @@
 
         // 名前バッジ
         if (showName) {
-          const nameY = Math.max(24, hy - 56);
+          const nameY = showAvatar ? Math.max(22, hy - 54) : Math.max(22, hy - 26);
           ctx.save();
           ctx.font = "bold 11px sans-serif";
           const textW = ctx.measureText(name).width;
@@ -1611,12 +1956,12 @@
           const boxH = 18;
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.roundRect(fx - boxW / 2, fy + 4, boxW, boxH, 5);
+          ctx.roundRect(fx - boxW / 2, fy + 6, boxW, boxH, 5);
           ctx.fill();
           ctx.fillStyle = "#ffffff";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(label, fx, fy + 13);
+          ctx.fillText(label, fx, fy + 15);
           ctx.restore();
         }
       });
@@ -1738,9 +2083,13 @@
       updateSongViewerNotice();
     }
 
-    async function ensurePoseLandmarkerLoaded() {
-      if (poseLandmarkerInstance) return poseLandmarkerInstance;
+    async function ensurePoseLandmarkerLoaded(mode = "VIDEO") {
+      if (poseLandmarkerInstance && poseLandmarkerMode === mode) return poseLandmarkerInstance;
       try {
+        if (poseLandmarkerInstance && poseLandmarkerInstance.close) {
+          poseLandmarkerInstance.close();
+          poseLandmarkerInstance = null;
+        }
         const vision = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm");
         const { PoseLandmarker, FilesetResolver } = vision;
         const filesetResolver = await FilesetResolver.forVisionTasks(
@@ -1748,15 +2097,16 @@
         );
         poseLandmarkerInstance = await PoseLandmarker.createFromOptions(filesetResolver, {
           baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
             delegate: "GPU"
           },
-          runningMode: "IMAGE",
+          runningMode: mode,
           numPoses: 10,
           minPoseDetectionConfidence: 0.45,
           minPosePresenceConfidence: 0.45,
           minTrackingConfidence: 0.45
         });
+        poseLandmarkerMode = mode;
         return poseLandmarkerInstance;
       } catch (err) {
         console.warn("MediaPipe初期化エラー:", err);
@@ -1813,7 +2163,7 @@
 
     function waitForVideoSeek(video, seekTime) {
       return new Promise(resolve => {
-        if (Math.abs((video.currentTime || 0) - seekTime) < 0.01 && video.readyState >= 2) {
+        if (Math.abs((video.currentTime || 0) - seekTime) < 0.008 && video.readyState >= 2) {
           resolve();
           return;
         }
@@ -1841,15 +2191,15 @@
 
       btn.disabled = true;
       virtualPlaying = false;
-      progressEl.textContent = "骨格モデルを準備中...";
-      const landmarker = await ensurePoseLandmarkerLoaded();
+      progressEl.textContent = "高精度骨格モデルを準備中...";
+      const landmarker = await ensurePoseLandmarkerLoaded("VIDEO");
       if (!landmarker) {
         progressEl.textContent = "骨格推定モデルの読み込みに失敗しました。ネットワークやブラウザ環境をご確認ください。";
         btn.disabled = false;
         return;
       }
 
-      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 10;
+      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 15;
       const stepSec = 1 / targetFps;
       const duration = Math.min(video.duration, 300);
       video.pause();
@@ -1857,20 +2207,24 @@
       const palette = ["#e11d48", "#0284c7", "#7c3aed", "#059669", "#d97706", "#db2777", "#2563eb", "#0d9488", "#ea580c", "#4f46e5"];
       const detectedPersons = {};
       const frames = [];
-      // 交差時のID切れを防ぐため、直近数フレームのトラック情報を保持する
       let activeMemoryTracks = [];
       let nextSeq = 1;
+      let lastTimestampMs = -1;
 
       for (let t = 0; t <= duration; t += stepSec) {
-        const seekTime = Number(t.toFixed(2));
+        const seekTime = Number(t.toFixed(3));
         await waitForVideoSeek(video, seekTime);
 
-        const res = landmarker.detect(video);
+        let timestampMs = Math.round(seekTime * 1000);
+        if (timestampMs <= lastTimestampMs) timestampMs = lastTimestampMs + 1;
+        lastTimestampMs = timestampMs;
+
+        const res = landmarker.detectForVideo(video, timestampMs);
         const poseList = Array.isArray(res?.landmarks) ? res.landmarks : [];
         const frameTracks = [];
 
         poseList.forEach(lm => {
-          if (!Array.isArray(lm) || lm.length < 29) return;
+          if (!Array.isArray(lm) || lm.length < 33) return;
           const keyIndices = [0, 11, 12, 23, 24];
           const avgVis = keyIndices.reduce((acc, idx) => acc + (lm[idx]?.visibility ?? 0.8), 0) / keyIndices.length;
           if (avgVis < 0.4) return;
@@ -1906,12 +2260,15 @@
 
           if (!matchedId) {
             matchedId = `person_${nextSeq++}`;
-            const color = palette[(nextSeq - 2) % palette.length];
-            const name = `メンバー${nextSeq - 1}`;
+            const idx = nextSeq - 2;
+            const color = palette[idx % palette.length];
+            const name = `メンバー${idx + 1}`;
             detectedPersons[matchedId] = {
               id: matchedId,
               name,
               color,
+              hairStyle: HAIR_STYLES[idx % HAIR_STYLES.length],
+              hairColor: HAIR_COLORS[idx % HAIR_COLORS.length],
               avatar: cropFaceAvatarFromVideo(video, lm, color, name),
               detectedByPose: true
             };
@@ -1919,6 +2276,7 @@
 
           const faceInfo = estimateFaceFacingFromLandmarks(lm);
           const posSlot = Math.max(1, Math.min(8, Math.round(footX * 7) + 1));
+          const p = (idx) => (lm[idx] ? { x: lm[idx].x, y: lm[idx].y } : null);
 
           frameTracks.push({
             id: matchedId,
@@ -1932,29 +2290,37 @@
             facing: faceInfo.facing,
             eyeOffsetX: faceInfo.eyeOffsetX,
             joints: {
-              leftShoulder: lm[11] ? { x: lm[11].x, y: lm[11].y } : null,
-              rightShoulder: lm[12] ? { x: lm[12].x, y: lm[12].y } : null,
-              leftElbow: lm[13] ? { x: lm[13].x, y: lm[13].y } : null,
-              rightElbow: lm[14] ? { x: lm[14].x, y: lm[14].y } : null,
-              leftWrist: lm[15] ? { x: lm[15].x, y: lm[15].y } : null,
-              rightWrist: lm[16] ? { x: lm[16].x, y: lm[16].y } : null,
-              leftHip: lm[23] ? { x: lm[23].x, y: lm[23].y } : null,
-              rightHip: lm[24] ? { x: lm[24].x, y: lm[24].y } : null,
-              leftKnee: lm[25] ? { x: lm[25].x, y: lm[25].y } : null,
-              rightKnee: lm[26] ? { x: lm[26].x, y: lm[26].y } : null,
-              leftAnkle: lm[27] ? { x: lm[27].x, y: lm[27].y } : null,
-              rightAnkle: lm[28] ? { x: lm[28].x, y: lm[28].y } : null
+              leftShoulder: p(11),
+              rightShoulder: p(12),
+              leftElbow: p(13),
+              rightElbow: p(14),
+              leftWrist: p(15),
+              rightWrist: p(16),
+              leftPinky: p(17),
+              rightPinky: p(18),
+              leftIndex: p(19),
+              rightIndex: p(20),
+              leftThumb: p(21),
+              rightThumb: p(22),
+              leftHip: p(23),
+              rightHip: p(24),
+              leftKnee: p(25),
+              rightKnee: p(26),
+              leftAnkle: p(27),
+              rightAnkle: p(28),
+              leftHeel: p(29),
+              rightHeel: p(30),
+              leftFootIndex: p(31),
+              rightFootIndex: p(32)
             }
           });
         });
 
         if (frameTracks.length > 0) {
           frames.push({ t: seekTime, tracks: frameTracks });
-          // 今フレームのトラックを最優先とし、未検出の既存トラックも数フレーム保持
           const currentIds = new Set(frameTracks.map(ft => ft.id));
           const carried = activeMemoryTracks
-            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.4)
-            .map(mt => ({ ...mt, vx: 0, vy: 0 }));
+            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.4);
           activeMemoryTracks = [
             ...frameTracks.map(ft => ({ ...ft, lastSeenT: seekTime })),
             ...carried
@@ -1987,8 +2353,8 @@
 
       songMemoryStore[pkg.songId] = pkg;
       virtualTime = 0;
-      applySongTrackingData(pkg, "骨格解析完了（動き・フォーメーション加工データ生成済み）");
-      progressEl.textContent = `完了：骨格判定された ${personCount} 名のpersonを抽出し、${frames.length} フレームの動き・フォーメーションデータを生成しました。`;
+      applySongTrackingData(pkg, "骨格解析完了（女の子ダンス＆フォーメーション再現データ生成済み）");
+      progressEl.textContent = `完了：骨格判定された ${personCount} 名のpersonを抽出し、${frames.length} フレームの振り付け・フォーメーションデータを生成しました。`;
     }
 
     function renderDetectedPersonEditor() {
@@ -2005,12 +2371,20 @@
         const row = document.createElement('div');
         row.className = "flex flex-wrap items-center gap-2 p-2 rounded border border-slate-200 bg-slate-50";
         const avatarSrc = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
+        const hairVal = info.hairStyle || "twintail";
         row.innerHTML = `
           <img src="${avatarSrc}" alt="${escapeHtml(info.name || pid)}" class="w-9 h-9 rounded-full object-cover border border-slate-300">
           <span class="font-mono text-[11px] text-slate-500">${escapeHtml(pid)}</span>
-          <input type="text" value="${escapeHtml(info.name || pid)}" onchange="updatePersonName('${escapeHtml(pid)}', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-white flex-1 min-w-[120px]" placeholder="名前">
+          <input type="text" value="${escapeHtml(info.name || pid)}" onchange="updatePersonName('${escapeHtml(pid)}', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-white flex-1 min-w-[100px]" placeholder="名前">
+          <select onchange="updatePersonHair('${escapeHtml(pid)}', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-white">
+            <option value="twintail" ${hairVal === "twintail" ? "selected" : ""}>ツインテール</option>
+            <option value="ponytail" ${hairVal === "ponytail" ? "selected" : ""}>ポニーテール</option>
+            <option value="long" ${hairVal === "long" ? "selected" : ""}>ロング</option>
+            <option value="bob" ${hairVal === "bob" ? "selected" : ""}>ボブ</option>
+          </select>
+          <input type="color" value="${escapeHtml(info.color || "#db2777")}" onchange="updatePersonColor('${escapeHtml(pid)}', this.value)" title="衣装カラー" class="w-7 h-7 rounded cursor-pointer border border-slate-300">
           <label class="cursor-pointer bg-white hover:bg-pink-50 border border-slate-300 rounded px-2 py-1 text-[11px] font-bold text-slate-700">
-            顔写真変更 <input type="file" accept="image/*" class="hidden" onchange="updatePersonAvatarFile('${escapeHtml(pid)}', this)">
+            顔写真 <input type="file" accept="image/*" class="hidden" onchange="updatePersonAvatarFile('${escapeHtml(pid)}', this)">
           </label>
         `;
         editorEl.appendChild(row);
@@ -2023,6 +2397,18 @@
       activeSongData.members[pid].name = trimmed;
       if (activeSongData._validMembers?.[pid]) activeSongData._validMembers[pid].name = trimmed;
       renderSongPersonChips();
+    }
+
+    function updatePersonHair(pid, hairStyle) {
+      if (!activeSongData?.members?.[pid]) return;
+      activeSongData.members[pid].hairStyle = hairStyle;
+      if (activeSongData._validMembers?.[pid]) activeSongData._validMembers[pid].hairStyle = hairStyle;
+    }
+
+    function updatePersonColor(pid, colorHex) {
+      if (!activeSongData?.members?.[pid]) return;
+      activeSongData.members[pid].color = colorHex;
+      if (activeSongData._validMembers?.[pid]) activeSongData._validMembers[pid].color = colorHex;
     }
 
     function updatePersonAvatarFile(pid, input) {
@@ -2055,6 +2441,8 @@
             id: pid,
             name: info.name || pid,
             color: info.color || "#db2777",
+            hairStyle: info.hairStyle || "twintail",
+            hairColor: info.hairColor || "#2b1b17",
             avatar: info.avatar || "",
             detectedByPose: true
           };
@@ -2071,7 +2459,7 @@
         songId: key,
         stageKey,
         trackName,
-        fps: base.fps || 10,
+        fps: base.fps || 15,
         members: filteredMembers,
         lyrics: parseLyricsText(document.getElementById('songLyricsEditor').value),
         frames: filteredFrames
