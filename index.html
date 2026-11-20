@@ -81,6 +81,7 @@
       border: 1px solid #1e293b;
       border-radius: 0 0 0.75rem 0.75rem;
       overflow: hidden;
+      cursor: pointer;
     }
     .timeline-band-box canvas {
       width: 100%;
@@ -120,7 +121,7 @@
   <header class="bg-pink-600 text-white p-4 shadow-md sticky top-0 z-40">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
       <h1 class="text-xl font-bold flex items-center gap-2">
-        <span id="theaterMaskIcon" onclick="onTheaterMaskTap(event)" title="劇場公演 データサイト" class="inline-flex items-center justify-center cursor-pointer select-none px-1 py-0.5 rounded hover:bg-pink-500/50 transition">
+        <span id="theaterMaskIcon" onclick="onTheaterMaskTap(event)" title="劇場公演 データサイト（2回タップで解析パネル）" class="inline-flex items-center justify-center cursor-pointer select-none px-1 py-0.5 rounded hover:bg-pink-500/50 transition">
           <i class="fa-solid fa-masks-theater"></i>
         </span>
         <span class="cursor-pointer" onclick="goHome()">劇場公演 データサイト</span>
@@ -335,13 +336,16 @@
               <video id="songVideo" playsinline preload="metadata" class="opacity-0"></video>
               <canvas id="songOverlayCanvas"></canvas>
             </div>
-            <div class="timeline-band-box">
+            <div class="timeline-band-box" id="songTimelineBandBox" onclick="onTimelineBandClick(event)" title="クリックでシーク">
               <canvas id="songTimelineBandCanvas"></canvas>
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 pt-2">
               <div class="flex items-center gap-2">
                 <button type="button" id="songPlayBtn" onclick="toggleSongPlayback()" class="bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow transition inline-flex items-center gap-1.5">
                   <i class="fa-solid fa-play" id="songPlayIcon"></i> <span id="songPlayLabel">再生</span>
+                </button>
+                <button type="button" onclick="restartSongPlayback()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-lg transition" title="先頭へ戻す">
+                  <i class="fa-solid fa-rotate-left"></i>
                 </button>
                 <span id="songTimeLabel" class="text-xs font-mono text-slate-600">00:00.0 / 00:00.0</span>
               </div>
@@ -647,6 +651,11 @@
     let localUploadedVideoUrl = null;
     let poseLandmarkerInstance = null;
 
+    // 動画なし・停止中でも解析済みデータを再生・シークするための仮想クロック状態
+    let virtualPlaying = false;
+    let virtualTime = 0;
+    let lastRafTimestamp = null;
+
     const DEFAULT_SONGS_BY_STAGE = [
       "M1. overture",
       "M2. 夢のポップスター",
@@ -673,10 +682,11 @@
       renderSongStageDropdown();
       startSongMotionLoop();
 
-      window.addEventListener("resize", resizeSongCanvases);
+      window.addEventListener("resize", () => requestAnimationFrame(resizeSongCanvases));
       document.getElementById('optShowRawVideo')?.addEventListener('change', (e) => {
-        document.getElementById('songVideo').classList.toggle('opacity-0', !e.target.checked);
-        document.getElementById('songVideo').classList.toggle('opacity-35', e.target.checked);
+        const videoEl = document.getElementById('songVideo');
+        videoEl.classList.toggle('opacity-0', !e.target.checked);
+        videoEl.classList.toggle('opacity-45', e.target.checked);
       });
 
       document.addEventListener('click', (e) => {
@@ -715,6 +725,9 @@
       const badge = document.getElementById('authorModeBadge');
       if (panel) panel.classList.toggle('hidden', !isAuthorModeActive);
       if (badge) badge.classList.toggle('hidden', !isAuthorModeActive);
+      if (isAuthorModeActive) {
+        renderDetectedPersonEditor();
+      }
       updateSongViewerNotice();
     }
 
@@ -917,6 +930,8 @@
       const trackName = document.getElementById('songTrackSelect').value;
       const key = getSongStorageKey(stageKey, trackName);
       selectedSongPersonId = null;
+      virtualPlaying = false;
+      virtualTime = 0;
 
       if (songMemoryStore[key]) {
         applySongTrackingData(songMemoryStore[key], "セッション内の解析データ");
@@ -952,6 +967,7 @@
         }
         renderSongPersonChips();
         renderSongLyricSeekButtons();
+        renderDetectedPersonEditor();
         updateSongViewerNotice();
         return;
       }
@@ -975,7 +991,7 @@
         }
       }
 
-      if (lyricsEditor && Array.isArray(data.lyrics)) {
+      if (lyricsEditor && Array.isArray(data.lyrics) && data.lyrics.length > 0) {
         lyricsEditor.value = data.lyrics.map(l => `[${formatLrcTimestamp(l.start)}] ${l.text}`).join("\n");
       }
 
@@ -984,18 +1000,74 @@
 
       renderSongPersonChips();
       renderSongLyricSeekButtons();
+      renderDetectedPersonEditor();
       updateSongViewerNotice();
+    }
+
+    function getSongTotalDuration() {
+      const video = document.getElementById('songVideo');
+      const vDur = (video && Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 0;
+      const frames = activeSongData?.frames || [];
+      const fDur = frames.length > 0 ? frames[frames.length - 1].t : 0;
+      return Math.max(vDur, fDur);
+    }
+
+    function getCurrentSongTime() {
+      const video = document.getElementById('songVideo');
+      const hasVideoSrc = !!(video && (video.currentSrc || video.getAttribute('src')));
+      if (hasVideoSrc && (!video.paused || video.currentTime > 0)) {
+        return video.currentTime || 0;
+      }
+      return virtualTime;
+    }
+
+    function seekSongTime(sec) {
+      const total = getSongTotalDuration();
+      const clamped = Math.max(0, total > 0 ? Math.min(total, sec) : Math.max(0, sec));
+      virtualTime = clamped;
+      const video = document.getElementById('songVideo');
+      if (video && (video.currentSrc || video.getAttribute('src')) && Number.isFinite(video.duration) && video.duration > 0) {
+        video.currentTime = Math.min(video.duration, clamped);
+      }
+    }
+
+    function onTimelineBandClick(event) {
+      const box = document.getElementById('songTimelineBandBox');
+      if (!box) return;
+      const total = getSongTotalDuration();
+      if (total <= 0) return;
+      const rect = box.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+      seekSongTime(ratio * total);
+    }
+
+    function restartSongPlayback() {
+      const video = document.getElementById('songVideo');
+      virtualTime = 0;
+      if (video && (video.currentSrc || video.getAttribute('src'))) {
+        video.currentTime = 0;
+      }
+    }
+
+    function isSongPlaying() {
+      const video = document.getElementById('songVideo');
+      const hasVideoSrc = !!(video && (video.currentSrc || video.getAttribute('src')));
+      if (hasVideoSrc) return !video.paused;
+      return virtualPlaying;
     }
 
     function updateSongViewerNotice() {
       const noticeEl = document.getElementById('songViewerNotice');
       if (!noticeEl) return;
-      const hasVideo = !!document.getElementById('songVideo').currentSrc || !!document.getElementById('songVideo').getAttribute('src');
+      const video = document.getElementById('songVideo');
+      const hasVideo = !!(video.currentSrc || video.getAttribute('src'));
       const hasFrames = Array.isArray(activeSongData?.frames) && activeSongData.frames.length > 0;
       if (!hasVideo && !hasFrames && !isAuthorModeActive) {
         noticeEl.textContent = "※ 動画・解析データ未設定の曲です（🎭を2回タップして動画を読み込むと骨格解析できます）";
       } else if (selectedSongPersonId && activeSongData?._validMembers?.[selectedSongPersonId]) {
         noticeEl.textContent = `絞り込み中: ${activeSongData._validMembers[selectedSongPersonId].name} のみ表示`;
+      } else if (!hasVideo && hasFrames) {
+        noticeEl.textContent = "解析フレーム再生モード（動画未紐付け）";
       } else {
         noticeEl.textContent = "";
       }
@@ -1040,9 +1112,17 @@
 
     function toggleSongPlayback() {
       const video = document.getElementById('songVideo');
-      if (video.currentSrc || video.src) {
+      const hasVideoSrc = !!(video.currentSrc || video.getAttribute('src'));
+      const hasFrames = Array.isArray(activeSongData?.frames) && activeSongData.frames.length > 0;
+
+      if (hasVideoSrc) {
         if (video.paused) video.play().catch(() => {});
         else video.pause();
+      } else if (hasFrames) {
+        const total = getSongTotalDuration();
+        if (!virtualPlaying && virtualTime >= total) virtualTime = 0;
+        virtualPlaying = !virtualPlaying;
+        lastRafTimestamp = null;
       }
       updateSongViewerNotice();
     }
@@ -1106,10 +1186,13 @@
         btn.dataset.idx = idx;
         btn.textContent = `${line.start.toFixed(1)}s ${line.text}`;
         btn.onclick = () => {
+          seekSongTime(line.start + 0.02);
           const video = document.getElementById('songVideo');
-          if (video.currentSrc || video.src) {
-            video.currentTime = line.start + 0.02;
+          if (video.currentSrc || video.getAttribute('src')) {
             video.play().catch(() => {});
+          } else if (Array.isArray(activeSongData?.frames) && activeSongData.frames.length > 0) {
+            virtualPlaying = true;
+            lastRafTimestamp = null;
           }
         };
         listEl.appendChild(btn);
@@ -1122,8 +1205,12 @@
       if (mainCanvas) {
         const rect = mainCanvas.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
-          mainCanvas.width = Math.floor(rect.width * dpr);
-          mainCanvas.height = Math.floor(rect.height * dpr);
+          const targetW = Math.floor(rect.width * dpr);
+          const targetH = Math.floor(rect.height * dpr);
+          if (mainCanvas.width !== targetW || mainCanvas.height !== targetH) {
+            mainCanvas.width = targetW;
+            mainCanvas.height = targetH;
+          }
           mainCanvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
         }
       }
@@ -1131,8 +1218,12 @@
       if (bandCanvas) {
         const brect = bandCanvas.getBoundingClientRect();
         if (brect.width > 0 && brect.height > 0) {
-          bandCanvas.width = Math.floor(brect.width * dpr);
-          bandCanvas.height = Math.floor(brect.height * dpr);
+          const targetBW = Math.floor(brect.width * dpr);
+          const targetBH = Math.floor(brect.height * dpr);
+          if (bandCanvas.width !== targetBW || bandCanvas.height !== targetBH) {
+            bandCanvas.width = targetBW;
+            bandCanvas.height = targetBH;
+          }
           bandCanvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
         }
       }
@@ -1188,17 +1279,21 @@
             Object.keys(pTrack.joints).forEach(jKey => {
               const pj = pTrack.joints[jKey];
               const nj = nTrack.joints[jKey] || pj;
-              merged.joints[jKey] = {
-                x: lerp(pj.x, nj.x),
-                y: lerp(pj.y, nj.y)
-              };
+              if (pj && nj) {
+                merged.joints[jKey] = {
+                  x: lerp(pj.x, nj.x),
+                  y: lerp(pj.y, nj.y)
+                };
+              } else if (pj || nj) {
+                merged.joints[jKey] = pj || nj;
+              }
             });
           }
           return merged;
         });
     }
 
-    function getRecentJointTrails(personId, currentT, lookbackSec = 0.35) {
+    function getRecentJointTrails(personId, currentT, lookbackSec = 0.45) {
       if (!activeSongData?.frames) return [];
       const points = [];
       for (const fr of activeSongData.frames) {
@@ -1209,8 +1304,8 @@
               t: fr.t,
               lw: tr.joints?.leftWrist || { x: tr.x - 0.04, y: tr.y + 0.14 },
               rw: tr.joints?.rightWrist || { x: tr.x + 0.04, y: tr.y + 0.14 },
-              la: tr.joints?.leftAnkle || { x: tr.footX - 0.02, y: tr.footY },
-              ra: tr.joints?.rightAnkle || { x: tr.footX + 0.02, y: tr.footY },
+              la: tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.02, y: tr.footY ?? (tr.y + 0.35) },
+              ra: tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.02, y: tr.footY ?? (tr.y + 0.35) },
               footX: tr.footX ?? tr.x,
               footY: tr.footY ?? (tr.y + 0.35)
             });
@@ -1221,22 +1316,43 @@
     }
 
     function startSongMotionLoop() {
-      const loop = () => {
+      const loop = (now) => {
+        if (lastRafTimestamp === null) lastRafTimestamp = now;
+        const dt = Math.min(0.1, (now - lastRafTimestamp) / 1000);
+        lastRafTimestamp = now;
+
         const video = document.getElementById('songVideo');
+        const hasVideoSrc = !!(video && (video.currentSrc || video.getAttribute('src')));
+        const totalDur = getSongTotalDuration();
+
+        if (!hasVideoSrc && virtualPlaying) {
+          virtualTime += dt;
+          if (totalDur > 0 && virtualTime >= totalDur) {
+            virtualTime = totalDur;
+            virtualPlaying = false;
+          }
+        }
+
+        const playing = isSongPlaying();
+        const cur = getCurrentSongTime();
+
         const playIcon = document.getElementById('songPlayIcon');
         const playLabel = document.getElementById('songPlayLabel');
         const timeLabel = document.getElementById('songTimeLabel');
 
-        if (video && playIcon && playLabel) {
-          playIcon.className = video.paused ? "fa-solid fa-play" : "fa-solid fa-pause";
-          playLabel.textContent = video.paused ? "再生" : "一時停止";
-          const cur = video.currentTime || 0;
-          const dur = Number.isFinite(video.duration) ? video.duration : 0;
-          if (timeLabel) timeLabel.textContent = `${formatClock(cur)} / ${formatClock(dur)}`;
-          renderSongMotionStage(cur, dur);
-          renderSongTimelineBand(cur, dur);
-          updateSongLyricsDisplay(cur);
+        if (playIcon && playLabel) {
+          playIcon.className = playing ? "fa-solid fa-pause" : "fa-solid fa-play";
+          playLabel.textContent = playing ? "一時停止" : "再生";
         }
+        if (timeLabel) {
+          timeLabel.textContent = `${formatClock(cur)} / ${formatClock(totalDur)}`;
+        }
+
+        resizeSongCanvases();
+        renderSongMotionStage(cur, totalDur);
+        renderSongTimelineBand(cur, totalDur);
+        updateSongLyricsDisplay(cur);
+
         requestAnimationFrame(loop);
       };
       requestAnimationFrame(loop);
@@ -1294,7 +1410,7 @@
           const spreadRatio = ((maxX - minX) / Math.max(1, w)).toFixed(2);
 
           ctx.save();
-          ctx.strokeStyle = "rgba(56, 189, 248, 0.55)";
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
           ctx.lineWidth = 2;
           ctx.setLineDash([5, 4]);
           ctx.beginPath();
@@ -1305,10 +1421,9 @@
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // 左右端の広がり幅バッジ
-          ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
+          ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
           ctx.beginPath();
-          ctx.roundRect(12, 12, 165, 24, 6);
+          ctx.roundRect(12, 12, 175, 24, 6);
           ctx.fill();
           ctx.fillStyle = "#7dd3fc";
           ctx.font = "bold 11px sans-serif";
@@ -1340,7 +1455,7 @@
 
         // 手首・足首の残像と移動軌跡
         if (showTrail) {
-          const historyPts = getRecentJointTrails(tr.id, t, 0.35);
+          const historyPts = getRecentJointTrails(tr.id, t, 0.45);
           historyPts.forEach((pt, idx) => {
             const alpha = Math.max(0.08, ((idx + 1) / Math.max(1, historyPts.length)) * 0.45);
             ctx.save();
@@ -1358,7 +1473,7 @@
           if (showFormation && historyPts.length >= 2) {
             ctx.save();
             ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.5;
+            ctx.globalAlpha = 0.55;
             ctx.lineWidth = 2;
             ctx.beginPath();
             historyPts.forEach((pt, idx) => {
@@ -1390,6 +1505,7 @@
           const ra = j.rightAnkle || { x: rk.x, y: fy / h };
 
           const seg = (p1, p2) => {
+            if (!p1 || !p2) return;
             ctx.beginPath();
             ctx.moveTo(p1.x * w, p1.y * h);
             ctx.lineTo(p2.x * w, p2.y * h);
@@ -1408,7 +1524,6 @@
           seg(rh, rk); seg(rk, ra);
           ctx.restore();
 
-          // 頭の向き表現（正面＝色付き＋両目、斜め横＝白＋寄った目、後ろ＝濃い茶色・目なし）
           const facing = tr.facing || "front";
           const headR = 11;
           ctx.save();
@@ -1539,7 +1654,6 @@
       const totalDur = Math.max(duration || 0, frames.length ? frames[frames.length - 1].t : 0, 1);
 
       if (frames.length > 0) {
-        // フレームごとの正面向き割合を帯グラフで描画
         ctx.save();
         ctx.fillStyle = "rgba(219, 39, 119, 0.35)";
         ctx.beginPath();
@@ -1574,7 +1688,6 @@
         ctx.restore();
       }
 
-      // 現在再生位置の縦線
       const curX = Math.max(0, Math.min(w, (t / totalDur) * w));
       ctx.save();
       ctx.strokeStyle = "#ffffff";
@@ -1616,6 +1729,8 @@
       if (!file) return;
       if (localUploadedVideoUrl) URL.revokeObjectURL(localUploadedVideoUrl);
       localUploadedVideoUrl = URL.createObjectURL(file);
+      virtualPlaying = false;
+      virtualTime = 0;
       const video = document.getElementById('songVideo');
       video.src = localUploadedVideoUrl;
       video.load();
@@ -1637,10 +1752,10 @@
             delegate: "GPU"
           },
           runningMode: "IMAGE",
-          numPoses: 8,
-          minPoseDetectionConfidence: 0.5,
-          minPosePresenceConfidence: 0.5,
-          minTrackingConfidence: 0.5
+          numPoses: 10,
+          minPoseDetectionConfidence: 0.45,
+          minPosePresenceConfidence: 0.45,
+          minTrackingConfidence: 0.45
         });
         return poseLandmarkerInstance;
       } catch (err) {
@@ -1696,6 +1811,21 @@
       }
     }
 
+    function waitForVideoSeek(video, seekTime) {
+      return new Promise(resolve => {
+        if (Math.abs((video.currentTime || 0) - seekTime) < 0.01 && video.readyState >= 2) {
+          resolve();
+          return;
+        }
+        const done = () => {
+          video.removeEventListener("seeked", done);
+          requestAnimationFrame(() => resolve());
+        };
+        video.addEventListener("seeked", done, { once: true });
+        video.currentTime = seekTime;
+      });
+    }
+
     async function runPoseAnalysisOnVideo() {
       const video = document.getElementById('songVideo');
       const progressEl = document.getElementById('poseAnalysisProgress');
@@ -1710,6 +1840,7 @@
       }
 
       btn.disabled = true;
+      virtualPlaying = false;
       progressEl.textContent = "骨格モデルを準備中...";
       const landmarker = await ensurePoseLandmarkerLoaded();
       if (!landmarker) {
@@ -1720,25 +1851,19 @@
 
       const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 10;
       const stepSec = 1 / targetFps;
-      const duration = Math.min(video.duration, 180);
+      const duration = Math.min(video.duration, 300);
       video.pause();
 
-      const palette = ["#e11d48", "#0284c7", "#7c3aed", "#059669", "#d97706", "#db2777", "#2563eb", "#0d9488"];
+      const palette = ["#e11d48", "#0284c7", "#7c3aed", "#059669", "#d97706", "#db2777", "#2563eb", "#0d9488", "#ea580c", "#4f46e5"];
       const detectedPersons = {};
       const frames = [];
-      let prevTracks = [];
+      // 交差時のID切れを防ぐため、直近数フレームのトラック情報を保持する
+      let activeMemoryTracks = [];
       let nextSeq = 1;
 
       for (let t = 0; t <= duration; t += stepSec) {
         const seekTime = Number(t.toFixed(2));
-        video.currentTime = seekTime;
-        await new Promise(resolve => {
-          const onSeeked = () => {
-            video.removeEventListener("seeked", onSeeked);
-            resolve();
-          };
-          video.addEventListener("seeked", onSeeked);
-        });
+        await waitForVideoSeek(video, seekTime);
 
         const res = landmarker.detect(video);
         const poseList = Array.isArray(res?.landmarks) ? res.landmarks : [];
@@ -1748,24 +1873,34 @@
           if (!Array.isArray(lm) || lm.length < 29) return;
           const keyIndices = [0, 11, 12, 23, 24];
           const avgVis = keyIndices.reduce((acc, idx) => acc + (lm[idx]?.visibility ?? 0.8), 0) / keyIndices.length;
-          if (avgVis < 0.45) return;
+          if (avgVis < 0.4) return;
 
           const nose = lm[0];
+          const ls = lm[11];
+          const rs = lm[12];
+          const lh = lm[23];
+          const rh = lm[24];
           const la = lm[27];
           const ra = lm[28];
+
+          const torsoX = ((ls?.x ?? nose.x) + (rs?.x ?? nose.x) + (lh?.x ?? nose.x) + (rh?.x ?? nose.x)) / 4;
+          const torsoY = ((ls?.y ?? nose.y) + (rs?.y ?? nose.y) + (lh?.y ?? nose.y) + (rh?.y ?? nose.y)) / 4;
+
           const x = Math.max(0.05, Math.min(0.95, nose.x));
-          const y = Math.max(0.12, Math.min(0.82, nose.y));
-          const footX = Math.max(0.05, Math.min(0.95, ((la?.x ?? nose.x) + (ra?.x ?? nose.x)) / 2));
-          const footY = Math.max(0.25, Math.min(0.92, ((la?.y ?? (y + 0.35)) + (ra?.y ?? (y + 0.35))) / 2));
+          const y = Math.max(0.10, Math.min(0.84, nose.y));
+          const footX = Math.max(0.05, Math.min(0.95, ((la?.x ?? torsoX) + (ra?.x ?? torsoX)) / 2));
+          const footY = Math.max(0.25, Math.min(0.93, ((la?.y ?? (y + 0.35)) + (ra?.y ?? (y + 0.35))) / 2));
 
           let matchedId = null;
-          let bestDist = 0.18;
-          prevTracks.forEach(pt => {
-            if (frameTracks.some(ft => ft.id === pt.id)) return;
-            const d = Math.hypot(pt.x - x, pt.y - y);
-            if (d < bestDist) {
-              bestDist = d;
-              matchedId = pt.id;
+          let bestScore = 0.24;
+          activeMemoryTracks.forEach(mt => {
+            if (frameTracks.some(ft => ft.id === mt.id)) return;
+            const headDist = Math.hypot(mt.x - x, mt.y - y);
+            const torsoDist = Math.hypot((mt.torsoX ?? mt.x) - torsoX, (mt.torsoY ?? mt.y) - torsoY);
+            const score = headDist * 0.45 + torsoDist * 0.55;
+            if (score < bestScore) {
+              bestScore = score;
+              matchedId = mt.id;
             }
           });
 
@@ -1789,6 +1924,8 @@
             id: matchedId,
             x,
             y,
+            torsoX,
+            torsoY,
             footX,
             footY,
             pos: `POS ${posSlot}`,
@@ -1813,7 +1950,15 @@
 
         if (frameTracks.length > 0) {
           frames.push({ t: seekTime, tracks: frameTracks });
-          prevTracks = frameTracks;
+          // 今フレームのトラックを最優先とし、未検出の既存トラックも数フレーム保持
+          const currentIds = new Set(frameTracks.map(ft => ft.id));
+          const carried = activeMemoryTracks
+            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.4)
+            .map(mt => ({ ...mt, vx: 0, vy: 0 }));
+          activeMemoryTracks = [
+            ...frameTracks.map(ft => ({ ...ft, lastSeenT: seekTime })),
+            ...carried
+          ];
         }
 
         const pct = Math.min(100, Math.round((seekTime / Math.max(0.1, duration)) * 100));
@@ -1841,13 +1986,14 @@
       };
 
       songMemoryStore[pkg.songId] = pkg;
+      virtualTime = 0;
       applySongTrackingData(pkg, "骨格解析完了（動き・フォーメーション加工データ生成済み）");
-      renderDetectedPersonEditor();
       progressEl.textContent = `完了：骨格判定された ${personCount} 名のpersonを抽出し、${frames.length} フレームの動き・フォーメーションデータを生成しました。`;
     }
 
     function renderDetectedPersonEditor() {
       const editorEl = document.getElementById('detectedPersonEditor');
+      if (!editorEl) return;
       editorEl.innerHTML = '';
       const validMembers = activeSongData?._validMembers || {};
       const entries = Object.entries(validMembers);
@@ -2006,6 +2152,7 @@
 
     function goHome() {
       selectedMemberName = null;
+      virtualPlaying = false;
       document.getElementById('mainTabsContainer').classList.remove('hidden');
       document.getElementById('memberDetailContainer').classList.add('hidden');
       document.getElementById('navNormal').classList.remove('hidden');
@@ -2052,10 +2199,10 @@
       if (tabName === 'coapp') renderCoappMemberChips();
       if (tabName === 'stats') renderStatsTab();
       if (tabName === 'songparts') {
-        resizeSongCanvases();
         if (!document.getElementById('songStageSelect').options.length) {
           renderSongStageDropdown();
         }
+        requestAnimationFrame(() => resizeSongCanvases());
       }
     }
 
@@ -2548,6 +2695,7 @@
 
     function openMemberDetail(memberName) {
       selectedMemberName = memberName;
+      virtualPlaying = false;
       document.getElementById('mainTabsContainer').classList.add('hidden');
       document.getElementById('memberDetailContainer').classList.remove('hidden');
       document.getElementById('navNormal').classList.add('hidden');
