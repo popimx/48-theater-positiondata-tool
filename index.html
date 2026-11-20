@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>劇場公演 データサイト</title>
+  <!-- Tailwind CSS & Font Awesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -22,7 +23,8 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     .member-link { color: #111827; font-weight: 500; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; display: inline-block; padding: 0.125rem 0; }
     .member-link:hover { opacity: 0.7; color: #db2777; }
-
+    
+    /* カレンダーグリッド用スタイル */
     .cal-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -41,78 +43,13 @@
     }
     .cal-cell.other-month { background-color: #f8fafc; color: #94a3b8; }
     .cal-cell.today { background-color: #fdf2f8; }
-
+    
+    /* 表の列固定用 */
     .sticky-col-1 {
       position: sticky;
       left: 0;
       background-color: #ffffff;
       z-index: 10;
-    }
-
-    /* 加工モーション＆フォーメーションステージ */
-    .motion-stage-box {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: radial-gradient(circle at 50% 25%, #1e1b4b 0%, #0b1020 75%);
-      border-radius: 0.75rem 0.75rem 0 0;
-      overflow: hidden;
-      border: 1px solid #1e293b;
-      border-bottom: none;
-    }
-    .motion-stage-box video {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-    .motion-stage-box canvas {
-      position: relative;
-      z-index: 2;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .timeline-band-box {
-      width: 100%;
-      height: 54px;
-      background: #111827;
-      border: 1px solid #1e293b;
-      border-radius: 0 0 0.75rem 0.75rem;
-      overflow: hidden;
-      cursor: pointer;
-    }
-    .timeline-band-box canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .person-filter-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 700;
-      border: 1px solid #cbd5e1;
-      background: #ffffff;
-      color: #334155;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .person-filter-chip.active {
-      background: #db2777;
-      border-color: #db2777;
-      color: #ffffff;
-    }
-    .person-filter-chip img {
-      width: 20px;
-      height: 20px;
-      border-radius: 9999px;
-      object-fit: cover;
-      background: #e2e8f0;
     }
   </style>
 </head>
@@ -120,16 +57,14 @@
   <!-- Header -->
   <header class="bg-pink-600 text-white p-4 shadow-md sticky top-0 z-40">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
-      <h1 class="text-xl font-bold flex items-center gap-2">
-        <span id="theaterMaskIcon" onclick="onTheaterMaskTap(event)" title="劇場公演 データサイト（2回タップで解析パネル）" class="inline-flex items-center justify-center cursor-pointer select-none px-1 py-0.5 rounded hover:bg-pink-500/50 transition">
-          <i class="fa-solid fa-masks-theater"></i>
-        </span>
-        <span class="cursor-pointer" onclick="goHome()">劇場公演 データサイト</span>
+      <h1 class="text-xl font-bold flex items-center gap-2 cursor-pointer" onclick="goHome()">
+        <i class="fa-solid fa-masks-theater"></i> 劇場公演 データサイト
       </h1>
     </div>
+    <!-- 検索バー ＆ サジェスト -->
     <div class="max-w-4xl mx-auto mt-3 relative">
       <div class="relative">
-        <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名 で検索"
+        <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="演目名 または メンバー名 で検索" 
                class="w-full pl-9 pr-4 py-2 bg-white text-slate-800 text-sm rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-pink-300">
         <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
       </div>
@@ -137,7 +72,9 @@
     </div>
   </header>
 
+  <!-- Main Content Container -->
   <main class="max-w-4xl mx-auto p-4">
+    <!-- 通常タブコンテンツ -->
     <div id="mainTabsContainer">
       <!-- Tab 1: カレンダー -->
       <section id="tab-calendar" class="tab-content">
@@ -163,6 +100,7 @@
               </div>
             </div>
           </div>
+          <!-- 劇場選択タブ -->
           <div class="flex flex-nowrap overflow-x-auto gap-1.5 mb-4 pb-2">
             <button onclick="filterSchedule('ALL', this)" class="filter-btn active bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">全劇場</button>
             <button onclick="filterSchedule('AKB48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">AKB48劇場</button>
@@ -172,6 +110,7 @@
             <button onclick="filterSchedule('NGT48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">NGT48劇場</button>
             <button onclick="filterSchedule('STU48', this)" class="filter-btn bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-slate-200">STU48劇場</button>
           </div>
+          
           <div id="calendarList" class="space-y-3"></div>
           <div id="calendarGrid" class="hidden"></div>
         </div>
@@ -277,9 +216,11 @@
             <span class="text-xs text-slate-500">メンバーを選択してください。</span>
           </div>
           <div id="coappMemberChips" class="flex flex-wrap gap-1.5 p-2 border border-slate-200 rounded-lg bg-slate-50"></div>
+          
           <div class="pt-2">
             <button onclick="searchCoappearances()" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 rounded-lg text-xs shadow transition">共演公演を検索する</button>
           </div>
+
           <div id="coappResultArea" class="space-y-2 pt-2 border-t border-slate-100">
             <h3 class="text-xs font-bold text-slate-700">【共通公演一覧】</h3>
             <div id="coappResultList" class="space-y-2 max-h-96 overflow-y-auto pr-1">
@@ -289,135 +230,20 @@
         </div>
       </section>
 
-      <!-- Tab 7: 歌割り（女の子キャラダンス再現＋フォーメーション＋下部同期歌詞） -->
+      <!-- Tab 7: 歌割り -->
       <section id="tab-songparts" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-music text-pink-500"></i> 歌割り・ダンス振り付け＆フォーメーション再現
-            </h2>
-            <span id="authorModeBadge" class="hidden text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-              <i class="fa-solid fa-sliders mr-1"></i> 解析・編集パネル表示中
-            </span>
-          </div>
-
-          <!-- 曲選択 -->
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-music text-pink-500"></i> 歌割りを確認できるページ
+          </h2>
           <div class="space-y-2">
             <label class="block text-xs font-bold text-slate-600">演目と楽曲を選択</label>
-            <div class="flex flex-col sm:flex-row gap-2">
+            <div class="flex gap-2">
               <select id="songStageSelect" onchange="onSongStageChange()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
-              <select id="songTrackSelect" onchange="onSongTrackChange()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
-            </div>
-            <div id="songDataStatus" class="text-[11px] text-slate-500"></div>
-          </div>
-
-          <!-- person 選択チップ＋加工レイヤー設定 -->
-          <div class="space-y-1.5">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="text-xs font-bold text-slate-600">表示メンバー（person選択で単独表示）</span>
-              <div class="flex flex-wrap items-center gap-2.5 text-[11px] text-slate-600">
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowDancer" checked> 女の子ダンス</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowTrail" checked> 手足残像</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowFormation" checked> フォーメーション</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowAvatar" checked> 顔写真バッジ</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowName" checked> 名前</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowPos" checked> 立ち位置(8-0-8)</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer text-slate-400"><input type="checkbox" id="optShowRawVideo"> 元映像透かし</label>
-              </div>
-            </div>
-            <div id="songPersonChips" class="flex flex-wrap gap-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200 min-h-[42px] items-center">
-              <span class="text-xs text-slate-400">骨格判定されたpersonデータがある曲を選ぶと表示されます。</span>
+              <select id="songTrackSelect" onchange="renderSongParts()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
             </div>
           </div>
-
-          <!-- 女の子ダンサーCanvas ＋ 推移帯Canvas -->
-          <div class="space-y-1">
-            <div class="motion-stage-box" id="songStageBox">
-              <video id="songVideo" playsinline preload="metadata" class="opacity-0"></video>
-              <canvas id="songOverlayCanvas"></canvas>
-            </div>
-            <div class="timeline-band-box" id="songTimelineBandBox" onclick="onTimelineBandClick(event)" title="クリックでシーク">
-              <canvas id="songTimelineBandCanvas"></canvas>
-            </div>
-            <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 pt-2">
-              <div class="flex items-center gap-2">
-                <button type="button" id="songPlayBtn" onclick="toggleSongPlayback()" class="bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow transition inline-flex items-center gap-1.5">
-                  <i class="fa-solid fa-play" id="songPlayIcon"></i> <span id="songPlayLabel">再生</span>
-                </button>
-                <button type="button" onclick="restartSongPlayback()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-2.5 py-2 rounded-lg transition" title="先頭へ戻す">
-                  <i class="fa-solid fa-rotate-left"></i>
-                </button>
-                <span id="songTimeLabel" class="text-xs font-mono text-slate-600">00:00.0 / 00:00.0</span>
-              </div>
-              <div id="songViewerNotice" class="text-[11px] text-slate-500"></div>
-            </div>
-          </div>
-
-          <!-- 動画下の同期歌詞 -->
-          <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2 border border-slate-800">
-            <div class="text-[11px] font-bold text-pink-400 flex items-center justify-between">
-              <span><i class="fa-solid fa-closed-captioning mr-1"></i> 同期歌詞</span>
-              <span id="songCurrentPosSummary" class="text-slate-300 font-normal"></span>
-            </div>
-            <div id="songCurrentLyric" class="text-base sm:text-lg font-bold leading-relaxed min-h-[28px]">再生すると歌詞が同期表示されます</div>
-            <div id="songNextLyric" class="text-xs text-slate-400">次: -</div>
-            <div id="songLyricSeekList" class="flex flex-wrap gap-1.5 pt-1"></div>
-          </div>
-
-          <!-- 左上🎭を2回タップしたときだけ開く解析・編集パネル -->
-          <div id="songAuthorPanel" class="hidden space-y-4 pt-4 border-t-2 border-dashed border-amber-300 bg-amber-50/40 p-3.5 rounded-xl">
-            <div class="flex items-center justify-between">
-              <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-person-running text-pink-600"></i> 定点動画 骨格解析＆振り付け・フォーメーションデータ出力（120fps超高速・高精度・最大6分対応）
-              </h3>
-              <button type="button" onclick="setAuthorMode(false)" class="text-xs text-slate-500 hover:text-slate-800 font-bold">閉じる</button>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-                <label class="block font-bold text-slate-700">1. 定点動画ファイルを選択（最大6分）</label>
-                <input type="file" id="localDanceVideoInput" accept="video/*" onchange="onLocalDanceVideoSelected(this)" class="block w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
-                <div class="flex items-center gap-2 pt-1">
-                  <label class="text-slate-600">解析サンプリング:</label>
-                  <select id="analysisFpsSelect" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-slate-50">
-                    <option value="24">24 fps（映画・標準高精細）</option>
-                    <option value="30">30 fps（放送・高精細）</option>
-                    <option value="60">60 fps（滑らか高精細）</option>
-                    <option value="120" selected>120 fps（超高速・最高精度）</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-                <label class="block font-bold text-slate-700">2. 超高速・高精度骨格解析を実行</label>
-                <button type="button" id="runPoseAnalysisBtn" onclick="runPoseAnalysisOnVideo()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-3 rounded-lg text-xs transition">
-                  <i class="fa-solid fa-microchip mr-1"></i> 120fps骨格解析を実行
-                </button>
-                <div id="poseAnalysisProgress" class="text-[11px] text-slate-600 font-medium">動画を読み込んで実行してください（120fps超高速・高精度・最大6分対応）。</div>
-              </div>
-            </div>
-
-            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-              <div class="text-xs font-bold text-slate-700">3. 骨格判定された person の設定（名前・髪型・衣装カラー・顔写真差し替え）</div>
-              <div id="detectedPersonEditor" class="space-y-2 text-xs">
-                <p class="text-slate-400">骨格解析を実行すると、検出されたpersonがここに表示されます。</p>
-              </div>
-            </div>
-
-            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-              <label class="block text-xs font-bold text-slate-700">4. 同期歌詞（LRC形式 `[00:05.00] 歌詞` または `秒数|歌詞`）</label>
-              <textarea id="songLyricsEditor" rows="4" oninput="syncLyricsFromEditor()" placeholder="[00:00.00] イントロ&#10;[00:04.50] 最初の歌詞フレーズ" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              <button type="button" onclick="exportSongTrackingJson()" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition">
-                <i class="fa-solid fa-download mr-1"></i> 解析JSONをダウンロード（./data/songs/配置用）
-              </button>
-              <button type="button" onclick="saveCurrentSongToSessionMemory()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-3 rounded-lg text-xs transition">
-                この曲データとして確定
-              </button>
-            </div>
-          </div>
+          <div id="songPartsResult" class="space-y-3 pt-2 border-t border-slate-100"></div>
         </div>
       </section>
 
@@ -427,14 +253,20 @@
           <h2 class="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
             <i class="fa-solid fa-chart-line text-pink-500"></i> 統計
           </h2>
+          
+          <!-- カウントダウン -->
           <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-hourglass-half text-pink-500 mr-1"></i> 大台達成カウントダウン</h4>
             <div id="countdownList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
           </div>
+
+          <!-- 節目達成日一覧 -->
           <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-medal text-pink-500 mr-1"></i> 節目達成日一覧</h4>
             <div id="milestoneList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto pr-1"></div>
           </div>
+
+          <!-- 演目別出演回数ランキング -->
           <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1">
               <i class="fa-solid fa-trophy text-pink-500"></i> 演目別出演回数ランキング
@@ -464,6 +296,7 @@
           <i class="fa-solid fa-xmark mr-1"></i> 閉じる
         </button>
       </div>
+
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
         <div class="flex items-center justify-between border-b pb-2 mb-3">
           <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -474,6 +307,7 @@
         <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
         <ul id="showsBreakdownList" class="space-y-2 text-xs"></ul>
       </div>
+
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
         <div>
           <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-2 flex items-center gap-2">
@@ -497,6 +331,7 @@
           <ol id="coappearanceTopList" class="space-y-1 text-xs divide-y divide-slate-100"></ol>
         </div>
       </div>
+
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
         <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
           <i class="fa-solid fa-list-check text-pink-500"></i> 出演履歴
@@ -571,14 +406,27 @@
     </div>
   </nav>
 
+  <!-- JavaScript Logic -->
   <script>
     const MASTER_MEMBER_ORDER_BY_GROUP = {
-      AKB48: ["秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀", "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純", "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海", "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜", "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優", "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた", "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"],
-      SKE48: ["相川暖花", "石黒友月", "伊藤虹々美", "入内嶋涼", "熊崎晴香", "倉島杏実", "桒原椿", "坂本真凛", "杉本りいな", "鈴木恋奈", "野村実代", "原優寧", "松川みゆ", "南澤恋々", "山村さくら", "荒野姫楓", "伊藤実希", "井上瑠夏", "奥野心羽", "鎌田菜月", "北川愛乃", "雲井紗菜", "倉本羽菜", "近藤海琴", "佐藤佳穂", "篠原京香", "松本慈子", "青木莉樺", "赤堀君江", "浅井裕華", "井田玲音名", "太田彩夏", "太田愛恵", "大村杏", "河村優愛", "鈴木愛菜", "中坂美祐", "西井美桜", "長谷川雅", "森本くるみ", "高村紗弥", "川村昇子", "久保田怜", "佐々木希美", "立花菖", "田村真悠", "聖遥花", "宮本倫花", "横井志穂", "飯田ゆら", "池田有沙", "竹下茉莉花", "中尾楓華", "矢島凪"],
-      NMB48: ["青原優花", "池帆乃香", "池田典愛", "石山千尋", "泉綾乃", "板垣心和", "内田愛彩", "岡腰星来", "衣笠彩実", "木根彩呂花", "黒島咲花", "坂下真心", "坂田心咲", "桜田彩叶", "塩月希依音", "澁谷愛紗南", "新澤菜央", "高橋ことね", "竹田京加", "龍本弥生", "田中美空", "田中ミリア", "中川朋香", "西島梨央", "西田帆花", "平山真衣", "福野杏実", "松岡さくら", "松本海日菜", "三鴨くるみ", "宮崎紗衣", "宮原心音", "宮本杏海", "村井悠莉", "山口美桜", "赤松昊", "桜井ひまり", "善家侑莉花", "高橋樹奈", "田中れい", "谷口詩乃", "西住美咲妃", "福原琴美", "藪内陽花", "和田承子"],
-      HKT48: ["生野莉奈", "石川歩実優", "石橋颯", "石松結菜", "市村愛里", "北川陽彩", "栗原紗英", "渋井美奈", "豊永阿紀", "中野南実", "藤野心葉", "渕上舞", "松永悠良", "梁瀬鈴雅", "山内祐奈", "吉田めい", "龍頭綺音", "秋吉優花", "井澤美優", "石井彩音", "猪島莉玲亜", "猪原絆愛", "今村麻莉愛", "江浦優香", "江口心々華", "大庭凜咲", "栗山梨奈", "竹本くるみ", "立花心良", "田中伊桜莉", "長野らら", "福井可憐", "松本苺花", "森﨑冴彩", "安井妃奈", "青木日菜子", "呉優菜", "靏川那智", "山川万里愛"],
-      NGT48: ["清司麗菜", "西潟茉莉奈", "佐藤海里", "大塚七海", "三村妃乃", "磯部瑠紅", "喜多花恵", "北村優羽", "水津菜月", "杉本萌", "磯崎菜々", "木本杏菜", "佐藤広花", "新沢葵唯", "高島柚愛", "西川晴菜", "安座間結", "阿達夢", "甲斐瑞季", "北澤百音", "佐藤柚花", "須藤凜華", "中田麻実", "皆川日和", "相木茉采", "猪股咲那", "大橋彩乃", "片山珠吏", "久我水羚", "佐藤歩夏", "平井柚葉", "細矢夏帆"],
-      STU48: ["甲斐心愛", "谷口茉妃菜", "兵頭葵", "福田朱里", "信濃宙花", "中村舞", "池田裕楽", "内海里音", "尾崎世里花", "川又優菜", "工藤理子", "迫姫華", "高雄さやか", "原田清花", "宗雪里香", "吉田彩良", "渡辺菜月", "岡田あずみ", "岡村梨央", "久留島優果", "諸葛望愛", "新井梨杏", "石原侑奈", "奥田唯菜", "北澤苺", "濵田響", "森末妃奈", "石松陽菜", "井上久伶杏", "蕪竹真奈", "木原姫花世", "小松奈侑", "坂木叶愛", "坂崎愛", "島田紗香", "曽我部あこ", "髙村栞里", "田中奈菜子", "道保琉南", "野中莉央", "濵田美惟", "藤田愛結", "三好真綺", "屋木優菜", "横井結菜"]
+      AKB48: [
+        "秋山由奈", "新井彩永", "伊藤百花", "岩立沙穂", "太田有紀", "奥本カイリ", "小栗有以", "川村結衣", "行天優莉奈", "工藤華純", "久保姫菜乃", "倉野尾成美", "黒須遥香", "坂川陽香", "迫由芽実", "佐藤綺星", "下尾みう", "髙橋彩音", "千葉恵里", "徳永羚海", "長友彩海", "永野芹佳", "成田香姫奈", "橋本恵理子", "橋本陽菜", "畠山希美", "平田侑希", "福岡聖菜", "布袋百椛", "正鋳真優", "水島美結", "武藤小麟", "八木愛月", "山内瑞葵", "山口結愛", "山﨑空", "山根涼羽", "大賀彩姫", "近藤沙樹", "丸山ひなた", "髙橋舞桜", "田中沙友利", "牧戸愛茉", "森川優", "渡邉葵心", "大西ゆな", "長谷川百々花", "前田衣澄", "山内利乃明"
+      ],
+      SKE48: [
+        "相川暖花", "石黒友月", "伊藤虹々美", "入内嶋涼", "熊崎晴香", "倉島杏実", "桒原椿", "坂本真凛", "杉本りいな", "鈴木恋奈", "野村実代", "原優寧", "松川みゆ", "南澤恋々", "山村さくら", "荒野姫楓", "伊藤実希", "井上瑠夏", "奥野心羽", "鎌田菜月", "北川愛乃", "雲井紗菜", "倉本羽菜", "近藤海琴", "佐藤佳穂", "篠原京香", "松本慈子", "青木莉樺", "赤堀君江", "浅井裕華", "井田玲音名", "太田彩夏", "太田愛恵", "大村杏", "河村優愛", "鈴木愛菜", "中坂美祐", "西井美桜", "長谷川雅", "森本くるみ", "高村紗弥", "川村昇子", "久保田怜", "佐々木希美", "立花菖", "田村真悠", "聖遥花", "宮本倫花", "横井志穂", "飯田ゆら", "池田有沙", "竹下茉莉花", "中尾楓華", "矢島凪"
+      ],
+      NMB48: [
+        "青原優花", "池帆乃香", "池田典愛", "石山千尋", "泉綾乃", "板垣心和", "内田愛彩", "岡腰星来", "衣笠彩実", "木根彩呂花", "黒島咲花", "坂下真心", "坂田心咲", "桜田彩叶", "塩月希依音", "澁谷愛紗南", "新澤菜央", "高橋ことね", "竹田京加", "龍本弥生", "田中美空", "田中ミリア", "中川朋香", "西島梨央", "西田帆花", "平山真衣", "福野杏実", "松岡さくら", "松本海日菜", "三鴨くるみ", "宮崎紗衣", "宮原心音", "宮本杏海", "村井悠莉", "山口美桜", "赤松昊", "桜井ひまり", "善家侑莉花", "高橋樹奈", "田中れい", "谷口詩乃", "西住美咲妃", "福原琴美", "藪内陽花", "和田承子"
+      ],
+      HKT48: [
+        "生野莉奈", "石川歩実優", "石橋颯", "石松結菜", "市村愛里", "北川陽彩", "栗原紗英", "渋井美奈", "豊永阿紀", "中野南実", "藤野心葉", "渕上舞", "松永悠良", "梁瀬鈴雅", "山内祐奈", "吉田めい", "龍頭綺音", "秋吉優花", "井澤美優", "石井彩音", "猪島莉玲亜", "猪原絆愛", "今村麻莉愛", "江浦優香", "江口心々華", "大庭凜咲", "栗山梨奈", "竹本くるみ", "立花心良", "田中伊桜莉", "長野らら", "福井可憐", "松本苺花", "森﨑冴彩", "安井妃奈", "青木日菜子", "呉優菜", "靏川那智", "山川万里愛"
+      ],
+      NGT48: [
+        "清司麗菜", "西潟茉莉奈", "佐藤海里", "大塚七海", "三村妃乃", "磯部瑠紅", "喜多花恵", "北村優羽", "水津菜月", "杉本萌", "磯崎菜々", "木本杏菜", "佐藤広花", "新沢葵唯", "高島柚愛", "西川晴菜", "安座間結", "阿達夢", "甲斐瑞季", "北澤百音", "佐藤柚花", "須藤凜華", "中田麻実", "皆川日和", "相木茉采", "猪股咲那", "大橋彩乃", "片山珠吏", "久我水羚", "佐藤歩夏", "平井柚葉", "細矢夏帆"
+      ],
+      STU48: [
+        "甲斐心愛", "谷口茉妃菜", "兵頭葵", "福田朱里", "信濃宙花", "中村舞", "池田裕楽", "内海里音", "尾崎世里花", "川又優菜", "工藤理子", "迫姫華", "高雄さやか", "原田清花", "宗雪里香", "吉田彩良", "渡辺菜月", "岡田あずみ", "岡村梨央", "久留島優果", "諸葛望愛", "新井梨杏", "石原侑奈", "奥田唯菜", "北澤苺", "濵田響", "森末妃奈", "石松陽菜", "井上久伶杏", "蕪竹真奈", "木原姫花世", "小松奈侑", "坂木叶愛", "坂崎愛", "島田紗香", "曽我部あこ", "髙村栞里", "田中奈菜子", "道保琉南", "野中莉央", "濵田美惟", "藤田愛結", "三好真綺", "屋木優菜", "横井結菜"
+      ]
     };
 
     let MASTER_MEMBER_ORDER = [...MASTER_MEMBER_ORDER_BY_GROUP.AKB48];
@@ -642,32 +490,6 @@
     let perfTableMode = 'circle';
     let selectedCoappMembers = new Set();
 
-    let isAuthorModeActive = false;
-    let lastMaskTapTime = 0;
-
-    let songMemoryStore = {};
-    let activeSongData = null;
-    let selectedSongPersonId = null;
-    let songAvatarImages = {};
-    let localUploadedVideoUrl = null;
-    let poseLandmarkerInstance = null;
-    let poseLandmarkerMode = null;
-
-    let virtualPlaying = false;
-    let virtualTime = 0;
-    let lastRafTimestamp = null;
-
-    const HAIR_STYLES = ["twintail", "ponytail", "long", "bob"];
-    const HAIR_COLORS = ["#1e1b18", "#3b2314", "#4a2c18", "#27272a", "#5c3317", "#1f2937"];
-
-    const DEFAULT_SONGS_BY_STAGE = [
-      "M1. overture",
-      "M2. 夢のポップスター",
-      "M3. 青春のフラッグ",
-      "M4. 君と僕の関係",
-      "M5. 希望的リフレイン"
-    ];
-
     const FALLBACK_SCHEDULE_2026 = [
       {
         id: "akb_260807",
@@ -676,6 +498,24 @@
         title: "「夢のポップスター」公演 初日",
         members: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空"],
         positions: ["新井彩永", "久保姫菜乃", "倉野尾成美", "坂川陽香", "髙橋彩音", "山内瑞葵", "山口結愛", "山﨑空"]
+      },
+      {
+        id: "akb_260826",
+        date: "2026-08-26 18:30",
+        time: "18:30",
+        theater: "AKB48劇場",
+        title: "「夢のポップスター」公演",
+        members: ["秋山由奈", "奥本カイリ", "下尾みう", "成田香姫奈", "福岡聖菜", "正鋳真優", "近藤沙樹", "田中沙友利"],
+        positions: ["福岡聖菜", "秋山由奈", "成田香姫奈", "奥本カイリ", "田中沙友利", "正鋳真優", "下尾みう", "近藤沙樹"]
+      },
+      {
+        id: "akb_260831",
+        date: "2026-08-31 18:30",
+        time: "18:30",
+        theater: "AKB48劇場",
+        title: "「夢のポップスター」公演",
+        members: ["太田有紀", "工藤華純", "黒須遥香", "迫由芽実", "佐藤綺星", "成田香姫奈", "福岡聖菜", "山内瑞葵"],
+        positions: ["福岡聖菜", "佐藤綺星", "成田香姫奈", "迫由芽実", "太田有紀", "山内瑞葵", "黒須遥香", "工藤華純"]
       }
     ];
 
@@ -683,16 +523,7 @@
       initYearMonthDropdowns();
       await loadAllYearsScheduleData();
       await onDateChange();
-      renderSongStageDropdown();
-      startSongMotionLoop();
-
-      window.addEventListener("resize", () => requestAnimationFrame(resizeSongCanvases));
-      document.getElementById('optShowRawVideo')?.addEventListener('change', (e) => {
-        const videoEl = document.getElementById('songVideo');
-        videoEl.classList.toggle('opacity-0', !e.target.checked);
-        videoEl.classList.toggle('opacity-45', e.target.checked);
-      });
-
+      
       document.addEventListener('click', (e) => {
         const suggestBox = document.getElementById('searchSuggest');
         const searchInput = document.getElementById('searchInput');
@@ -700,58 +531,29 @@
       });
     });
 
-    function onTheaterMaskTap(event) {
-      if (event) event.stopPropagation();
-      const now = Date.now();
-      if (now - lastMaskTapTime <= 500) {
-        lastMaskTapTime = 0;
-        setAuthorMode(!isAuthorModeActive);
-        document.getElementById('mainTabsContainer').classList.remove('hidden');
-        document.getElementById('memberDetailContainer').classList.add('hidden');
-        if (!currentStageKey) {
-          const firstKey = Object.keys(GLOBAL_STAGE_DATABASE)[0] || "夢のポップスター";
-          currentStageKey = firstKey;
-          document.getElementById('navNormal').classList.add('hidden');
-          document.getElementById('navMemberSearching').classList.add('hidden');
-          document.getElementById('navStageDetail').classList.remove('hidden');
-          document.getElementById('navStageDetail').classList.add('flex');
-          renderSongStageDropdown();
-        }
-        switchTab('songparts');
-      } else {
-        lastMaskTapTime = now;
-      }
-    }
-
-    function setAuthorMode(active) {
-      isAuthorModeActive = !!active;
-      const panel = document.getElementById('songAuthorPanel');
-      const badge = document.getElementById('authorModeBadge');
-      if (panel) panel.classList.toggle('hidden', !isAuthorModeActive);
-      if (badge) badge.classList.toggle('hidden', !isAuthorModeActive);
-      if (isAuthorModeActive) {
-        renderDetectedPersonEditor();
-      }
-      updateSongViewerNotice();
-    }
-
     function initYearMonthDropdowns() {
       const yearSelect = document.getElementById("yearSelect");
       const monthSelect = document.getElementById("monthSelect");
       yearSelect.innerHTML = ''; monthSelect.innerHTML = '';
       for (let y = 2026; y >= 2005; y--) yearSelect.appendChild(new Option(`${y}年`, y));
       for (let m = 1; m <= 12; m++) monthSelect.appendChild(new Option(`${m}月`, m < 10 ? `0${m}` : `${m}`));
+      
       const now = new Date();
       yearSelect.value = now.getFullYear();
       monthSelect.value = (now.getMonth() + 1).toString().padStart(2, '0');
-      todayString = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+      
+      const yStr = now.getFullYear();
+      const mStr = (now.getMonth() + 1).toString().padStart(2, '0');
+      const dStr = now.getDate().toString().padStart(2, '0');
+      todayString = `${yStr}/${mStr}/${dStr}`;
     }
 
     function changeMonth(diff) {
       const yearSelect = document.getElementById("yearSelect");
       const monthSelect = document.getElementById("monthSelect");
       let y = parseInt(yearSelect.value, 10);
-      let m = parseInt(monthSelect.value, 10) + diff;
+      let m = parseInt(monthSelect.value, 10);
+      m += diff;
       if (m > 12) { m = 1; y++; }
       else if (m < 1) { m = 12; y--; }
       yearSelect.value = y.toString();
@@ -761,8 +563,9 @@
 
     async function fetchScheduleJson(groupName, year) {
       const group = String(groupName || "akb48").toLowerCase();
+      const fileName = `schedule_${group}_${year}.json`;
       try {
-        const response = await fetch(`schedule_${group}_${year}.json`);
+        const response = await fetch(fileName);
         if (!response.ok) throw new Error();
         const data = await response.json();
         return Array.isArray(data) ? data : [];
@@ -783,9 +586,10 @@
         }
       }
       const results = await Promise.all(promises);
-      results.forEach(({ group, rawData }) => {
+      results.forEach(({ group, year, rawData }) => {
         if (Array.isArray(rawData)) {
-          allList = allList.concat(normalizeScheduleData(rawData).map(item => ({ ...item, sourceGroup: group.toUpperCase() })));
+          const normalizedData = normalizeScheduleData(rawData).map(item => ({ ...item, sourceGroup: group.toUpperCase() }));
+          allList = allList.concat(normalizedData);
         }
       });
       ALL_SCHEDULE_DATA = allList;
@@ -805,14 +609,17 @@
         }
         let rawTitle = item.title || item.stage || "";
         let mainTitle = rawTitle, subTitle = item.event || item.subTitle || "";
+        
+        // 公演名からサブタイトル（初日・千秋楽など）を切り離し、人数表記などはベース演目名に残す
         let baseStage = mainTitle.trim();
         const stageMatch = rawTitle.match(/^(.*?(?:「.*?」|『.*?』).*?(?:\s*公演)?(?:\s*\(\d+人\))?)(?:\s+(初日|千秋楽|生誕祭|卒業公演.*))?$/);
         if (stageMatch) {
-          baseStage = stageMatch[1].trim();
+          baseStage = stageMatch[1].trim(); 
           subTitle = subTitle || stageMatch[2] || "";
         } else {
           baseStage = mainTitle.replace(/\s+(初日|千秋楽|生誕祭|卒業公演.*)$/, '').trim();
         }
+
         let membersArr = Array.isArray(item.members) ? item.members.filter(m => m && m !== "-" && m !== "－") : [];
         let posArr = Array.isArray(item.positions) ? item.positions : [];
         return {
@@ -827,7 +634,9 @@
 
     function formatStageTitle(baseName) {
       if (!baseName) return "";
-      if (baseName.includes("公演")) return baseName;
+      if (baseName.includes("公演")) {
+        return baseName;
+      }
       return baseName.includes("「") ? `${baseName}公演` : `「${baseName}」公演`;
     }
 
@@ -837,17 +646,18 @@
         const base = item.baseStageName;
         if (!base) return;
         if (!GLOBAL_STAGE_DATABASE[base]) {
-          GLOBAL_STAGE_DATABASE[base] = {
-            id: base,
-            name: formatStageTitle(base),
-            group: item.theater.replace("劇場", "").trim() || "AKB48",
-            fixed: [],
-            allMembers: new Set(),
-            schedules: []
+          const stageDisplayName = formatStageTitle(base);
+          GLOBAL_STAGE_DATABASE[base] = { 
+            id: base, 
+            name: stageDisplayName, 
+            group: item.theater.replace("劇場", "").trim() || "AKB48", 
+            fixed: [], 
+            allMembers: new Set(), 
+            schedules: [] 
           };
         }
         GLOBAL_STAGE_DATABASE[base].schedules.push(item);
-        item.membersArray.forEach(m => { if (m && m !== "-" && m !== "－") GLOBAL_STAGE_DATABASE[base].allMembers.add(m.trim()); });
+        item.membersArray.forEach(m => { if(m && m !== "-" && m !== "－") GLOBAL_STAGE_DATABASE[base].allMembers.add(m.trim()); });
       });
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(key => {
         const stage = GLOBAL_STAGE_DATABASE[key];
@@ -863,17 +673,18 @@
         const base = item.baseStageName;
         if (!base) return;
         if (!STAGE_DATABASE[base]) {
-          STAGE_DATABASE[base] = {
-            id: base,
-            name: formatStageTitle(base),
-            group: item.theater.replace("劇場", "").trim() || "AKB48",
-            fixed: [],
-            allMembers: new Set(),
-            schedules: []
+          const stageDisplayName = formatStageTitle(base);
+          STAGE_DATABASE[base] = { 
+            id: base, 
+            name: stageDisplayName, 
+            group: item.theater.replace("劇場", "").trim() || "AKB48", 
+            fixed: [], 
+            allMembers: new Set(), 
+            schedules: [] 
           };
         }
         STAGE_DATABASE[base].schedules.push(item);
-        item.membersArray.forEach(m => { if (m && m !== "-" && m !== "－") STAGE_DATABASE[base].allMembers.add(m.trim()); });
+        item.membersArray.forEach(m => { if(m && m !== "-" && m !== "－") STAGE_DATABASE[base].allMembers.add(m.trim()); });
       });
       Object.keys(STAGE_DATABASE).forEach(key => {
         const stage = STAGE_DATABASE[key];
@@ -887,1672 +698,6 @@
       });
     }
 
-    /* =========================================================================
-       歌割りタブ：女の子ダンサー振り付け再現＆8-0-8フォーメーション描画
-       ========================================================================= */
-    function getSongStorageKey(stageKey, trackName) {
-      return `${stageKey || 'default'}__${trackName || 'track'}`;
-    }
-
-    function makeDefaultAvatarDataUrl(label, colorHex) {
-      const safeChar = String(label || 'P').slice(0, 1);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="${colorHex}"/><text x="40" y="50" font-size="34" font-family="sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">${safeChar}</text></svg>`;
-      return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
-    }
-
-    function formatStandingPos8to0to8(normX) {
-      const clamped = Math.max(0.05, Math.min(0.95, Number(normX) || 0.5));
-      const raw = (clamped - 0.5) * 18;
-      const num = Math.max(-8, Math.min(8, Math.round(raw)));
-      if (num === 0) return "0";
-      return `${Math.abs(num)}`;
-    }
-
-    function renderSongStageDropdown() {
-      const stageSelect = document.getElementById('songStageSelect');
-      if (!stageSelect) return;
-      const previousStage = currentStageKey || stageSelect.value;
-      stageSelect.innerHTML = '';
-      const keys = Object.keys(GLOBAL_STAGE_DATABASE);
-      if (keys.length > 0) {
-        keys.forEach(stageKey => {
-          const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
-          stageSelect.appendChild(new Option(stageObj ? stageObj.name : formatStageTitle(stageKey), stageKey));
-        });
-      } else {
-        stageSelect.appendChild(new Option("「夢のポップスター」公演", "夢のポップスター"));
-      }
-      if (previousStage && Array.from(stageSelect.options).some(o => o.value === previousStage)) {
-        stageSelect.value = previousStage;
-      }
-      onSongStageChange();
-    }
-
-    function onSongStageChange() {
-      const stageKey = document.getElementById('songStageSelect').value;
-      currentStageKey = stageKey;
-      const trackSelect = document.getElementById('songTrackSelect');
-      trackSelect.innerHTML = '';
-      DEFAULT_SONGS_BY_STAGE.forEach(t => trackSelect.appendChild(new Option(t, t)));
-      onSongTrackChange();
-    }
-
-    async function onSongTrackChange() {
-      const stageKey = document.getElementById('songStageSelect').value;
-      const trackName = document.getElementById('songTrackSelect').value;
-      const key = getSongStorageKey(stageKey, trackName);
-      selectedSongPersonId = null;
-      virtualPlaying = false;
-      virtualTime = 0;
-
-      if (songMemoryStore[key]) {
-        applySongTrackingData(songMemoryStore[key], "セッション内の解析データ");
-        return;
-      }
-
-      try {
-        const res = await fetch(`./data/songs/${encodeURIComponent(key)}.json`);
-        if (res.ok) {
-          const jsonData = await res.json();
-          if (jsonData && jsonData.members && Array.isArray(jsonData.frames)) {
-            songMemoryStore[key] = jsonData;
-            applySongTrackingData(jsonData, "保存済みJSONデータ");
-            return;
-          }
-        }
-      } catch (_) {}
-
-      applySongTrackingData(null, "未解析（骨格判定されたpersonデータなし）");
-    }
-
-    function applySongTrackingData(data, sourceLabel) {
-      activeSongData = data;
-      songAvatarImages = {};
-
-      const statusEl = document.getElementById('songDataStatus');
-      const lyricsEditor = document.getElementById('songLyricsEditor');
-
-      if (!data) {
-        statusEl.textContent = `状態: ${sourceLabel} — 再生ボタンを押すと再生されます（骨格判定されたpersonのみ表示）。`;
-        if (lyricsEditor && !lyricsEditor.value.trim()) {
-          lyricsEditor.value = "[00:00.00] イントロ\n[00:04.00] 歌詞を入力してください";
-        }
-        renderSongPersonChips();
-        renderSongLyricSeekButtons();
-        renderDetectedPersonEditor();
-        updateSongViewerNotice();
-        return;
-      }
-
-      const validMembers = {};
-      Object.entries(data.members || {}).forEach(([pid, info], idx) => {
-        if (info && info.detectedByPose !== false) {
-          validMembers[pid] = {
-            ...info,
-            hairStyle: info.hairStyle || HAIR_STYLES[idx % HAIR_STYLES.length],
-            hairColor: info.hairColor || HAIR_COLORS[idx % HAIR_COLORS.length]
-          };
-          const img = new Image();
-          img.src = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
-          songAvatarImages[pid] = img;
-        }
-      });
-      data._validMembers = validMembers;
-
-      if (data.videoUrl) {
-        const videoEl = document.getElementById('songVideo');
-        if (videoEl.getAttribute('src') !== data.videoUrl) {
-          videoEl.src = data.videoUrl;
-          videoEl.load();
-        }
-      }
-
-      if (lyricsEditor && Array.isArray(data.lyrics) && data.lyrics.length > 0) {
-        lyricsEditor.value = data.lyrics.map(l => `[${formatLrcTimestamp(l.start)}] ${l.text}`).join("\n");
-      }
-
-      const count = Object.keys(validMembers).length;
-      statusEl.textContent = `状態: ${sourceLabel} ／ 骨格判定されたperson: ${count}名`;
-
-      renderSongPersonChips();
-      renderSongLyricSeekButtons();
-      renderDetectedPersonEditor();
-      updateSongViewerNotice();
-    }
-
-    function getSongTotalDuration() {
-      const video = document.getElementById('songVideo');
-      const vDur = (video && Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 0;
-      const frames = activeSongData?.frames || [];
-      const fDur = frames.length > 0 ? frames[frames.length - 1].t : 0;
-      return Math.max(vDur, fDur);
-    }
-
-    function getCurrentSongTime() {
-      const video = document.getElementById('songVideo');
-      const hasVideoSrc = !!(video && (video.currentSrc || video.getAttribute('src')));
-      if (hasVideoSrc && (!video.paused || video.currentTime > 0)) {
-        return video.currentTime || 0;
-      }
-      return virtualTime;
-    }
-
-    function seekSongTime(sec) {
-      const total = getSongTotalDuration();
-      const clamped = Math.max(0, total > 0 ? Math.min(total, sec) : Math.max(0, sec));
-      virtualTime = clamped;
-      const video = document.getElementById('songVideo');
-      if (video && (video.currentSrc || video.getAttribute('src')) && Number.isFinite(video.duration) && video.duration > 0) {
-        video.currentTime = Math.min(video.duration, clamped);
-      }
-    }
-
-    function onTimelineBandClick(event) {
-      const box = document.getElementById('songTimelineBandBox');
-      if (!box) return;
-      const total = getSongTotalDuration();
-      if (total <= 0) return;
-      const rect = box.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
-      seekSongTime(ratio * total);
-    }
-
-    function restartSongPlayback() {
-      const video = document.getElementById('songVideo');
-      virtualTime = 0;
-      if (video && (video.currentSrc || video.getAttribute('src'))) {
-        video.currentTime = 0;
-      }
-    }
-
-    function isSongPlaying() {
-      const video = document.getElementById('songVideo');
-      const hasVideoSrc = !!(video && (video.currentSrc || video.getAttribute('src')));
-      if (hasVideoSrc) return !video.paused;
-      return virtualPlaying;
-    }
-
-    function updateSongViewerNotice() {
-      const noticeEl = document.getElementById('songViewerNotice');
-      if (!noticeEl) return;
-      const video = document.getElementById('songVideo');
-      const hasVideo = !!(video.currentSrc || video.getAttribute('src'));
-      const hasFrames = Array.isArray(activeSongData?.frames) && activeSongData.frames.length > 0;
-      if (!hasVideo && !hasFrames && !isAuthorModeActive) {
-        noticeEl.textContent = "※ 動画・解析データ未設定の曲です（🎭を2回タップして動画を読み込むと骨格解析できます）";
-      } else if (selectedSongPersonId && activeSongData?._validMembers?.[selectedSongPersonId]) {
-        noticeEl.textContent = `絞り込み中: ${activeSongData._validMembers[selectedSongPersonId].name} のみ表示`;
-      } else if (!hasVideo && hasFrames) {
-        noticeEl.textContent = "解析フレーム再生モード（動画未紐付け）";
-      } else {
-        noticeEl.textContent = "";
-      }
-    }
-
-    function renderSongPersonChips() {
-      const container = document.getElementById('songPersonChips');
-      container.innerHTML = '';
-      const validMembers = activeSongData?._validMembers || {};
-      const entries = Object.entries(validMembers);
-
-      if (entries.length === 0) {
-        container.innerHTML = `<span class="text-xs text-slate-400">骨格判定されたpersonデータがありません。</span>`;
-        return;
-      }
-
-      const allBtn = document.createElement('button');
-      allBtn.type = 'button';
-      allBtn.className = `person-filter-chip ${selectedSongPersonId === null ? 'active' : ''}`;
-      allBtn.textContent = `全員 (${entries.length})`;
-      allBtn.onclick = () => {
-        selectedSongPersonId = null;
-        renderSongPersonChips();
-        updateSongViewerNotice();
-      };
-      container.appendChild(allBtn);
-
-      entries.forEach(([pid, info]) => {
-        const avatarSrc = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = `person-filter-chip ${selectedSongPersonId === pid ? 'active' : ''}`;
-        btn.innerHTML = `<img src="${avatarSrc}" alt="${escapeHtml(info.name || pid)}"><span>${escapeHtml(info.name || pid)}</span>`;
-        btn.onclick = () => {
-          selectedSongPersonId = (selectedSongPersonId === pid) ? null : pid;
-          renderSongPersonChips();
-          updateSongViewerNotice();
-        };
-        container.appendChild(btn);
-      });
-    }
-
-    function toggleSongPlayback() {
-      const video = document.getElementById('songVideo');
-      const hasVideoSrc = !!(video.currentSrc || video.getAttribute('src'));
-      const hasFrames = Array.isArray(activeSongData?.frames) && activeSongData.frames.length > 0;
-
-      if (hasVideoSrc) {
-        if (video.paused) video.play().catch(() => {});
-        else video.pause();
-      } else if (hasFrames) {
-        const total = getSongTotalDuration();
-        if (!virtualPlaying && virtualTime >= total) virtualTime = 0;
-        virtualPlaying = !virtualPlaying;
-        lastRafTimestamp = null;
-      }
-      updateSongViewerNotice();
-    }
-
-    function formatClock(sec) {
-      if (!Number.isFinite(sec) || sec < 0) return "00:00.0";
-      const mins = Math.floor(sec / 60);
-      const rem = (sec % 60).toFixed(1).padStart(4, "0");
-      return `${String(mins).padStart(2, "0")}:${rem}`;
-    }
-
-    function formatLrcTimestamp(sec) {
-      const safe = Math.max(0, Number(sec) || 0);
-      const mins = Math.floor(safe / 60);
-      const secs = (safe % 60).toFixed(2).padStart(5, "0");
-      return `${String(mins).padStart(2, "0")}:${secs}`;
-    }
-
-    function parseLyricsText(rawText) {
-      const lines = String(rawText || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-      const parsed = lines.map((line, idx) => {
-        const lrcMatch = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.+)$/);
-        if (lrcMatch) {
-          const start = parseInt(lrcMatch[1], 10) * 60 + parseFloat(lrcMatch[2]);
-          return { start, end: start + 5.0, text: lrcMatch[3].trim() };
-        }
-        const pipeMatch = line.match(/^(\d+(?:\.\d+)?)\s*\|\s*(.+)$/);
-        if (pipeMatch) {
-          const start = parseFloat(pipeMatch[1]);
-          return { start, end: start + 5.0, text: pipeMatch[2].trim() };
-        }
-        const start = idx * 4.0;
-        return { start, end: start + 4.0, text: line };
-      });
-      parsed.sort((a, b) => a.start - b.start);
-      for (let i = 0; i < parsed.length; i++) {
-        parsed[i].end = (i < parsed.length - 1)
-          ? Math.max(parsed[i].start + 0.5, parsed[i + 1].start - 0.05)
-          : parsed[i].start + 6.0;
-      }
-      return parsed;
-    }
-
-    function syncLyricsFromEditor() {
-      const parsed = parseLyricsText(document.getElementById('songLyricsEditor').value);
-      if (!activeSongData) {
-        activeSongData = { members: {}, _validMembers: {}, frames: [], lyrics: parsed };
-      } else {
-        activeSongData.lyrics = parsed;
-      }
-      renderSongLyricSeekButtons();
-    }
-
-    function renderSongLyricSeekButtons() {
-      const listEl = document.getElementById('songLyricSeekList');
-      listEl.innerHTML = '';
-      (activeSongData?.lyrics || []).forEach((line, idx) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'song-lyric-btn text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition';
-        btn.dataset.idx = idx;
-        btn.textContent = `${line.start.toFixed(1)}s ${line.text}`;
-        btn.onclick = () => {
-          seekSongTime(line.start + 0.02);
-          const video = document.getElementById('songVideo');
-          if (video.currentSrc || video.getAttribute('src')) {
-            video.play().catch(() => {});
-          } else if (Array.isArray(activeSongData?.frames) && activeSongData.frames.length > 0) {
-            virtualPlaying = true;
-            lastRafTimestamp = null;
-          }
-        };
-        listEl.appendChild(btn);
-      });
-    }
-
-    function resizeSongCanvases() {
-      const dpr = window.devicePixelRatio || 1;
-      const mainCanvas = document.getElementById('songOverlayCanvas');
-      if (mainCanvas) {
-        const rect = mainCanvas.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          const targetW = Math.floor(rect.width * dpr);
-          const targetH = Math.floor(rect.height * dpr);
-          if (mainCanvas.width !== targetW || mainCanvas.height !== targetH) {
-            mainCanvas.width = targetW;
-            mainCanvas.height = targetH;
-          }
-          mainCanvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-      }
-      const bandCanvas = document.getElementById('songTimelineBandCanvas');
-      if (bandCanvas) {
-        const brect = bandCanvas.getBoundingClientRect();
-        if (brect.width > 0 && brect.height > 0) {
-          const targetBW = Math.floor(brect.width * dpr);
-          const targetBH = Math.floor(brect.height * dpr);
-          if (bandCanvas.width !== targetBW || bandCanvas.height !== targetBH) {
-            bandCanvas.width = targetBW;
-            bandCanvas.height = targetBH;
-          }
-          bandCanvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-      }
-    }
-
-    // 二分探索で高速に前後フレームを特定し線形補間
-    function getInterpolatedSongTracks(t) {
-      if (!activeSongData || !Array.isArray(activeSongData.frames) || activeSongData.frames.length === 0) {
-        return [];
-      }
-      const validMembers = activeSongData._validMembers || {};
-      const frames = activeSongData.frames;
-
-      if (t <= frames[0].t) {
-        return (frames[0].tracks || []).filter(tr => !!validMembers[tr.id]);
-      }
-      if (t >= frames[frames.length - 1].t) {
-        return (frames[frames.length - 1].tracks || []).filter(tr => !!validMembers[tr.id]);
-      }
-
-      let lo = 0;
-      let hi = frames.length - 2;
-      let foundIdx = 0;
-      while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        if (t >= frames[mid].t && t <= frames[mid + 1].t) {
-          foundIdx = mid;
-          break;
-        } else if (t < frames[mid].t) {
-          hi = mid - 1;
-        } else {
-          lo = mid + 1;
-        }
-      }
-
-      const prev = frames[foundIdx];
-      const next = frames[foundIdx + 1];
-      const span = Math.max(0.0001, next.t - prev.t);
-      const ratio = (t - prev.t) / span;
-
-      return (prev.tracks || [])
-        .filter(tr => !!validMembers[tr.id])
-        .map(pTrack => {
-          const nTrack = (next.tracks || []).find(item => item.id === pTrack.id);
-          if (!nTrack) return pTrack;
-
-          const lerp = (a, b) => (a ?? 0.5) + ((b ?? a ?? 0.5) - (a ?? 0.5)) * ratio;
-          const merged = {
-            id: pTrack.id,
-            x: lerp(pTrack.x, nTrack.x),
-            y: lerp(pTrack.y, nTrack.y),
-            footX: lerp(pTrack.footX ?? pTrack.x, nTrack.footX ?? nTrack.x),
-            footY: lerp(pTrack.footY ?? (pTrack.y + 0.24), nTrack.footY ?? (nTrack.y + 0.24)),
-            facing: ratio < 0.5 ? (pTrack.facing || "front") : (nTrack.facing || pTrack.facing || "front"),
-            eyeOffsetX: lerp(pTrack.eyeOffsetX ?? 0, nTrack.eyeOffsetX ?? 0),
-            pos: ratio < 0.5 ? pTrack.pos : (nTrack.pos || pTrack.pos)
-          };
-
-          if (pTrack.joints && nTrack.joints) {
-            merged.joints = {};
-            const allKeys = new Set([...Object.keys(pTrack.joints), ...Object.keys(nTrack.joints)]);
-            allKeys.forEach(jKey => {
-              const pj = pTrack.joints[jKey];
-              const nj = nTrack.joints[jKey] || pj;
-              if (pj && nj) {
-                merged.joints[jKey] = {
-                  x: lerp(pj.x, nj.x),
-                  y: lerp(pj.y, nj.y)
-                };
-              } else if (pj || nj) {
-                merged.joints[jKey] = pj || nj;
-              }
-            });
-          }
-          return merged;
-        });
-    }
-
-    function getRecentJointTrails(personId, currentT, lookbackSec = 0.28) {
-      if (!activeSongData?.frames) return [];
-      const frames = activeSongData.frames;
-      if (frames.length === 0) return [];
-
-      // 二分探索で開始インデックスを高速特定
-      const startT = currentT - lookbackSec;
-      let lo = 0;
-      let hi = frames.length - 1;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (frames[mid].t < startT) lo = mid + 1;
-        else hi = mid;
-      }
-
-      const points = [];
-      for (let i = lo; i < frames.length; i++) {
-        const fr = frames[i];
-        if (fr.t > currentT) break;
-        const tr = (fr.tracks || []).find(item => item.id === personId);
-        if (tr) {
-          points.push({
-            t: fr.t,
-            lw: tr.joints?.leftIndex || tr.joints?.leftWrist || { x: tr.x - 0.02, y: tr.y + 0.09 },
-            rw: tr.joints?.rightIndex || tr.joints?.rightWrist || { x: tr.x + 0.02, y: tr.y + 0.09 },
-            la: tr.joints?.leftFootIndex || tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.01, y: tr.footY ?? (tr.y + 0.22) },
-            ra: tr.joints?.rightFootIndex || tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.01, y: tr.footY ?? (tr.y + 0.22) },
-            footX: tr.footX ?? tr.x,
-            footY: tr.footY ?? (tr.y + 0.22)
-          });
-        }
-      }
-      return points;
-    }
-
-    function startSongMotionLoop() {
-      const loop = (now) => {
-        if (lastRafTimestamp === null) lastRafTimestamp = now;
-        const dt = Math.min(0.1, (now - lastRafTimestamp) / 1000);
-        lastRafTimestamp = now;
-
-        const video = document.getElementById('songVideo');
-        const hasVideoSrc = !!(video && (video.currentSrc || video.getAttribute('src')));
-        const totalDur = getSongTotalDuration();
-
-        if (!hasVideoSrc && virtualPlaying) {
-          virtualTime += dt;
-          if (totalDur > 0 && virtualTime >= totalDur) {
-            virtualTime = totalDur;
-            virtualPlaying = false;
-          }
-        }
-
-        const playing = isSongPlaying();
-        const cur = getCurrentSongTime();
-
-        const playIcon = document.getElementById('songPlayIcon');
-        const playLabel = document.getElementById('songPlayLabel');
-        const timeLabel = document.getElementById('songTimeLabel');
-
-        if (playIcon && playLabel) {
-          playIcon.className = playing ? "fa-solid fa-pause" : "fa-solid fa-play";
-          playLabel.textContent = playing ? "一時停止" : "再生";
-        }
-        if (timeLabel) {
-          timeLabel.textContent = `${formatClock(cur)} / ${formatClock(totalDur)}`;
-        }
-
-        resizeSongCanvases();
-        renderSongMotionStage(cur, totalDur);
-        renderSongTimelineBand(cur, totalDur);
-        updateSongLyricsDisplay(cur);
-
-        requestAnimationFrame(loop);
-      };
-      requestAnimationFrame(loop);
-    }
-
-    /* =========================================================================
-       16人1列でも見分けやすい小型ダンサー描画エンジン
-       ========================================================================= */
-    function drawTaperedLimb(ctx, p1, p2, r1, r2, fillStyle, strokeStyle = null) {
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const len = Math.hypot(dx, dy);
-      if (len < 0.35) {
-        ctx.beginPath();
-        ctx.arc(p1.x, p1.y, r1, 0, Math.PI * 2);
-        ctx.fillStyle = fillStyle;
-        ctx.fill();
-        return;
-      }
-      const nx = -dy / len;
-      const ny = dx / len;
-      const angle = Math.atan2(dy, dx);
-
-      ctx.beginPath();
-      ctx.moveTo(p1.x + nx * r1, p1.y + ny * r1);
-      ctx.lineTo(p2.x + nx * r2, p2.y + ny * r2);
-      ctx.arc(p2.x, p2.y, r2, angle + Math.PI / 2, angle - Math.PI / 2, true);
-      ctx.lineTo(p1.x - nx * r1, p1.y - ny * r1);
-      ctx.arc(p1.x, p1.y, r1, angle - Math.PI / 2, angle + Math.PI / 2, true);
-      ctx.closePath();
-
-      ctx.fillStyle = fillStyle;
-      ctx.fill();
-      if (strokeStyle) {
-        ctx.strokeStyle = strokeStyle;
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-      }
-    }
-
-    function drawGirlHand(ctx, wrist, indexTip, pinkyTip, thumbTip, handScale, skinColor) {
-      const tipX = indexTip ? (indexTip.x + (pinkyTip ? pinkyTip.x : indexTip.x)) / 2 : wrist.x;
-      const tipY = indexTip ? (indexTip.y + (pinkyTip ? pinkyTip.y : indexTip.y)) / 2 : wrist.y;
-      const dx = tipX - wrist.x;
-      const dy = tipY - wrist.y;
-      const dist = Math.hypot(dx, dy);
-
-      const angle = dist > 1.0 ? Math.atan2(dy, dx) : Math.PI / 2;
-      const palmLen = Math.max(handScale * 0.9, Math.min(handScale * 1.4, dist * 0.95));
-      const palmW = handScale * 0.54;
-
-      ctx.save();
-      ctx.translate(wrist.x, wrist.y);
-      ctx.rotate(angle);
-
-      ctx.fillStyle = skinColor;
-      ctx.strokeStyle = "#d99b82";
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      ctx.roundRect(0, -palmW * 0.5, palmLen, palmW, palmW * 0.45);
-      ctx.fill();
-      ctx.stroke();
-
-      if (thumbTip) {
-        const localThumbY = ((thumbTip.y - wrist.y) * Math.cos(angle) - (thumbTip.x - wrist.x) * Math.sin(angle)) >= 0 ? 1 : -1;
-        ctx.beginPath();
-        ctx.ellipse(palmLen * 0.35, localThumbY * palmW * 0.5, palmLen * 0.25, palmW * 0.22, localThumbY * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    function drawGirlBoot(ctx, ankle, heel, footIndex, legRadius, dressColor) {
-      const toeX = footIndex ? footIndex.x : ankle.x;
-      const toeY = footIndex ? footIndex.y : ankle.y + legRadius * 1.3;
-      const heelX = heel ? heel.x : ankle.x;
-      const heelY = heel ? heel.y : ankle.y + legRadius * 0.6;
-
-      ctx.save();
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(ankle.x, ankle.y, legRadius * 0.9, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = "#f8fafc";
-      ctx.strokeStyle = dressColor;
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      ctx.moveTo(ankle.x - legRadius * 0.75, ankle.y);
-      ctx.lineTo(heelX - legRadius * 0.65, heelY + legRadius * 0.35);
-      ctx.lineTo(toeX + legRadius * 0.45, toeY + legRadius * 0.2);
-      ctx.quadraticCurveTo(toeX + legRadius * 0.85, toeY - legRadius * 0.25, ankle.x + legRadius * 0.75, ankle.y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function drawGirlDancer(ctx, tr, member, w, h, t, visibleCount = 16) {
-      const j = tr.joints || {};
-      const dressColor = member.color || "#db2777";
-      const hairColor = member.hairColor || "#2b1b17";
-      const hairStyle = member.hairStyle || "twintail";
-      const skinColor = "#ffe4d6";
-      const skinShade = "#f6cbb7";
-
-      const hx = tr.x * w;
-      const hy = tr.y * h;
-      const fx = (tr.footX ?? tr.x) * w;
-      const rawFy = (tr.footY ?? Math.min(0.9, tr.y + 0.22)) * h;
-      const fy = Math.max(hy + 28, Math.min(h * 0.9, rawFy));
-
-      const pitchFactor = Math.max(0.45, Math.min(0.85, (w / Math.max(12, visibleCount)) / 52));
-      const idealHeight = Math.max(34, Math.min(h * 0.22, fy - hy, 92));
-      const scale = Math.max(0.42, Math.min(0.72, (idealHeight / 92) * (0.72 + pitchFactor * 0.28)));
-
-      const headR = Math.max(4.2, Math.min(6.4, 5.8 * scale));
-      const upperArmR = Math.max(1.3, Math.min(2.0, 1.8 * scale));
-      const foreArmR = Math.max(1.05, Math.min(1.6, 1.45 * scale));
-      const thighR = Math.max(1.7, Math.min(2.5, 2.25 * scale));
-      const calfR = Math.max(1.25, Math.min(1.85, 1.65 * scale));
-
-      const pt = (joint, fallbackX, fallbackY) => ({
-        x: (joint?.x ?? fallbackX) * w,
-        y: Math.min(fy, (joint?.y ?? fallbackY) * h)
-      });
-
-      const ls = pt(j.leftShoulder, tr.x - 0.022, tr.y + 0.05);
-      const rs = pt(j.rightShoulder, tr.x + 0.022, tr.y + 0.05);
-      const shoulderMid = { x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 };
-
-      const lh = pt(j.leftHip, tr.x - 0.014, tr.y + 0.115);
-      const rh = pt(j.rightHip, tr.x + 0.014, tr.y + 0.115);
-      const hipMid = { x: (lh.x + rh.x) / 2, y: (lh.y + rh.y) / 2 };
-
-      const le = pt(j.leftElbow, tr.x - 0.036, tr.y + 0.085);
-      const re = pt(j.rightElbow, tr.x + 0.036, tr.y + 0.085);
-      const lw = pt(j.leftWrist, tr.x - 0.048, tr.y + 0.125);
-      const rw = pt(j.rightWrist, tr.x + 0.048, tr.y + 0.125);
-
-      const li = j.leftIndex ? { x: j.leftIndex.x * w, y: Math.min(fy + 4, j.leftIndex.y * h) } : null;
-      const ri = j.rightIndex ? { x: j.rightIndex.x * w, y: Math.min(fy + 4, j.rightIndex.y * h) } : null;
-      const lp = j.leftPinky ? { x: j.leftPinky.x * w, y: Math.min(fy + 4, j.leftPinky.y * h) } : null;
-      const rp = j.rightPinky ? { x: j.rightPinky.x * w, y: Math.min(fy + 4, j.rightPinky.y * h) } : null;
-      const lt = j.leftThumb ? { x: j.leftThumb.x * w, y: Math.min(fy + 4, j.leftThumb.y * h) } : null;
-      const rt = j.rightThumb ? { x: j.rightThumb.x * w, y: Math.min(fy + 4, j.rightThumb.y * h) } : null;
-
-      const lk = pt(j.leftKnee, tr.x - 0.013, tr.y + 0.165);
-      const rk = pt(j.rightKnee, tr.x + 0.013, tr.y + 0.165);
-      const la = pt(j.leftAnkle, tr.x - 0.013, tr.y + 0.21);
-      const ra = pt(j.rightAnkle, tr.x + 0.013, tr.y + 0.21);
-
-      const lHeel = j.leftHeel ? { x: j.leftHeel.x * w, y: Math.min(fy + 3, j.leftHeel.y * h) } : null;
-      const rHeel = j.rightHeel ? { x: j.rightHeel.x * w, y: Math.min(fy + 3, j.rightHeel.y * h) } : null;
-      const lFoot = j.leftFootIndex ? { x: j.leftFootIndex.x * w, y: Math.min(fy + 3, j.leftFootIndex.y * h) } : null;
-      const rFoot = j.rightFootIndex ? { x: j.rightFootIndex.x * w, y: Math.min(fy + 3, j.rightFootIndex.y * h) } : null;
-
-      const facing = tr.facing || "front";
-      const torsoAngle = Math.atan2(hipMid.y - shoulderMid.y, hipMid.x - shoulderMid.x) - Math.PI / 2;
-
-      ctx.save();
-
-      // 0. 足元の影
-      ctx.fillStyle = "rgba(0, 0, 0, 0.36)";
-      ctx.beginPath();
-      ctx.ellipse(fx, fy + 1.5 * scale, 8.5 * scale, 2.4 * scale, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 1. 後ろ髪
-      const hairSway = Math.sin(t * 6 + hx * 0.04) * 1.4 * scale;
-      ctx.fillStyle = hairColor;
-      if (hairStyle === "twintail") {
-        [-1, 1].forEach(side => {
-          ctx.beginPath();
-          ctx.moveTo(hx + side * headR * 0.7, hy - headR * 0.25);
-          ctx.quadraticCurveTo(
-            hx + side * (headR * 1.4) + hairSway,
-            hy + headR * 0.45,
-            hx + side * (headR * 1.08) + hairSway * 1.15,
-            hy + headR * 1.65
-          );
-          ctx.quadraticCurveTo(
-            hx + side * (headR * 0.68),
-            hy + headR * 1.1,
-            hx + side * headR * 0.55,
-            hy + headR * 0.1
-          );
-          ctx.closePath();
-          ctx.fill();
-        });
-      } else if (hairStyle === "ponytail") {
-        const sideDir = facing === "side" ? -(tr.eyeOffsetX || 0.6) : 0.65;
-        ctx.beginPath();
-        ctx.moveTo(hx + sideDir * headR * 0.4, hy - headR * 0.45);
-        ctx.quadraticCurveTo(
-          hx + sideDir * headR * 1.38 + hairSway,
-          hy + headR * 0.2,
-          hx + sideDir * headR * 1.1 + hairSway * 1.15,
-          hy + headR * 1.55
-        );
-        ctx.quadraticCurveTo(
-          hx + sideDir * headR * 0.65,
-          hy + headR * 0.8,
-          hx + sideDir * headR * 0.3,
-          hy - headR * 0.1
-        );
-        ctx.closePath();
-        ctx.fill();
-      } else if (hairStyle === "long") {
-        ctx.beginPath();
-        ctx.moveTo(hx - headR * 0.92, hy - headR * 0.2);
-        ctx.lineTo(hx - headR * 1.08 + hairSway, hy + headR * 1.7);
-        ctx.lineTo(hx + headR * 1.08 + hairSway, hy + headR * 1.7);
-        ctx.lineTo(hx + headR * 0.92, hy - headR * 0.2);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.beginPath();
-        ctx.arc(hx, hy + headR * 0.1, headR * 1.1, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // 2. 両脚＆ブーツ
-      drawTaperedLimb(ctx, lh, lk, thighR, calfR * 1.0, skinShade);
-      drawTaperedLimb(ctx, lk, la, calfR * 1.0, calfR * 0.76, skinColor);
-      drawGirlBoot(ctx, la, lHeel, lFoot, calfR, dressColor);
-
-      drawTaperedLimb(ctx, rh, rk, thighR, calfR * 1.0, skinShade);
-      drawTaperedLimb(ctx, rk, ra, calfR * 1.0, calfR * 0.76, skinColor);
-      drawGirlBoot(ctx, ra, rHeel, rFoot, calfR, dressColor);
-
-      // 3. 胴体
-      const waistWidth = Math.max(4.5 * scale, Math.min(13 * scale, Math.hypot(rh.x - lh.x, rh.y - lh.y) * 0.82));
-      const shoulderWidth = Math.max(6.5 * scale, Math.min(17 * scale, Math.hypot(rs.x - ls.x, rs.y - ls.y) * 0.85));
-
-      ctx.fillStyle = dressColor;
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(shoulderMid.x - shoulderWidth * 0.5, shoulderMid.y);
-      ctx.lineTo(shoulderMid.x + shoulderWidth * 0.5, shoulderMid.y);
-      ctx.lineTo(hipMid.x + waistWidth * 0.45, hipMid.y);
-      ctx.lineTo(hipMid.x - waistWidth * 0.45, hipMid.y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      if (facing !== "back") {
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.moveTo(shoulderMid.x - shoulderWidth * 0.2, shoulderMid.y);
-        ctx.lineTo(shoulderMid.x + shoulderWidth * 0.2, shoulderMid.y);
-        ctx.lineTo(shoulderMid.x, shoulderMid.y + 3.8 * scale);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      // 4. フレアスカート
-      const skirtLen = Math.max(7 * scale, Math.min(14 * scale, idealHeight * 0.15));
-      const skirtTopW = waistWidth * 0.5;
-      const skirtBotW = Math.max(9 * scale, Math.min(16.5 * scale, waistWidth * 1.2));
-
-      ctx.save();
-      ctx.translate(hipMid.x, hipMid.y);
-      ctx.rotate(torsoAngle);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.moveTo(-skirtTopW, 0);
-      ctx.lineTo(skirtTopW, 0);
-      ctx.lineTo(skirtBotW * 1.03, skirtLen * 1.06);
-      ctx.lineTo(-skirtBotW * 1.03, skirtLen * 1.06);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = dressColor;
-      ctx.strokeStyle = "rgba(255,255,255,0.75)";
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      ctx.moveTo(-skirtTopW, 0);
-      ctx.lineTo(skirtTopW, 0);
-      ctx.lineTo(skirtBotW, skirtLen);
-      ctx.quadraticCurveTo(0, skirtLen + 2 * scale, -skirtBotW, skirtLen);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-
-      // 5. 両腕＆手のひら・指先
-      drawTaperedLimb(ctx, ls, le, upperArmR, foreArmR, skinColor);
-      drawTaperedLimb(ctx, le, lw, foreArmR, foreArmR * 0.76, skinColor);
-      drawGirlHand(ctx, lw, li, lp, lt, foreArmR * 1.35, skinColor);
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(ls.x, ls.y, upperArmR * 1.15, 0, Math.PI * 2);
-      ctx.fill();
-
-      drawTaperedLimb(ctx, rs, re, upperArmR, foreArmR, skinColor);
-      drawTaperedLimb(ctx, re, rw, foreArmR, foreArmR * 0.76, skinColor);
-      drawGirlHand(ctx, rw, ri, rp, rt, foreArmR * 1.35, skinColor);
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(rs.x, rs.y, upperArmR * 1.15, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 6. 首＆頭部
-      drawTaperedLimb(ctx, shoulderMid, { x: hx, y: hy + headR * 0.5 }, 1.5 * scale, 1.3 * scale, skinShade);
-
-      ctx.beginPath();
-      ctx.arc(hx, hy, headR, 0, Math.PI * 2);
-      ctx.fillStyle = facing === "back" ? hairColor : skinColor;
-      ctx.fill();
-
-      if (facing === "back") {
-        ctx.fillStyle = hairColor;
-        ctx.beginPath();
-        ctx.arc(hx, hy, headR * 1.04, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = dressColor;
-        ctx.beginPath();
-        ctx.arc(hx - 2 * scale, hy - headR * 0.62, 1.5 * scale, 0, Math.PI * 2);
-        ctx.arc(hx + 2 * scale, hy - headR * 0.62, 1.5 * scale, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = hairColor;
-        ctx.beginPath();
-        ctx.arc(hx, hy - headR * 0.1, headR * 1.03, Math.PI * 1.02, Math.PI * 1.98);
-        ctx.lineTo(hx + headR * 0.42, hy - headR * 0.15);
-        ctx.lineTo(hx, hy - headR * 0.3);
-        ctx.lineTo(hx - headR * 0.42, hy - headR * 0.15);
-        ctx.closePath();
-        ctx.fill();
-
-        const eyeShift = facing === "side" ? (tr.eyeOffsetX ?? 0.5) * headR * 0.4 : 0;
-        ctx.fillStyle = "#1e1b18";
-        if (facing === "front") {
-          ctx.beginPath();
-          ctx.arc(hx - headR * 0.32, hy + headR * 0.08, 1.0 * scale, 0, Math.PI * 2);
-          ctx.arc(hx + headR * 0.32, hy + headR * 0.08, 1.0 * scale, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.beginPath();
-          ctx.arc(hx + eyeShift, hy + headR * 0.08, 1.1 * scale, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        ctx.fillStyle = dressColor;
-        ctx.beginPath();
-        ctx.arc(hx + headR * 0.65, hy - headR * 0.6, 1.5 * scale, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-    }
-
-    function renderSongMotionStage(t, duration) {
-      const canvas = document.getElementById('songOverlayCanvas');
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
-
-      const ctx = canvas.getContext('2d');
-      const w = rect.width;
-      const h = rect.height;
-      ctx.clearRect(0, 0, w, h);
-
-      ctx.save();
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.14)";
-      ctx.lineWidth = 1;
-      for (let gx = 0.08; gx <= 0.92; gx += 0.105) {
-        ctx.beginPath();
-        ctx.moveTo(gx * w, 0);
-        ctx.lineTo(gx * w, h * 0.9);
-        ctx.stroke();
-      }
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.89);
-      ctx.lineTo(w, h * 0.89);
-      ctx.strokeStyle = "rgba(244, 114, 182, 0.25)";
-      ctx.stroke();
-      ctx.restore();
-
-      if (!activeSongData || !activeSongData._validMembers) return;
-
-      const allTracks = getInterpolatedSongTracks(t);
-      const visibleTracks = selectedSongPersonId
-        ? allTracks.filter(tr => tr.id === selectedSongPersonId)
-        : allTracks;
-
-      const sortedVisibleTracks = [...visibleTracks].sort((a, b) => {
-        const ay = a.footY ?? (a.y + 0.24);
-        const by = b.footY ?? (b.y + 0.24);
-        return ay - by;
-      });
-
-      const showDancer = document.getElementById('optShowDancer')?.checked ?? true;
-      const showTrail = document.getElementById('optShowTrail')?.checked ?? true;
-      const showFormation = document.getElementById('optShowFormation')?.checked ?? true;
-      const showAvatar = document.getElementById('optShowAvatar')?.checked ?? true;
-      const showName = document.getElementById('optShowName')?.checked ?? true;
-      const showPos = document.getElementById('optShowPos')?.checked ?? true;
-
-      const visibleCount = Math.max(1, sortedVisibleTracks.length);
-      const isCrowded = visibleCount >= 12;
-
-      if (showFormation && sortedVisibleTracks.length > 0) {
-        const feet = sortedVisibleTracks.map(tr => ({
-          fx: (tr.footX ?? tr.x) * w,
-          fy: Math.min(h * 0.9, (tr.footY ?? Math.min(0.9, tr.y + 0.22)) * h)
-        }));
-        feet.sort((a, b) => a.fx - b.fx);
-
-        if (feet.length >= 2) {
-          const minX = feet[0].fx;
-          const maxX = feet[feet.length - 1].fx;
-          const spreadRatio = ((maxX - minX) / Math.max(1, w)).toFixed(2);
-
-          ctx.save();
-          ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
-          ctx.lineWidth = 1.6;
-          ctx.setLineDash([4, 4]);
-          ctx.beginPath();
-          feet.forEach((pt, idx) => {
-            if (idx === 0) ctx.moveTo(pt.fx, pt.fy);
-            else ctx.lineTo(pt.fx, pt.fy);
-          });
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-          ctx.beginPath();
-          ctx.roundRect(12, 12, 178, 24, 6);
-          ctx.fill();
-          ctx.fillStyle = "#7dd3fc";
-          ctx.font = "bold 11px sans-serif";
-          ctx.fillText(`フォーメーション幅: ${spreadRatio} (${sortedVisibleTracks.length}人)`, 20, 28);
-          ctx.restore();
-        }
-      }
-
-      const posSummary = [];
-      let frontCount = 0;
-      allTracks.forEach(tr => {
-        if ((tr.facing || "front") === "front") frontCount++;
-      });
-
-      sortedVisibleTracks.forEach((tr, idx) => {
-        const member = activeSongData._validMembers[tr.id];
-        if (!member) return;
-        const color = member.color || "#e11d48";
-        const name = member.name || tr.id;
-        const hx = tr.x * w;
-        const hy = tr.y * h;
-        const fx = (tr.footX ?? tr.x) * w;
-        const fy = Math.max(hy + 28, Math.min(h * 0.9, (tr.footY ?? Math.min(0.9, tr.y + 0.22)) * h));
-        const posLabel = formatStandingPos8to0to8(tr.footX ?? tr.x);
-
-        if (showPos) {
-          posSummary.push(`${name}:${posLabel}`);
-        }
-
-        if (showTrail) {
-          const historyPts = getRecentJointTrails(tr.id, t, 0.26);
-          // 120fpsでも描画負荷が膨らまないよう残像ポイント数を最大16点に間引き
-          const stride = Math.max(1, Math.floor(historyPts.length / 16));
-          for (let pIdx = 0; pIdx < historyPts.length; pIdx += stride) {
-            const pt = historyPts[pIdx];
-            const alpha = Math.max(0.08, ((pIdx + 1) / Math.max(1, historyPts.length)) * 0.42);
-            ctx.save();
-            ctx.fillStyle = color;
-            ctx.globalAlpha = alpha;
-            [pt.lw, pt.rw, pt.la, pt.ra].forEach(jp => {
-              if (!jp) return;
-              ctx.beginPath();
-              ctx.arc(jp.x * w, Math.min(h * 0.91, jp.y * h), 2.1, 0, Math.PI * 2);
-              ctx.fill();
-            });
-            ctx.restore();
-          }
-
-          if (showFormation && historyPts.length >= 2) {
-            ctx.save();
-            ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.55;
-            ctx.lineWidth = 1.6;
-            ctx.beginPath();
-            for (let pIdx = 0; pIdx < historyPts.length; pIdx += stride) {
-              const pt = historyPts[pIdx];
-              const px = pt.footX * w;
-              const py = Math.min(h * 0.9, pt.footY * h);
-              if (pIdx === 0) ctx.moveTo(px, py);
-              else ctx.lineTo(px, py);
-            }
-            ctx.stroke();
-            ctx.restore();
-          }
-        }
-
-        if (showDancer) {
-          drawGirlDancer(ctx, tr, member, w, h, t, visibleCount);
-        }
-
-        if (showAvatar) {
-          const radius = isCrowded ? 7.5 : 9.5;
-          const avatarY = Math.max(radius + 6, hy - (isCrowded ? 14 : 18));
-          const img = songAvatarImages[tr.id];
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(hx, avatarY, radius, 0, Math.PI * 2);
-          ctx.fillStyle = color;
-          ctx.fill();
-          if (img && img.complete && img.naturalWidth > 0) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(hx, avatarY, radius - 1.2, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(img, hx - radius, avatarY - radius, radius * 2, radius * 2);
-            ctx.restore();
-          }
-          ctx.lineWidth = 1.3;
-          ctx.strokeStyle = color;
-          ctx.beginPath();
-          ctx.arc(hx, avatarY, radius, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        if (showName) {
-          const stagger = isCrowded && (idx % 2 === 1) ? -10 : 0;
-          const nameY = (showAvatar ? Math.max(15, hy - (isCrowded ? 26 : 32)) : Math.max(15, hy - 14)) + stagger;
-          ctx.save();
-          ctx.font = isCrowded ? "bold 7.5px sans-serif" : "bold 8.5px sans-serif";
-          const displayLabel = isCrowded ? name.slice(0, 3) : name;
-          const textW = ctx.measureText(displayLabel).width;
-          const boxW = textW + 6;
-          const boxH = isCrowded ? 11 : 12.5;
-          ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-          ctx.beginPath();
-          ctx.roundRect(hx - boxW / 2, nameY - boxH / 2, boxW, boxH, 3.5);
-          ctx.fill();
-          ctx.fillStyle = "#ffffff";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(displayLabel, hx, nameY);
-          ctx.restore();
-        }
-
-        if (showPos) {
-          ctx.save();
-          ctx.font = isCrowded ? "bold 7.5px sans-serif" : "bold 8.5px sans-serif";
-          const boxW = Math.max(13, ctx.measureText(posLabel).width + 6);
-          const boxH = isCrowded ? 11.5 : 13;
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.roundRect(fx - boxW / 2, fy + 3, boxW, boxH, 3.5);
-          ctx.fill();
-          ctx.fillStyle = "#ffffff";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(posLabel, fx, fy + 3 + boxH / 2);
-          ctx.restore();
-        }
-      });
-
-      if (allTracks.length > 0) {
-        ctx.save();
-        ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
-        ctx.beginPath();
-        ctx.roundRect(w - 118, 12, 106, 26, 6);
-        ctx.fill();
-        ctx.fillStyle = "#f472b6";
-        ctx.font = "bold 12px sans-serif";
-        ctx.textAlign = "right";
-        ctx.fillText(`正面: ${frontCount} / ${allTracks.length}人`, w - 20, 29);
-        ctx.restore();
-      }
-
-      const summaryEl = document.getElementById('songCurrentPosSummary');
-      if (summaryEl) summaryEl.textContent = posSummary.join(" / ");
-    }
-
-    function renderSongTimelineBand(t, duration) {
-      const canvas = document.getElementById('songTimelineBandCanvas');
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
-
-      const ctx = canvas.getContext('2d');
-      const w = rect.width;
-      const h = rect.height;
-      ctx.clearRect(0, 0, w, h);
-
-      const frames = activeSongData?.frames || [];
-      const totalDur = Math.max(duration || 0, frames.length ? frames[frames.length - 1].t : 0, 1);
-
-      if (frames.length > 0) {
-        const stride = Math.max(1, Math.floor(frames.length / Math.max(120, Math.floor(w))));
-        ctx.save();
-        ctx.fillStyle = "rgba(219, 39, 119, 0.35)";
-        ctx.beginPath();
-        ctx.moveTo(0, h);
-        for (let i = 0; i < frames.length; i += stride) {
-          const fr = frames[i];
-          const tracks = fr.tracks || [];
-          const ratio = tracks.length > 0
-            ? tracks.filter(tr => (tr.facing || "front") === "front").length / tracks.length
-            : 0;
-          const x = Math.min(w, (fr.t / totalDur) * w);
-          const y = h - ratio * (h - 10) - 4;
-          ctx.lineTo(x, y);
-        }
-        ctx.lineTo(w, h);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.strokeStyle = "#f472b6";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 0; i < frames.length; i += stride) {
-          const fr = frames[i];
-          const tracks = fr.tracks || [];
-          const ratio = tracks.length > 0
-            ? tracks.filter(tr => (tr.facing || "front") === "front").length / tracks.length
-            : 0;
-          const x = Math.min(w, (fr.t / totalDur) * w);
-          const y = h - ratio * (h - 10) - 4;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      const curX = Math.max(0, Math.min(w, (t / totalDur) * w));
-      ctx.save();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(curX, 0);
-      ctx.lineTo(curX, h);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function updateSongLyricsDisplay(t) {
-      const currentEl = document.getElementById('songCurrentLyric');
-      const nextEl = document.getElementById('songNextLyric');
-      if (!currentEl || !nextEl) return;
-
-      const lyrics = activeSongData?.lyrics || [];
-      const activeIdx = lyrics.findIndex(line => t >= line.start && t <= line.end);
-
-      if (activeIdx !== -1) {
-        currentEl.textContent = lyrics[activeIdx].text;
-        nextEl.textContent = lyrics[activeIdx + 1] ? `次: ${lyrics[activeIdx + 1].text}` : "次: -";
-      } else {
-        const upcoming = lyrics.find(line => t < line.start);
-        currentEl.textContent = lyrics.length > 0 ? "♪" : "再生すると歌詞が同期表示されます";
-        nextEl.textContent = upcoming ? `次: ${upcoming.text}` : "次: -";
-      }
-
-      document.querySelectorAll('.song-lyric-btn').forEach((btn, idx) => {
-        const isActive = idx === activeIdx;
-        btn.classList.toggle('bg-pink-600', isActive);
-        btn.classList.toggle('text-white', isActive);
-        btn.classList.toggle('border-pink-400', isActive);
-      });
-    }
-
-    function onLocalDanceVideoSelected(input) {
-      const file = input.files && input.files[0];
-      if (!file) return;
-      if (localUploadedVideoUrl) URL.revokeObjectURL(localUploadedVideoUrl);
-      localUploadedVideoUrl = URL.createObjectURL(file);
-      virtualPlaying = false;
-      virtualTime = 0;
-      const video = document.getElementById('songVideo');
-      video.src = localUploadedVideoUrl;
-      video.load();
-      document.getElementById('poseAnalysisProgress').textContent = `動画「${file.name}」を読み込みました（120fps超高速・高精度・最大6分対応）。「120fps骨格解析を実行」を押してください。`;
-      updateSongViewerNotice();
-    }
-
-    async function ensurePoseLandmarkerLoaded(mode = "VIDEO") {
-      if (poseLandmarkerInstance && poseLandmarkerMode === mode) return poseLandmarkerInstance;
-      try {
-        if (poseLandmarkerInstance && poseLandmarkerInstance.close) {
-          poseLandmarkerInstance.close();
-          poseLandmarkerInstance = null;
-        }
-        const vision = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm");
-        const { PoseLandmarker, FilesetResolver } = vision;
-        const filesetResolver = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-        );
-        poseLandmarkerInstance = await PoseLandmarker.createFromOptions(filesetResolver, {
-          baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-            delegate: "GPU"
-          },
-          runningMode: mode,
-          numPoses: 16,
-          minPoseDetectionConfidence: 0.34,
-          minPosePresenceConfidence: 0.34,
-          minTrackingConfidence: 0.36
-        });
-        poseLandmarkerMode = mode;
-        return poseLandmarkerInstance;
-      } catch (err) {
-        console.warn("MediaPipe初期化エラー:", err);
-        return null;
-      }
-    }
-
-    function estimateFaceFacingFromLandmarks(lm) {
-      const nose = lm[0];
-      const lEye = lm[2];
-      const rEye = lm[5];
-      const lEar = lm[7];
-      const rEar = lm[8];
-      const lShoulder = lm[11];
-      const rShoulder = lm[12];
-
-      const eyeVis = ((lEye?.visibility ?? 0) + (rEye?.visibility ?? 0)) / 2;
-      const earVis = ((lEar?.visibility ?? 0) + (rEar?.visibility ?? 0)) / 2;
-      const shoulderWidth = Math.max(0.01, Math.abs((lShoulder?.x ?? 0.4) - (rShoulder?.x ?? 0.6)));
-      const eyeSpan = Math.abs((lEye?.x ?? 0.5) - (rEye?.x ?? 0.5));
-      const eyeRatio = eyeSpan / shoulderWidth;
-
-      if (eyeVis < 0.35 && earVis >= 0.35) {
-        return { facing: "back", eyeOffsetX: 0 };
-      }
-      if (eyeRatio < 0.22) {
-        const centerX = ((lEye?.x ?? nose.x) + (rEye?.x ?? nose.x)) / 2;
-        const offset = Math.max(-1, Math.min(1, (centerX - nose.x) * 14));
-        return { facing: "side", eyeOffsetX: offset };
-      }
-      return { facing: "front", eyeOffsetX: 0 };
-    }
-
-    function cropFaceAvatarFromVideo(videoEl, landmarks, colorHex, fallbackName) {
-      try {
-        const nose = landmarks?.[0];
-        if (!nose || (nose.visibility ?? 1) < 0.3) {
-          return makeDefaultAvatarDataUrl(fallbackName, colorHex);
-        }
-        const vw = videoEl.videoWidth || 640;
-        const vh = videoEl.videoHeight || 360;
-        const size = Math.max(32, Math.min(vw, vh) * 0.11);
-        const sx = Math.max(0, Math.min(vw - size, nose.x * vw - size / 2));
-        const sy = Math.max(0, Math.min(vh - size, nose.y * vh - size * 0.55));
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = 72;
-        tempCanvas.height = 72;
-        tempCanvas.getContext('2d').drawImage(videoEl, sx, sy, size, size, 0, 0, 72, 72);
-        return tempCanvas.toDataURL("image/jpeg", 0.78);
-      } catch (_) {
-        return makeDefaultAvatarDataUrl(fallbackName, colorHex);
-      }
-    }
-
-    // 超高速シーク待機（120fps解析向けに許容誤差とタイムアウトを極小化）
-    function waitForVideoSeek(video, seekTime) {
-      return new Promise(resolve => {
-        if (Math.abs((video.currentTime || 0) - seekTime) < 0.0035 && video.readyState >= 2) {
-          resolve();
-          return;
-        }
-        let settled = false;
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          video.removeEventListener("seeked", onSeeked);
-          resolve();
-        };
-        const onSeeked = () => finish();
-        const timer = setTimeout(finish, 28);
-        video.addEventListener("seeked", onSeeked, { once: true });
-        try {
-          if (typeof video.fastSeek === "function" && Math.abs((video.currentTime || 0) - seekTime) > 0.3) {
-            video.fastSeek(seekTime);
-          } else {
-            video.currentTime = seekTime;
-          }
-        } catch (_) {
-          video.currentTime = seekTime;
-        }
-      });
-    }
-
-    async function runPoseAnalysisOnVideo() {
-      const video = document.getElementById('songVideo');
-      const progressEl = document.getElementById('poseAnalysisProgress');
-      const btn = document.getElementById('runPoseAnalysisBtn');
-
-      if (!video.src && !video.currentSrc) {
-        progressEl.textContent = "先にローカル動画ファイルを選択してください。";
-        return;
-      }
-      if (!Number.isFinite(video.duration) || video.duration <= 0) {
-        await new Promise(resolve => video.addEventListener("loadedmetadata", resolve, { once: true }));
-      }
-
-      btn.disabled = true;
-      virtualPlaying = false;
-      progressEl.textContent = "120fps超高速・高精度骨格モデルを準備中...";
-      const landmarker = await ensurePoseLandmarkerLoaded("VIDEO");
-      if (!landmarker) {
-        progressEl.textContent = "骨格推定モデルの読み込みに失敗しました。ネットワークやブラウザ環境をご確認ください。";
-        btn.disabled = false;
-        return;
-      }
-
-      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 120;
-      const stepSec = 1 / targetFps;
-      // 6分（360秒）まで動画を読み込んで解析
-      const duration = Math.min(video.duration, 360);
-      video.pause();
-
-      const palette = ["#e11d48", "#0284c7", "#7c3aed", "#059669", "#d97706", "#db2777", "#2563eb", "#0d9488", "#ea580c", "#4f46e5", "#ec4899", "#16a34a", "#0891b2", "#65a30d", "#c026d3", "#e11d48"];
-      const detectedPersons = {};
-      const frames = [];
-      let activeMemoryTracks = [];
-      let nextSeq = 1;
-      let lastTimestampMs = -1;
-      let frameCounter = 0;
-      const uiUpdateStride = Math.max(15, Math.round(targetFps * 0.5));
-      const smoothAlpha = targetFps >= 100 ? 0.88 : (targetFps >= 50 ? 0.8 : 0.75);
-
-      for (let t = 0; t <= duration; t += stepSec) {
-        const seekTime = Number(t.toFixed(5));
-        await waitForVideoSeek(video, seekTime);
-
-        let timestampMs = Math.round(seekTime * 1000);
-        if (timestampMs <= lastTimestampMs) timestampMs = lastTimestampMs + 1;
-        lastTimestampMs = timestampMs;
-
-        const res = landmarker.detectForVideo(video, timestampMs);
-        const poseList = Array.isArray(res?.landmarks) ? res.landmarks : [];
-
-        // 1. 検出された全骨格の特徴量を抽出
-        const candidates = [];
-        poseList.forEach(lm => {
-          if (!Array.isArray(lm) || lm.length < 33) return;
-          const keyIndices = [0, 11, 12, 23, 24];
-          const avgVis = keyIndices.reduce((acc, idx) => acc + (lm[idx]?.visibility ?? 0.75), 0) / keyIndices.length;
-          if (avgVis < 0.3) return;
-
-          const nose = lm[0];
-          const ls = lm[11];
-          const rs = lm[12];
-          const lh = lm[23];
-          const rh = lm[24];
-          const la = lm[27];
-          const ra = lm[28];
-
-          const torsoX = ((ls?.x ?? nose.x) + (rs?.x ?? nose.x) + (lh?.x ?? nose.x) + (rh?.x ?? nose.x)) / 4;
-          const torsoY = ((ls?.y ?? nose.y) + (rs?.y ?? nose.y) + (lh?.y ?? nose.y) + (rh?.y ?? nose.y)) / 4;
-          const shoulderW = Math.hypot((ls?.x ?? 0) - (rs?.x ?? 0), (ls?.y ?? 0) - (rs?.y ?? 0));
-
-          const x = Math.max(0.03, Math.min(0.97, nose.x));
-          const y = Math.max(0.08, Math.min(0.84, nose.y));
-          const footX = Math.max(0.03, Math.min(0.97, ((la?.x ?? torsoX) + (ra?.x ?? torsoX)) / 2));
-          const footY = Math.max(0.2, Math.min(0.9, ((la?.y ?? (y + 0.22)) + (ra?.y ?? (y + 0.22))) / 2));
-
-          candidates.push({ lm, nose, x, y, torsoX, torsoY, shoulderW, footX, footY });
-        });
-
-        // 2. 速度ベクトル予測＋体格一致度を用いたグローバル最適ペアリング（交差・フォーメーション移動に強い）
-        const pairs = [];
-        candidates.forEach((cand, cIdx) => {
-          activeMemoryTracks.forEach((mt, mIdx) => {
-            const dtTrack = Math.max(0.008, seekTime - (mt.lastSeenT ?? seekTime));
-            const predX = mt.x + (mt.vx || 0) * dtTrack;
-            const predY = mt.y + (mt.vy || 0) * dtTrack;
-            const predTorsoX = (mt.torsoX ?? mt.x) + (mt.vx || 0) * dtTrack;
-            const predTorsoY = (mt.torsoY ?? mt.y) + (mt.vy || 0) * dtTrack;
-
-            const headDist = Math.hypot(predX - cand.x, predY - cand.y);
-            const torsoDist = Math.hypot(predTorsoX - cand.torsoX, predTorsoY - cand.torsoY);
-            const sizeDiff = Math.abs((mt.shoulderW ?? cand.shoulderW) - cand.shoulderW);
-            const cost = headDist * 0.35 + torsoDist * 0.55 + sizeDiff * 0.25;
-
-            if (cost < 0.16) {
-              pairs.push({ cIdx, mIdx, cost });
-            }
-          });
-        });
-        pairs.sort((a, b) => a.cost - b.cost);
-
-        const matchedCandToTrack = new Map();
-        const usedTracks = new Set();
-        pairs.forEach(pair => {
-          if (!matchedCandToTrack.has(pair.cIdx) && !usedTracks.has(pair.mIdx)) {
-            matchedCandToTrack.set(pair.cIdx, activeMemoryTracks[pair.mIdx]);
-            usedTracks.add(pair.mIdx);
-          }
-        });
-
-        const frameTracks = [];
-        candidates.forEach((cand, cIdx) => {
-          const matchedTrack = matchedCandToTrack.get(cIdx) || null;
-          const matchedId = matchedTrack ? matchedTrack.id : `person_${nextSeq++}`;
-
-          if (!matchedTrack) {
-            const idx = nextSeq - 2;
-            const color = palette[idx % palette.length];
-            const name = `メンバー${idx + 1}`;
-            detectedPersons[matchedId] = {
-              id: matchedId,
-              name,
-              color,
-              hairStyle: HAIR_STYLES[idx % HAIR_STYLES.length],
-              hairColor: HAIR_COLORS[idx % HAIR_COLORS.length],
-              avatar: cropFaceAvatarFromVideo(video, cand.lm, color, name),
-              detectedByPose: true
-            };
-          }
-
-          const prevJoints = matchedTrack?.joints || {};
-          const p = (idx, key) => {
-            const cur = cand.lm[idx];
-            if (!cur) return prevJoints[key] || null;
-            const raw = { x: cur.x, y: cur.y };
-            const prev = prevJoints[key];
-            if (!prev) return raw;
-            return {
-              x: prev.x + (raw.x - prev.x) * smoothAlpha,
-              y: prev.y + (raw.y - prev.y) * smoothAlpha
-            };
-          };
-
-          const smoothedX = matchedTrack ? matchedTrack.x + (cand.x - matchedTrack.x) * smoothAlpha : cand.x;
-          const smoothedY = matchedTrack ? matchedTrack.y + (cand.y - matchedTrack.y) * smoothAlpha : cand.y;
-          const dtStep = Math.max(0.008, seekTime - (matchedTrack?.lastSeenT ?? seekTime));
-          const vx = matchedTrack ? Math.max(-1.5, Math.min(1.5, (smoothedX - matchedTrack.x) / dtStep)) : 0;
-          const vy = matchedTrack ? Math.max(-1.5, Math.min(1.5, (smoothedY - matchedTrack.y) / dtStep)) : 0;
-
-          const faceInfo = estimateFaceFacingFromLandmarks(cand.lm);
-          const posLabel = formatStandingPos8to0to8(cand.footX);
-
-          frameTracks.push({
-            id: matchedId,
-            x: smoothedX,
-            y: smoothedY,
-            vx,
-            vy,
-            torsoX: cand.torsoX,
-            torsoY: cand.torsoY,
-            shoulderW: cand.shoulderW,
-            footX: matchedTrack ? (matchedTrack.footX ?? matchedTrack.x) + (cand.footX - (matchedTrack.footX ?? matchedTrack.x)) * smoothAlpha : cand.footX,
-            footY: matchedTrack ? (matchedTrack.footY ?? (matchedTrack.y + 0.22)) + (cand.footY - (matchedTrack.footY ?? (matchedTrack.y + 0.22))) * smoothAlpha : cand.footY,
-            pos: posLabel,
-            facing: faceInfo.facing,
-            eyeOffsetX: faceInfo.eyeOffsetX,
-            joints: {
-              leftShoulder: p(11, "leftShoulder"),
-              rightShoulder: p(12, "rightShoulder"),
-              leftElbow: p(13, "leftElbow"),
-              rightElbow: p(14, "rightElbow"),
-              leftWrist: p(15, "leftWrist"),
-              rightWrist: p(16, "rightWrist"),
-              leftPinky: p(17, "leftPinky"),
-              rightPinky: p(18, "rightPinky"),
-              leftIndex: p(19, "leftIndex"),
-              rightIndex: p(20, "rightIndex"),
-              leftThumb: p(21, "leftThumb"),
-              rightThumb: p(22, "rightThumb"),
-              leftHip: p(23, "leftHip"),
-              rightHip: p(24, "rightHip"),
-              leftKnee: p(25, "leftKnee"),
-              rightKnee: p(26, "rightKnee"),
-              leftAnkle: p(27, "leftAnkle"),
-              rightAnkle: p(28, "rightAnkle"),
-              leftHeel: p(29, "leftHeel"),
-              rightHeel: p(30, "rightHeel"),
-              leftFootIndex: p(31, "leftFootIndex"),
-              rightFootIndex: p(32, "rightFootIndex")
-            }
-          });
-        });
-
-        if (frameTracks.length > 0) {
-          frames.push({ t: seekTime, tracks: frameTracks });
-          const currentIds = new Set(frameTracks.map(ft => ft.id));
-          const carried = activeMemoryTracks
-            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.55);
-          activeMemoryTracks = [
-            ...frameTracks.map(ft => ({ ...ft, lastSeenT: seekTime })),
-            ...carried
-          ];
-        }
-
-        frameCounter++;
-        if (frameCounter % uiUpdateStride === 0 || seekTime >= duration - stepSec) {
-          const pct = Math.min(100, Math.round((seekTime / Math.max(0.1, duration)) * 100));
-          progressEl.textContent = `${targetFps}fps超高速・高精度解析中... ${pct}%（${formatClock(seekTime)} / ${formatClock(duration)}・検出: ${Object.keys(detectedPersons).length}名）`;
-          await new Promise(r => setTimeout(r, 0));
-        }
-      }
-
-      btn.disabled = false;
-      const personCount = Object.keys(detectedPersons).length;
-      if (personCount === 0) {
-        progressEl.textContent = "骨格が明確に検出された人物がありませんでした。";
-        return;
-      }
-
-      const stageKey = document.getElementById('songStageSelect').value;
-      const trackName = document.getElementById('songTrackSelect').value;
-      const pkg = {
-        songId: getSongStorageKey(stageKey, trackName),
-        stageKey,
-        trackName,
-        videoUrl: localUploadedVideoUrl || video.src || "",
-        fps: targetFps,
-        members: detectedPersons,
-        lyrics: parseLyricsText(document.getElementById('songLyricsEditor').value),
-        frames
-      };
-
-      songMemoryStore[pkg.songId] = pkg;
-      virtualTime = 0;
-      applySongTrackingData(pkg, `${targetFps}fps超高速・高精度解析完了`);
-      progressEl.textContent = `完了：${targetFps}fpsで ${personCount} 名のpersonを抽出し、${frames.length} フレーム（最大6分対応）のデータを生成しました。`;
-    }
-
-    function renderDetectedPersonEditor() {
-      const editorEl = document.getElementById('detectedPersonEditor');
-      if (!editorEl) return;
-      editorEl.innerHTML = '';
-      const validMembers = activeSongData?._validMembers || {};
-      const entries = Object.entries(validMembers);
-      if (entries.length === 0) {
-        editorEl.innerHTML = `<p class="text-slate-400">骨格解析を実行すると、検出されたpersonがここに表示されます。</p>`;
-        return;
-      }
-      entries.forEach(([pid, info]) => {
-        const row = document.createElement('div');
-        row.className = "flex flex-wrap items-center gap-2 p-2 rounded border border-slate-200 bg-slate-50";
-        const avatarSrc = info.avatar || makeDefaultAvatarDataUrl(info.name || pid, info.color || "#db2777");
-        const hairVal = info.hairStyle || "twintail";
-        row.innerHTML = `
-          <img src="${avatarSrc}" alt="${escapeHtml(info.name || pid)}" class="w-9 h-9 rounded-full object-cover border border-slate-300">
-          <span class="font-mono text-[11px] text-slate-500">${escapeHtml(pid)}</span>
-          <input type="text" value="${escapeHtml(info.name || pid)}" onchange="updatePersonName('${escapeHtml(pid)}', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-white flex-1 min-w-[100px]" placeholder="名前">
-          <select onchange="updatePersonHair('${escapeHtml(pid)}', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-white">
-            <option value="twintail" ${hairVal === "twintail" ? "selected" : ""}>ツインテール</option>
-            <option value="ponytail" ${hairVal === "ponytail" ? "selected" : ""}>ポニーテール</option>
-            <option value="long" ${hairVal === "long" ? "selected" : ""}>ロング</option>
-            <option value="bob" ${hairVal === "bob" ? "selected" : ""}>ボブ</option>
-          </select>
-          <input type="color" value="${escapeHtml(info.color || "#db2777")}" onchange="updatePersonColor('${escapeHtml(pid)}', this.value)" title="衣装カラー" class="w-7 h-7 rounded cursor-pointer border border-slate-300">
-          <label class="cursor-pointer bg-white hover:bg-pink-50 border border-slate-300 rounded px-2 py-1 text-[11px] font-bold text-slate-700">
-            顔写真 <input type="file" accept="image/*" class="hidden" onchange="updatePersonAvatarFile('${escapeHtml(pid)}', this)">
-          </label>
-        `;
-        editorEl.appendChild(row);
-      });
-    }
-
-    function updatePersonName(pid, newName) {
-      if (!activeSongData?.members?.[pid]) return;
-      const trimmed = String(newName || '').trim() || pid;
-      activeSongData.members[pid].name = trimmed;
-      if (activeSongData._validMembers?.[pid]) activeSongData._validMembers[pid].name = trimmed;
-      renderSongPersonChips();
-    }
-
-    function updatePersonHair(pid, hairStyle) {
-      if (!activeSongData?.members?.[pid]) return;
-      activeSongData.members[pid].hairStyle = hairStyle;
-      if (activeSongData._validMembers?.[pid]) activeSongData._validMembers[pid].hairStyle = hairStyle;
-    }
-
-    function updatePersonColor(pid, colorHex) {
-      if (!activeSongData?.members?.[pid]) return;
-      activeSongData.members[pid].color = colorHex;
-      if (activeSongData._validMembers?.[pid]) activeSongData._validMembers[pid].color = colorHex;
-    }
-
-    function updatePersonAvatarFile(pid, input) {
-      const file = input.files && input.files[0];
-      if (!file || !activeSongData?.members?.[pid]) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result;
-        activeSongData.members[pid].avatar = dataUrl;
-        if (activeSongData._validMembers?.[pid]) activeSongData._validMembers[pid].avatar = dataUrl;
-        const img = new Image();
-        img.src = dataUrl;
-        songAvatarImages[pid] = img;
-        renderSongPersonChips();
-        renderDetectedPersonEditor();
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function buildExportableSongJson() {
-      const stageKey = document.getElementById('songStageSelect').value;
-      const trackName = document.getElementById('songTrackSelect').value;
-      const key = getSongStorageKey(stageKey, trackName);
-      const base = activeSongData || songMemoryStore[key] || { members: {}, frames: [], lyrics: [] };
-
-      const filteredMembers = {};
-      Object.entries(base.members || {}).forEach(([pid, info]) => {
-        if (info && info.detectedByPose !== false) {
-          filteredMembers[pid] = {
-            id: pid,
-            name: info.name || pid,
-            color: info.color || "#db2777",
-            hairStyle: info.hairStyle || "twintail",
-            hairColor: info.hairColor || "#2b1b17",
-            avatar: info.avatar || "",
-            detectedByPose: true
-          };
-        }
-      });
-
-      const validIds = new Set(Object.keys(filteredMembers));
-      const filteredFrames = (base.frames || []).map(fr => ({
-        t: fr.t,
-        tracks: (fr.tracks || []).filter(tr => validIds.has(tr.id))
-      }));
-
-      return {
-        songId: key,
-        stageKey,
-        trackName,
-        fps: base.fps || 120,
-        members: filteredMembers,
-        lyrics: parseLyricsText(document.getElementById('songLyricsEditor').value),
-        frames: filteredFrames
-      };
-    }
-
-    function saveCurrentSongToSessionMemory() {
-      const pkg = buildExportableSongJson();
-      if (localUploadedVideoUrl) pkg.videoUrl = localUploadedVideoUrl;
-      songMemoryStore[pkg.songId] = pkg;
-      applySongTrackingData(pkg, "確定済み曲データ");
-      alert("この曲のデータを反映しました。");
-    }
-
-    function exportSongTrackingJson() {
-      const pkg = buildExportableSongJson();
-      const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${encodeURIComponent(pkg.songId)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    /* =========================================================================
-       既存サイトロジック
-       ========================================================================= */
     function getAllUniqueMembers() {
       const set = new Set(MASTER_MEMBER_ORDER);
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
@@ -2603,7 +748,6 @@
 
     function goHome() {
       selectedMemberName = null;
-      virtualPlaying = false;
       document.getElementById('mainTabsContainer').classList.remove('hidden');
       document.getElementById('memberDetailContainer').classList.add('hidden');
       document.getElementById('navNormal').classList.remove('hidden');
@@ -2649,12 +793,6 @@
       }
       if (tabName === 'coapp') renderCoappMemberChips();
       if (tabName === 'stats') renderStatsTab();
-      if (tabName === 'songparts') {
-        if (!document.getElementById('songStageSelect').options.length) {
-          renderSongStageDropdown();
-        }
-        requestAnimationFrame(() => resizeSongCanvases());
-      }
     }
 
     function filterSchedule(filter, button) {
@@ -2751,13 +889,16 @@
         schedMap[item.date].push(item);
       });
       let html = `<div class="cal-grid">`;
-      ['日', '月', '火', '水', '木', '金', '土'].forEach((label, i) => {
+      const dayLabels = ['日', '月', '火', '水', '木', '金', '土'];
+      dayLabels.forEach((label, i) => {
         const color = i === 0 ? 'text-red-500' : (i === 6 ? 'text-blue-500' : 'text-slate-600');
         html += `<div class="bg-slate-100 p-1 text-center font-bold text-xs ${color}">${label}</div>`;
       });
       for (let i = 0; i < startDayOfWeek; i++) html += `<div class="cal-cell other-month"></div>`;
       for (let day = 1; day <= totalDays; day++) {
-        const fullDateStr = `${year}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
+        const mStr = month.toString().padStart(2, '0');
+        const dStr = day.toString().padStart(2, '0');
+        const fullDateStr = `${year}/${mStr}/${dStr}`;
         const isToday = fullDateStr === todayString;
         const dayShows = schedMap[fullDateStr] || [];
         html += `<div class="cal-cell ${isToday ? 'today border border-pink-400' : ''}">`;
@@ -2768,7 +909,8 @@
         });
         html += `</div></div>`;
       }
-      const remainingCells = (7 - ((startDayOfWeek + totalDays) % 7)) % 7;
+      const totalCells = startDayOfWeek + totalDays;
+      const remainingCells = (7 - (totalCells % 7)) % 7;
       for (let i = 0; i < remainingCells; i++) html += `<div class="cal-cell other-month"></div>`;
       html += `</div>`;
       gridContainer.innerHTML = html;
@@ -2788,6 +930,7 @@
       }
       document.getElementById('modalTitle').innerText = titleText;
       document.getElementById('modalDate').innerText = `${item.date} ${item.time || ''}`;
+      
       const listEl = document.getElementById('modalMemberList');
       const posCountEl = document.getElementById('modalPosCount');
       listEl.innerHTML = '';
@@ -2798,7 +941,10 @@
           const posName = (stageObj && stageObj.fixed && stageObj.fixed[idx]) ? stageObj.fixed[idx] : `Pos.${idx+1}`;
           const div = document.createElement('div');
           div.className = "bg-white p-1.5 rounded border border-slate-200 flex items-center justify-between";
-          div.innerHTML = `<span class="text-[10px] text-slate-400 truncate">${escapeHtml(posName)}ポジ</span><span class="member-link text-xs" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${escapeHtml(m)}</span>`;
+          div.innerHTML = `
+            <span class="text-[10px] text-slate-400 truncate">${escapeHtml(posName)}ポジ</span>
+            <span class="member-link text-xs" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${escapeHtml(m)}</span>
+          `;
           listEl.appendChild(div);
         });
       } else if (item.membersArray && item.membersArray.length > 0) {
@@ -2850,41 +996,63 @@
     function getSortedStageMembers(stage) {
       const stageMembersSet = new Set();
       const validShows = stage.schedules.filter(s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0));
+      
       const scheduleAppearanceOrder = [];
       validShows.forEach(show => {
         const arr = show.membersArray && show.membersArray.length > 0 ? show.membersArray : show.positionsArray;
         if (arr) {
           arr.forEach(m => {
-            if (m && m !== '-' && m !== '－' && !stageMembersSet.has(m)) {
-              stageMembersSet.add(m);
-              scheduleAppearanceOrder.push(m);
+            if (m && m !== '-' && m !== '－') {
+              if (!stageMembersSet.has(m)) {
+                stageMembersSet.add(m);
+                scheduleAppearanceOrder.push(m);
+              }
             }
           });
         }
       });
+
       const sortedResult = [];
-      MASTER_MEMBER_ORDER.forEach(m => { if (stageMembersSet.has(m)) sortedResult.push(m); });
-      scheduleAppearanceOrder.forEach(m => { if (!sortedResult.includes(m)) sortedResult.push(m); });
+      MASTER_MEMBER_ORDER.forEach(m => {
+        if (stageMembersSet.has(m)) {
+          sortedResult.push(m);
+        }
+      });
+      scheduleAppearanceOrder.forEach(m => {
+        if (!sortedResult.includes(m)) {
+          sortedResult.push(m);
+        }
+      });
       return sortedResult;
     }
 
     function getPositionRowDataList(stage) {
       if (!stage || !stage.fixed || stage.fixed.length === 0) return [];
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
-      const rowDataList = [];
+      let rowDataList = [];
+
       stage.fixed.forEach((fixedMember, colIdx) => {
         const experiencedSet = new Set();
         validShows.forEach(show => {
-          const m = show.positionsArray?.[colIdx]?.trim();
-          if (m && m !== '-' && m !== '－') experiencedSet.add(m);
+          if (show.positionsArray && show.positionsArray[colIdx]) {
+            const m = show.positionsArray[colIdx].trim();
+            if (m && m !== '-' && m !== '－') experiencedSet.add(m);
+          }
         });
+        
         const undersOrdered = MASTER_MEMBER_ORDER.filter(m => m !== fixedMember && experiencedSet.has(m));
         validShows.forEach(show => {
           const m = show.positionsArray?.[colIdx];
-          if (m && m !== '-' && m !== '－' && m !== fixedMember && !undersOrdered.includes(m)) undersOrdered.push(m);
+          if (m && m !== '-' && m !== '－' && m !== fixedMember && !undersOrdered.includes(m)) {
+            undersOrdered.push(m);
+          }
         });
-        const orderedMembers = (fixedMember ? [fixedMember, ...undersOrdered] : undersOrdered).filter(m => m && m !== '-' && m !== '－');
-        if (orderedMembers.length > 0) rowDataList.push({ fixedMember, orderedMembers });
+
+        const initialMembers = fixedMember ? [fixedMember, ...undersOrdered] : undersOrdered;
+        const orderedMembers = initialMembers.filter(m => m && m !== '-' && m !== '－');
+        if (orderedMembers.length > 0) {
+          rowDataList.push({ fixedMember, orderedMembers });
+        }
       });
       return rowDataList;
     }
@@ -2896,17 +1064,23 @@
       const headerTr = document.getElementById('positionTableHeader');
       const tbody = document.getElementById('positionTableBody');
       headerTr.innerHTML = ''; tbody.innerHTML = '';
+
       const rowDataList = getPositionRowDataList(stage);
       if (rowDataList.length === 0) return;
+
       let maxCols = 0;
-      rowDataList.forEach(item => { if (item.orderedMembers.length > maxCols) maxCols = item.orderedMembers.length; });
+      rowDataList.forEach(item => {
+        if (item.orderedMembers.length > maxCols) maxCols = item.orderedMembers.length;
+      });
+
       for (let i = 0; i < maxCols; i++) {
         const th = document.createElement('th');
         th.className = 'p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap';
         th.innerHTML = `<span class="text-xs font-bold text-slate-600">${i === 0 ? '初日' : `${i + 1}人目`}</span>`;
         headerTr.appendChild(th);
       }
-      rowDataList.forEach(({ orderedMembers }) => {
+
+      rowDataList.forEach(({ fixedMember, orderedMembers }) => {
         const tr = document.createElement('tr');
         tr.className = 'border-b border-slate-100 hover:bg-slate-50';
         for (let i = 0; i < maxCols; i++) {
@@ -2936,50 +1110,65 @@
       const tbody = document.getElementById('dailyTableBody');
       numHeaderTr.innerHTML = ''; headerTr.innerHTML = ''; tbody.innerHTML = '';
       if (!stage || !stage.fixed || stage.fixed.length === 0) return;
+
       const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0);
       const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
+
       const firstAppearanceByPosition = stage.fixed.map((_, idx) => {
         const firstAppearance = new Map();
         sortedShows.forEach((show, showIndex) => {
           const member = String(show.positionsArray[idx] || '').trim();
-          if (member && member !== '-' && member !== '－' && !firstAppearance.has(member)) firstAppearance.set(member, showIndex);
+          if (!member || member === '-' || member === '－') return;
+          if (!firstAppearance.has(member)) firstAppearance.set(member, showIndex);
         });
         return firstAppearance;
       });
+
       const numThFirst = document.createElement('th');
       numThFirst.className = "p-2.5 min-w-[100px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
       numThFirst.innerText = "ポジション";
       numHeaderTr.appendChild(numThFirst);
+
       const thFirst = document.createElement('th');
       thFirst.className = "p-2.5 min-w-[100px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-700 bg-slate-50";
       thFirst.innerText = "初日メンバー";
       headerTr.appendChild(thFirst);
+
       sortedShows.forEach((show, idx) => {
         const numTh = document.createElement('th');
         numTh.className = "p-2.5 min-w-[100px] text-center border-r border-slate-200 text-xs font-bold text-pink-600";
         numTh.innerText = idx + 1;
         numHeaderTr.appendChild(numTh);
+
+        const shortDateStr = formatShortDate(show.date);
         const th = document.createElement('th');
         th.className = "p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-pink-50 transition group";
+        th.title = "クリックしてスケジュールを表示";
         th.onclick = () => jumpToSchedule(show.date, show.id);
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(formatShortDate(show.date))}</span>`;
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(shortDateStr)}</span>`;
         headerTr.appendChild(th);
       });
+
       stage.fixed.forEach((fixedMember, pIdx) => {
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-100 hover:bg-slate-50";
+
         const tdPos = document.createElement('td');
         tdPos.className = "p-2.5 min-w-[100px] text-center border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-700 bg-white";
         tdPos.innerText = fixedMember;
         tr.appendChild(tdPos);
+
         sortedShows.forEach((show, showIndex) => {
           const member = String(show.positionsArray[pIdx] || '').trim();
           const td = document.createElement('td');
           td.className = "p-2.5 min-w-[100px] text-center border-r border-slate-100 text-xs";
           if (member && member !== '-' && member !== '－') {
-            if (firstAppearanceByPosition[pIdx].get(member) === showIndex && member !== stage.fixed[pIdx]) {
+            const isFirstAppearance = firstAppearanceByPosition[pIdx].get(member) === showIndex;
+            const isInitialMember = member === stage.fixed[pIdx];
+            if (isFirstAppearance && !isInitialMember) {
               td.style.backgroundColor = '#FFFBEB';
             }
+
             const span = document.createElement('span');
             span.className = "member-link text-xs";
             span.textContent = member;
@@ -3006,46 +1195,66 @@
       const tbody = document.getElementById('perfTableBody');
       numHeaderTr.innerHTML = ''; headerTr.innerHTML = ''; tbody.innerHTML = '';
       if (!stage) return;
-      const validShows = stage.schedules.filter(s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0));
+
+      const validShows = stage.schedules.filter(s => s.positionsArray && s.positionsArray.length > 0 || (s.membersArray && s.membersArray.length > 0));
       const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
+
       const memberList = getSortedStageMembers(stage);
+
       const numThFirst = document.createElement('th');
       numThFirst.className = "p-2.5 min-w-[120px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
       numThFirst.innerText = "メンバー";
       numHeaderTr.appendChild(numThFirst);
+
       const thFirst = document.createElement('th');
       thFirst.className = "p-2.5 min-w-[120px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-700 bg-slate-50";
       thFirst.innerText = "合計回数";
       headerTr.appendChild(thFirst);
+
       sortedShows.forEach((show, idx) => {
         const numTh = document.createElement('th');
         numTh.className = "p-2.5 min-w-[80px] text-center border-r border-slate-200 text-xs font-bold text-pink-600";
         numTh.innerText = idx + 1;
         numHeaderTr.appendChild(numTh);
+
+        const shortDateStr = formatShortDate(show.date);
         const th = document.createElement('th');
         th.className = "p-2.5 min-w-[80px] text-center border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-pink-50 transition group";
         th.onclick = () => jumpToSchedule(show.date, show.id);
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(formatShortDate(show.date))}</span>`;
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(shortDateStr)}</span>`;
         headerTr.appendChild(th);
       });
+
       memberList.forEach(member => {
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-100 hover:bg-slate-50";
+
         let totalCount = 0;
         sortedShows.forEach(show => {
-          if ((show.positionsArray && show.positionsArray.includes(member)) || (show.membersArray && show.membersArray.includes(member))) totalCount++;
+          const inPos = show.positionsArray && show.positionsArray.includes(member);
+          const inMem = show.membersArray && show.membersArray.includes(member);
+          if (inPos || inMem) totalCount++;
         });
+
         const tdMember = document.createElement('td');
         tdMember.className = "p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 bg-white flex justify-between items-center";
         tdMember.innerHTML = `<span class="member-link" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span><span class="text-pink-600 text-[10px] ml-2">${totalCount}回</span>`;
         tr.appendChild(tdMember);
+
         let runningCount = 0;
         sortedShows.forEach(show => {
-          const participated = (show.positionsArray && show.positionsArray.includes(member)) || (show.membersArray && show.membersArray.includes(member));
+          const inPos = show.positionsArray && show.positionsArray.includes(member);
+          const inMem = show.membersArray && show.membersArray.includes(member);
+          const participated = inPos || inMem;
           if (participated) runningCount++;
+
           const td = document.createElement('td');
           td.className = "p-2.5 text-center border-r border-slate-100 text-xs";
-          td.innerHTML = participated ? `<span class="font-bold text-slate-900">${perfTableMode === 'circle' ? '〇' : runningCount}</span>` : `<span class="text-slate-300">－</span>`;
+          if (participated) {
+            td.innerHTML = `<span class="font-bold text-slate-900">${perfTableMode === 'circle' ? '〇' : runningCount}</span>`;
+          } else {
+            td.innerHTML = `<span class="text-slate-300">－</span>`;
+          }
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -3055,19 +1264,31 @@
     function runForecast() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) { alert("先に公演を選択してください。"); return; }
+
       const rawInput = document.getElementById('forecastInputText').value;
       const inputNames = rawInput.split(/[\s・、,\n/]+/).map(s => s.trim()).filter(s => s.length > 0 && s !== "-" && s !== "－");
-      const forecastGroup = normalizeGroupName(stage.group) || detectGroupFromMembers(inputNames) || currentMemberOrderGroup || "AKB48";
+      const detectedGroup = detectGroupFromMembers(inputNames);
+      const forecastGroup = normalizeGroupName(stage.group) || detectedGroup || currentMemberOrderGroup || "AKB48";
       setMasterMemberOrder(forecastGroup);
+
       const inputSet = new Set(inputNames);
       const inputMemberList = Array.from(new Set(inputNames));
       const resultArea = document.getElementById('forecastResultArea');
       const allMembersGrid = document.getElementById('forecastAllMembersGrid');
       const expListArea = document.getElementById('forecastExpListArea');
       const positionsList = document.getElementById('forecastPositionsList');
+
       resultArea.classList.remove('hidden');
       allMembersGrid.innerHTML = ''; positionsList.innerHTML = '';
       if (expListArea) expListArea.innerHTML = '';
+
+      const validShows = (stage.schedules || []).filter(s => s.positionsArray && s.positionsArray.length > 0);
+      const historyNow = Date.now();
+      const historyShows = validShows.filter(show => {
+        const time = new Date(show.date).getTime();
+        return Number.isFinite(time) && time <= historyNow;
+      });
+
       MASTER_MEMBER_ORDER.forEach(name => {
         if (name === "-" || name === "－") return;
         const isAttending = inputSet.has(name);
@@ -3076,22 +1297,252 @@
         div.innerHTML = `<span>${escapeHtml(name)}</span><span class="text-[10px] px-1.5 py-0.5 rounded ${isAttending ? 'bg-pink-600 text-white' : 'bg-slate-100 text-slate-400'}">${isAttending ? '出演' : '不在'}</span>`;
         allMembersGrid.appendChild(div);
       });
-      const initialAttendingExpMap = {};
-      stage.fixed.forEach((_, pIdx) => { initialAttendingExpMap[pIdx] = []; });
-      const rowDataList = getPositionRowDataList(stage);
-      rowDataList.forEach(({ fixedMember, orderedMembers }, pIdx) => {
-        const list = [];
-        if (fixedMember && fixedMember !== '-' && fixedMember !== '－') list.push(fixedMember);
-        orderedMembers.filter(m => m && m !== '-' && m !== '－' && inputSet.has(m)).forEach(m => { if (!list.includes(m)) list.push(m); });
-        initialAttendingExpMap[pIdx] = list;
+
+      const initialAttendingExpMap = {}, appearanceCountMap = {}, lastAppearedDateMap = {};
+      stage.fixed.forEach((fixedMember, pIdx) => {
+        initialAttendingExpMap[pIdx] = [];
+        appearanceCountMap[pIdx] = {};
+        lastAppearedDateMap[pIdx] = {};
       });
+
+      if (expListArea) {
+        const rowDataList = getPositionRowDataList(stage);
+        let maxCols = 0;
+        rowDataList.forEach(item => {
+          if (item.orderedMembers.length > maxCols) maxCols = item.orderedMembers.length;
+        });
+
+        const expListContainer = document.createElement('div');
+        expListContainer.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3 mb-4";
+        
+        let expTableHtml = `
+          <div class="font-bold text-slate-800 text-xs mb-1">【ポジション経験者一覧】</div>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+            <table class="w-full text-left text-sm border-collapse min-w-max">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200">
+        `;
+
+          for (let i = 0; i <= maxCols; i++) {
+          expTableHtml += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">${i === 0 ? '初日' : `${i}人目`}</th>`;
+        }
+
+        expTableHtml += `
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+        `;
+
+        rowDataList.forEach(({ fixedMember, orderedMembers }, pIdx) => {
+          const attendingExperienced = orderedMembers.filter(member => member && member !== '-' && member !== '－' && inputSet.has(member));
+
+          const rowMembers = [];
+          if (fixedMember && fixedMember !== '-' && fixedMember !== '－') {
+            rowMembers.push(fixedMember);
+          }
+          attendingExperienced.forEach(m => {
+            rowMembers.push(m);
+          });
+
+          if (rowMembers.length === 0) return;
+
+          expTableHtml += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
+          
+          for (let i = 0; i <= maxCols; i++) {
+            const member = rowMembers[i];
+            if (member) {
+              if (!initialAttendingExpMap[pIdx].includes(member)) {
+                initialAttendingExpMap[pIdx].push(member);
+              }
+
+              const showsWithMember = historyShows.filter(show => show.positionsArray && show.positionsArray[pIdx] === member);
+              appearanceCountMap[pIdx][member] = showsWithMember.length;
+              if (showsWithMember.length > 0) {
+                const sortedDates = showsWithMember.map(show => new Date(show.date).getTime()).filter(t => Number.isFinite(t)).sort((a,b) => b-a);
+                lastAppearedDateMap[pIdx][member] = sortedDates[0] || 0;
+              } else { lastAppearedDateMap[pIdx][member] = 0; }
+
+              let cellBg = "";
+              if (i === 0) {
+                cellBg = "";
+              } else {
+                cellBg = "bg-pink-50/50";
+              }
+
+              expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap ${cellBg}"><span class="member-link text-xs font-bold" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span></td>`;
+            } else {
+              expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap"></td>`;
+            }
+          }
+          expTableHtml += `</tr>`;
+        });
+
+        expTableHtml += `</tbody></table></div>`;
+        expListContainer.innerHTML = expTableHtml;
+        expListArea.appendChild(expListContainer);
+      }
+
+      const positionCount = stage.fixed.length;
+      let minNewPosCount = Infinity;
+      const bestPatterns = new Map();
+      const currentAssignment = {};
+      const usedMembers = new Set();
+
+      function makePatternKey(pattern) {
+        return stage.fixed.map((_, pIdx) => `${pIdx}:${pattern[pIdx] || "-"}`).join("|");
+      }
+
+      function getAvailableExperiencedMembers(pIdx) {
+        return (initialAttendingExpMap[pIdx] || []).filter(member => inputSet.has(member) && !usedMembers.has(member));
+      }
+
+      function selectNextPosition(remainingPositions) {
+        let selectedPosition = remainingPositions[0];
+        let selectedCandidateCount = Infinity;
+        for (const pIdx of remainingPositions) {
+          const candidates = getAvailableExperiencedMembers(pIdx);
+          if (candidates.length < selectedCandidateCount) {
+            selectedCandidateCount = candidates.length;
+            selectedPosition = pIdx;
+          }
+        }
+        return selectedPosition;
+      }
+
+      function getMinimumAdditionalNewPositions(remainingPositions) {
+        let lowerBound = 0;
+        for (const pIdx of remainingPositions) {
+          const availableMembers = inputMemberList.filter(member => !usedMembers.has(member));
+          if (availableMembers.length === 0) continue;
+          const availableExps = getAvailableExperiencedMembers(pIdx);
+          if (availableExps.length === 0) lowerBound++;
+        }
+        return lowerBound;
+      }
+
+      function saveCompletedPattern(newPosCount) {
+        const pattern = { ...currentAssignment };
+        const key = makePatternKey(pattern);
+        if (newPosCount < minNewPosCount) {
+          minNewPosCount = newPosCount;
+          bestPatterns.clear();
+          bestPatterns.set(key, pattern);
+          return;
+        }
+        if (newPosCount === minNewPosCount) bestPatterns.set(key, pattern);
+      }
+
+      function searchAllPatterns(remainingPositions, currentNewPosCount) {
+        if (currentNewPosCount > minNewPosCount) return;
+        if (currentNewPosCount + getMinimumAdditionalNewPositions(remainingPositions) > minNewPosCount) return;
+        if (remainingPositions.length === 0) { saveCompletedPattern(currentNewPosCount); return; }
+
+        const pIdx = selectNextPosition(remainingPositions);
+        const nextRemainingPositions = remainingPositions.filter(idx => idx !== pIdx);
+        const candidates = inputMemberList.filter(member => !usedMembers.has(member)).sort((a, b) => {
+          const aIsExp = (initialAttendingExpMap[pIdx] || []).includes(a);
+          const bIsExp = (initialAttendingExpMap[pIdx] || []).includes(b);
+          if (aIsExp !== bIsExp) return aIsExp ? -1 : 1;
+          return inputMemberList.indexOf(a) - inputMemberList.indexOf(b);
+        });
+
+        if (candidates.length === 0) {
+          currentAssignment[pIdx] = "-";
+          searchAllPatterns(nextRemainingPositions, currentNewPosCount);
+          delete currentAssignment[pIdx];
+          return;
+        }
+
+        for (const member of candidates) {
+          const isExperienced = (initialAttendingExpMap[pIdx] || []).includes(member);
+          const nextNewPosCount = currentNewPosCount + (isExperienced ? 0 : 1);
+          if (nextNewPosCount > minNewPosCount) continue;
+          currentAssignment[pIdx] = member;
+          usedMembers.add(member);
+          searchAllPatterns(nextRemainingPositions, nextNewPosCount);
+          usedMembers.delete(member);
+          delete currentAssignment[pIdx];
+        }
+      }
+
+      if (positionCount > 0) {
+        searchAllPatterns(Array.from({ length: positionCount }, (_, idx) => idx), 0);
+      } else {
+        minNewPosCount = 0;
+        bestPatterns.set("empty", {});
+      }
+
+      let rawPatterns = Array.from(bestPatterns.values());
+      if (rawPatterns.length === 0) {
+        const fallback = {};
+        stage.fixed.forEach((_, pIdx) => { fallback[pIdx] = inputMemberList[pIdx] || "-"; });
+        rawPatterns = [fallback];
+      }
+
+      const scoredPatterns = rawPatterns.map(pattern => {
+        let scoreSum = 1.0;
+        Object.entries(pattern).forEach(([pIdxStr, member]) => {
+          const pIdx = parseInt(pIdxStr, 10);
+          if (!member || member === "-") return;
+          const isExp = (initialAttendingExpMap[pIdx] || []).includes(member);
+          const count = appearanceCountMap[pIdx]?.[member] || 0;
+          const posScore = isExp ? 2.0 + count * 0.5 : 0.2;
+          const lastDate = lastAppearedDateMap[pIdx]?.[member] || 0;
+          let dateScore = 0;
+          if (lastDate > 0) {
+            const daysSince = Math.max(0, (historyNow - lastDate) / (1000 * 60 * 60 * 24));
+            dateScore = 1.5 * Math.exp(-daysSince / 180);
+          }
+          scoreSum += posScore + dateScore;
+        });
+
+        let patternHistoryScore = 0;
+        for (let pIdx = 0; pIdx < stage.fixed.length; pIdx++) {
+          const member = pattern[pIdx];
+          if (!member || member === "-") continue;
+          for (let otherPIdx = pIdx + 1; otherPIdx < stage.fixed.length; otherPIdx++) {
+            const otherMember = pattern[otherPIdx];
+            if (!otherMember || otherMember === "-") continue;
+            const pairCount = historyShows.filter(show => show.positionsArray && show.positionsArray[pIdx] === member && show.positionsArray[otherPIdx] === otherMember).length;
+            patternHistoryScore += pairCount * 0.5;
+          }
+        }
+        scoreSum += patternHistoryScore;
+        return { pattern, rawScore: scoreSum };
+      });
+
+      scoredPatterns.sort((a, b) => b.rawScore - a.rawScore);
+      const totalRawScore = scoredPatterns.reduce((sum, p) => sum + p.rawScore, 0) || 1;
+      let rankedPatterns = scoredPatterns.map(p => {
+        const exactPct = (p.rawScore / totalRawScore) * 100;
+        let pct = Math.round(exactPct);
+        if (pct < 1 && exactPct > 0) pct = 1;
+        return { pattern: p.pattern, probability: pct };
+      });
+
+      if (rankedPatterns.length > 0) {
+        const currentSum = rankedPatterns.reduce((sum, p) => sum + p.probability, 0);
+        rankedPatterns[0].probability += (100 - currentSum);
+        if (rankedPatterns[0].probability < 0) rankedPatterns[0].probability = 0;
+      }
+
       const container = document.createElement('div');
       container.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3";
-      let html = `<div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner"><table class="w-full text-left text-xs border-collapse min-w-max"><thead><tr class="bg-slate-50 border-b border-slate-200"><th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 sticky-col-1 bg-slate-50 font-bold text-slate-600">ポジション</th><th class="p-2.5 min-w-[140px] text-center border-r border-slate-200 font-bold text-pink-600">経験者候補</th></tr></thead><tbody class="divide-y divide-slate-100">`;
+      let html = `<div class="text-xs text-slate-500">最小新ポジ数：${minNewPosCount} ／ 該当パターン数：${rankedPatterns.length}</div>`;
+      html += `<div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner"><table class="w-full text-left text-xs border-collapse min-w-max"><thead><tr class="bg-slate-50 border-b border-slate-200"><th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap sticky-col-1 bg-slate-50 font-bold text-slate-600 text-xs">ポジション</th>`;
+      rankedPatterns.forEach(pattern => {
+        html += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap"><span class="font-bold text-pink-600 text-xs">${pattern.probability}%</span></th>`;
+      });
+      html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
       stage.fixed.forEach((fixedMember, pIdx) => {
-        const cands = initialAttendingExpMap[pIdx] || [];
-        const assigned = cands.find(m => inputSet.has(m)) || inputMemberList[pIdx] || "-";
-        html += `<tr class="border-b border-slate-100"><td class="p-2.5 text-center border-r border-slate-100 font-bold text-slate-700 sticky-col-1 bg-white">${escapeHtml(fixedMember)}</td><td class="p-2.5 text-center border-r border-slate-100 font-bold text-slate-800">${escapeHtml(assigned)}</td></tr>`;
+        html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap font-bold text-slate-700 sticky-col-1 bg-white text-xs">${escapeHtml(fixedMember)}</td>`;
+        rankedPatterns.forEach(({ pattern }) => {
+          const assignedMember = pattern[pIdx] || "-";
+          const isExp = (initialAttendingExpMap[pIdx] || []).includes(assignedMember);
+          const cellClass = assignedMember === "-" ? "text-slate-400 text-xs" : (isExp ? "text-slate-800 font-medium text-xs" : "text-amber-600 font-bold bg-amber-50/50 text-xs");
+          html += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap ${cellClass}"><span class="text-xs">${escapeHtml(assignedMember)}</span></td>`;
+        });
+        html += `</tr>`;
       });
       html += `</tbody></table></div>`;
       container.innerHTML = html;
@@ -3102,7 +1553,8 @@
       const group = document.getElementById('coappGroupSelect').value;
       const chipContainer = document.getElementById('coappMemberChips');
       chipContainer.innerHTML = '';
-      (MASTER_MEMBER_ORDER_BY_GROUP[group] || []).forEach(m => {
+      const members = MASTER_MEMBER_ORDER_BY_GROUP[group] || [];
+      members.forEach(m => {
         const isSelected = selectedCoappMembers.has(m);
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -3125,49 +1577,113 @@
         resultList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">メンバーが選択されていません。</p>`;
         return;
       }
+
       const matchingShows = ALL_SCHEDULE_DATA.filter(item => {
         const itemMembers = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
         return members.every(m => itemMembers.has(m));
-      }).sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
+      });
+
+      matchingShows.sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
+
       if (matchingShows.length === 0) {
         resultList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">選択されたメンバー全員が共演している公演はありません。</p>`;
         return;
       }
+
+      const totalCount = matchingShows.length;
       matchingShows.forEach((item, index) => {
         let stageTitleWithSub = formatStageTitle(item.baseStageName);
         if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `  ${item.subTitle.trim()}`;
+
+        const perfNumber = totalCount - index;
+
         const div = document.createElement('div');
         div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
         div.onclick = () => jumpToSchedule(item.date, item.id);
-        div.innerHTML = `<div class="flex items-center gap-2 text-xs"><span class="font-bold text-pink-600">${matchingShows.length - index}回</span><span class="text-slate-500 font-medium">${item.date}</span><span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater)}</span></div><div class="font-bold text-slate-800 text-xs">${escapeHtml(stageTitleWithSub)}</div>`;
+        div.innerHTML = `
+          <div class="flex items-center gap-2 text-xs">
+            <span class="font-bold text-pink-600">${perfNumber}回</span>
+            <span class="text-slate-500 font-medium">${item.date}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater)}</span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-800">${escapeHtml(stageTitleWithSub)}</span>
+          </div>
+        `;
         resultList.appendChild(div);
       });
     }
 
+    function renderSongStageDropdown() {
+      const stageSelect = document.getElementById('songStageSelect');
+      stageSelect.innerHTML = '';
+      Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
+        const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
+        const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
+        stageSelect.appendChild(new Option(displayName, stageKey));
+      });
+      onSongStageChange();
+    }
+
+    function onSongStageChange() {
+      const stageKey = document.getElementById('songStageSelect').value;
+      const trackSelect = document.getElementById('songTrackSelect');
+      trackSelect.innerHTML = '';
+      const dummyTracks = ["M1. overture", "M2. ピース!", "M3. 女の子の第六感", "M4. 青春のフラッグ", "M5. ユニットメドレー"];
+      dummyTracks.forEach(t => trackSelect.appendChild(new Option(t, t)));
+      renderSongParts();
+    }
+
+    function renderSongParts() {
+      const resultArea = document.getElementById('songPartsResult');
+      resultArea.innerHTML = `
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 text-xs">
+          <div class="font-bold text-slate-700">【歌割り・ポジション構成】</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">センター</span>小栗有以・山内瑞葵</div>
+            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">フロント</span>佐藤綺星・千葉恵里</div>
+            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">ユニット</span>秋山由奈・八木愛月</div>
+            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">コーラス / 全員</span>出演メンバー全員</div>
+          </div>
+        </div>
+      `;
+    }
+
     function openMemberDetail(memberName) {
       selectedMemberName = memberName;
-      virtualPlaying = false;
       document.getElementById('mainTabsContainer').classList.add('hidden');
       document.getElementById('memberDetailContainer').classList.remove('hidden');
       document.getElementById('navNormal').classList.add('hidden');
       document.getElementById('navStageDetail').classList.add('hidden');
       document.getElementById('navMemberSearching').classList.remove('hidden');
       document.getElementById('navMemberSearching').classList.add('flex');
+
       document.getElementById('detailMemberName').innerText = memberName;
       currentSelectedMemberYear = 'ALL';
       showAllAppearanceRanking = false;
       showAllCoappearanceRanking = false;
+
       renderMemberDetail();
     }
 
     function renderMemberDetail() {
       if (!selectedMemberName) return;
       const memberName = selectedMemberName;
-      const memberPerfs = ALL_SCHEDULE_DATA.filter(item => (item.membersArray && item.membersArray.includes(memberName)) || (item.positionsArray && item.positionsArray.includes(memberName))).sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
+      const memberPerfs = ALL_SCHEDULE_DATA.filter(item => {
+        return (item.membersArray && item.membersArray.includes(memberName)) || (item.positionsArray && item.positionsArray.includes(memberName));
+      });
+      memberPerfs.sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
       memberPerfs.forEach((item, index) => { item._perfNumber = index + 1; });
+
       document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberPerfs.length}回`;
+
       const yearCounts = {};
-      memberPerfs.forEach(item => { const y = item.date.split('/')[0]; yearCounts[y] = (yearCounts[y] || 0) + 1; });
+      memberPerfs.forEach(item => {
+        const y = item.date.split('/')[0];
+        yearCounts[y] = (yearCounts[y] || 0) + 1;
+      });
+      const yearsSorted = Object.keys(yearCounts).sort((a, b) => b.localeCompare(a));
+      
       const yearlyList = document.getElementById('yearlyBreakdownList');
       yearlyList.innerHTML = '';
       const allBtn = document.createElement('button');
@@ -3175,14 +1691,17 @@
       allBtn.innerText = `通算 : ${memberPerfs.length}回`;
       allBtn.onclick = () => { currentSelectedMemberYear = 'ALL'; renderMemberDetail(); };
       yearlyList.appendChild(allBtn);
-      Object.keys(yearCounts).sort((a, b) => b.localeCompare(a)).forEach(y => {
+
+      yearsSorted.forEach(y => {
         const btn = document.createElement('button');
         btn.className = `px-3 py-1.5 rounded-lg border text-xs font-bold transition ${currentSelectedMemberYear === y ? 'bg-pink-600 text-white border-pink-600' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-pink-50'}`;
         btn.innerText = `${y}年 : ${yearCounts[y]}回`;
         btn.onclick = () => { currentSelectedMemberYear = y; renderMemberDetail(); };
         yearlyList.appendChild(btn);
       });
+
       const filteredPerfs = currentSelectedMemberYear === 'ALL' ? memberPerfs : memberPerfs.filter(item => item.date.startsWith(currentSelectedMemberYear));
+
       const stageGroup = {};
       filteredPerfs.forEach(item => {
         const stage = item.baseStageName;
@@ -3197,86 +1716,172 @@
         if (!posName) posName = memberName;
         stageGroup[stage].positions[posName] = (stageGroup[stage].positions[posName] || 0) + 1;
       });
+
       const showsList = document.getElementById('showsBreakdownList');
       showsList.innerHTML = '';
       const stagesSorted = Object.keys(stageGroup).sort((a, b) => stageGroup[b].total - stageGroup[a].total);
+
       if (stagesSorted.length === 0) {
         showsList.innerHTML = `<li class="text-slate-400 text-xs text-center py-2">該当する公演はありません。</li>`;
       } else {
         stagesSorted.forEach(st => {
           const info = stageGroup[st];
-          const posBreakdownArr = Object.keys(info.positions).map(pName => `${pName} ${info.positions[pName]}回`);
+          const posBreakdownArr = [];
+          Object.keys(info.positions).forEach(pName => posBreakdownArr.push(`${pName} ${info.positions[pName]}回`));
           const li = document.createElement('li');
           li.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1";
-          li.innerHTML = `<div class="flex justify-between items-center text-xs font-bold text-slate-800"><span>${escapeHtml(formatStageTitle(st))}</span><span class="text-pink-600 font-bold ml-auto">${info.total}回</span></div><div class="text-[10px] text-slate-500 font-medium">${escapeHtml(posBreakdownArr.join('　'))}</div>`;
+          
+          const stDisplayName = formatStageTitle(st);
+          
+          li.innerHTML = `
+            <div class="flex justify-between items-center text-xs font-bold text-slate-800">
+              <span>${escapeHtml(stDisplayName)}</span>
+              <span class="text-pink-600 font-bold ml-auto">${info.total}回</span>
+            </div>
+            <div class="text-[10px] text-slate-500 font-medium">${escapeHtml(posBreakdownArr.join('　'))}</div>
+          `;
           showsList.appendChild(li);
         });
       }
+
       renderMemberRankings();
+
       const historyList = document.getElementById('memberShowsHistoryList');
       historyList.innerHTML = '';
       const historyPerfs = [...memberPerfs].sort((a, b) => (b.date + " " + b.time).localeCompare(a.date + " " + a.time));
-      historyPerfs.forEach(item => {
-        let posName = "";
-        const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
-        if (item.positionsArray && item.positionsArray.length > 0) {
-          const pIdx = item.positionsArray.indexOf(memberName);
-          if (pIdx !== -1) posName = (stageObj && stageObj.fixed && stageObj.fixed[pIdx]) ? stageObj.fixed[pIdx] : `Pos.${pIdx+1}`;
-        }
-        if (!posName) posName = memberName;
-        let stageTitleWithSub = formatStageTitle(item.baseStageName);
-        if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `   ${item.subTitle.trim()}`;
-        const div = document.createElement('div');
-        div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
-        div.onclick = () => jumpToSchedule(item.date, item.id);
-        div.innerHTML = `<div class="flex items-center gap-2 text-xs"><span class="font-bold text-pink-600">${item._perfNumber}回</span><span class="text-slate-500 font-medium">${item.date}</span><span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater)}</span></div><div class="flex justify-between items-center text-xs"><span class="font-bold text-slate-800">${escapeHtml(stageTitleWithSub)}</span><span class="text-[10px] text-slate-500 font-medium ml-auto whitespace-nowrap">${escapeHtml(posName)}ポジ</span></div>`;
-        historyList.appendChild(div);
-      });
+      if (historyPerfs.length === 0) {
+        historyList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">出演履歴がありません。</p>`;
+      } else {
+        historyPerfs.forEach(item => {
+          let posName = "";
+          const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
+          if (item.positionsArray && item.positionsArray.length > 0) {
+            const pIdx = item.positionsArray.indexOf(memberName);
+            if (pIdx !== -1) posName = (stageObj && stageObj.fixed && stageObj.fixed[pIdx]) ? stageObj.fixed[pIdx] : `Pos.${pIdx+1}`;
+          }
+          if (!posName) posName = memberName;
+          
+          let stageTitleWithSub = formatStageTitle(item.baseStageName);
+          if (item.subTitle && item.subTitle.trim()) stageTitleWithSub += `   ${item.subTitle.trim()}`;
+
+          const div = document.createElement('div');
+          div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
+          div.onclick = () => jumpToSchedule(item.date, item.id);
+          div.innerHTML = `
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-bold text-pink-600">${item._perfNumber}回</span>
+              <span class="text-slate-500 font-medium">${item.date}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater)}</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-slate-800">${escapeHtml(stageTitleWithSub)}</span>
+              <span class="text-[10px] text-slate-500 font-medium ml-auto whitespace-nowrap">${escapeHtml(posName)}ポジ</span>
+            </div>
+          `;
+          historyList.appendChild(div);
+        });
+      }
     }
 
     function renderMemberRankings() {
       const targetYear = currentSelectedMemberYear;
       const memberGroup = getMemberGroup(selectedMemberName);
+      
       document.getElementById('rankingGroupBadge').innerText = `${memberGroup}限定 (${targetYear === 'ALL' ? '通算' : targetYear + '年'})`;
+
       const groupMembers = MASTER_MEMBER_ORDER_BY_GROUP[memberGroup] || [];
       const yearPerfs = targetYear === 'ALL' ? ALL_SCHEDULE_DATA : ALL_SCHEDULE_DATA.filter(item => item.date.startsWith(targetYear));
+
       const appearanceCounts = {};
       groupMembers.forEach(m => { appearanceCounts[m] = 0; });
+
       yearPerfs.forEach(item => {
-        new Set([...(item.membersArray || []), ...(item.positionsArray || [])]).forEach(m => {
+        const uniqueInShow = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
+        uniqueInShow.forEach(m => {
           if (groupMembers.includes(m)) appearanceCounts[m] = (appearanceCounts[m] || 0) + 1;
         });
       });
+
       const rankingArr = Object.keys(appearanceCounts).filter(m => appearanceCounts[m] > 0).map(m => ({ name: m, count: appearanceCounts[m] }));
       sortMemberRankings(rankingArr);
-      let rank = 1;
-      rankingArr.forEach((item, i, arr) => { if (i > 0 && item.count < arr[i - 1].count) rank = i + 1; item.rank = rank; });
+
+      let currentRank = 1;
+      rankingArr.forEach((item, index, arr) => {
+        if (index > 0 && item.count < arr[index - 1].count) {
+          currentRank = index + 1;
+        }
+        item.rank = currentRank;
+      });
+
       const rankingList = document.getElementById('memberRankingList');
       rankingList.innerHTML = '';
-      (showAllAppearanceRanking ? rankingArr : rankingArr.slice(0, 10)).forEach(item => {
+      const displayRanking = showAllAppearanceRanking ? rankingArr : rankingArr.slice(0, 10);
+      displayRanking.forEach((item) => {
         const li = document.createElement('li');
         li.className = `flex justify-between items-center py-1.5 border-b border-slate-100 text-xs ${item.name === selectedMemberName ? 'bg-pink-50 font-bold' : ''}`;
-        li.innerHTML = `<div class="flex items-center gap-2"><span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span><span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span></div><span class="font-bold text-pink-600 ml-auto">${item.count}回</span>`;
+        li.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span>
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
+          </div>
+          <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
+        `;
         rankingList.appendChild(li);
       });
+
+      if (rankingArr.length > 10) {
+        const btn = document.createElement('button');
+        btn.className = "w-full mt-2 py-1.5 text-xs text-pink-600 font-bold bg-pink-50 hover:bg-pink-100 rounded-lg border border-pink-200 transition";
+        btn.innerText = showAllAppearanceRanking ? "閉じる" : "もっと見る";
+        btn.onclick = () => { showAllAppearanceRanking = !showAllAppearanceRanking; renderMemberRankings(); };
+        rankingList.appendChild(btn);
+      }
+
       const coappCounts = {};
-      yearPerfs.filter(item => (item.membersArray && item.membersArray.includes(selectedMemberName)) || (item.positionsArray && item.positionsArray.includes(selectedMemberName))).forEach(item => {
-        new Set([...(item.membersArray || []), ...(item.positionsArray || [])]).forEach(m => {
+      const memberShows = yearPerfs.filter(item => {
+        return (item.membersArray && item.membersArray.includes(selectedMemberName)) || (item.positionsArray && item.positionsArray.includes(selectedMemberName));
+      });
+      memberShows.forEach(item => {
+        const uniqueInShow = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
+        uniqueInShow.forEach(m => {
           if (m && m !== "-" && m !== "－" && m !== selectedMemberName) coappCounts[m] = (coappCounts[m] || 0) + 1;
         });
       });
+
       const coappArr = Object.keys(coappCounts).map(m => ({ name: m, count: coappCounts[m] }));
       sortMemberRankings(coappArr);
-      let cRank = 1;
-      coappArr.forEach((item, i, arr) => { if (i > 0 && item.count < arr[i - 1].count) cRank = i + 1; item.rank = cRank; });
+
+      let currentCoappRank = 1;
+      coappArr.forEach((item, index, arr) => {
+        if (index > 0 && item.count < arr[index - 1].count) {
+          currentCoappRank = index + 1;
+        }
+        item.rank = currentCoappRank;
+      });
+
       const coappList = document.getElementById('coappearanceTopList');
       coappList.innerHTML = '';
-      (showAllCoappearanceRanking ? coappArr : coappArr.slice(0, 10)).forEach(item => {
+      const displayCoapp = showAllCoappearanceRanking ? coappArr : coappArr.slice(0, 10);
+      displayCoapp.forEach((item) => {
         const li = document.createElement('li');
         li.className = "flex justify-between items-center py-1.5 border-b border-slate-100 text-xs";
-        li.innerHTML = `<div class="flex items-center gap-2"><span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span><span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span></div><span class="font-bold text-pink-600 ml-auto">${item.count}回</span>`;
+        li.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span>
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
+          </div>
+          <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
+        `;
         coappList.appendChild(li);
       });
+
+      if (coappArr.length > 10) {
+        const btn = document.createElement('button');
+        btn.className = "w-full mt-2 py-1.5 text-xs text-pink-600 font-bold bg-pink-50 hover:bg-pink-100 rounded-lg border border-pink-200 transition";
+        btn.innerText = showAllCoappearanceRanking ? "閉じる" : "もっと見る";
+        btn.onclick = () => { showAllCoappearanceRanking = !showAllCoappearanceRanking; renderMemberRankings(); };
+        coappList.appendChild(btn);
+      }
     }
 
     function sortMemberRankings(arr) {
@@ -3299,22 +1904,32 @@
     function renderCountdownList() {
       const container = document.getElementById('countdownList');
       container.innerHTML = '';
-      const countItems = [];
-      getAllUniqueMembers().forEach(m => {
-        const total = ALL_SCHEDULE_DATA.filter(item => (item.membersArray && item.membersArray.includes(m)) || (item.positionsArray && item.positionsArray.includes(m))).length;
+      const allUnique = getAllUniqueMembers();
+      let countItems = [];
+
+      allUnique.forEach(m => {
+        const perfs = ALL_SCHEDULE_DATA.filter(item => (item.membersArray && item.membersArray.includes(m)) || (item.positionsArray && item.positionsArray.includes(m)));
+        const total = perfs.length;
         const nextMilestone = Math.ceil((total + 1) / 100) * 100;
         const diff = nextMilestone - total;
-        if (diff <= 10 && diff > 0) countItems.push({ name: m, nextMilestone, diff });
+        if (diff <= 10 && diff > 0) {
+          countItems.push({ name: m, total, nextMilestone, diff });
+        }
       });
+
       countItems.sort((a, b) => a.diff - b.diff);
       if (countItems.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-2">現在、100回の大台まであと10回以内のメンバーはいません。</p>`;
         return;
       }
+
       countItems.forEach(item => {
         const div = document.createElement('div');
         div.className = "bg-white p-2 rounded border border-slate-200 flex justify-between items-center";
-        div.innerHTML = `<span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span><span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.nextMilestone}回まであと${item.diff}回</span>`;
+        div.innerHTML = `
+          <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
+          <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.nextMilestone}回まであと${item.diff}回</span>
+        `;
         container.appendChild(div);
       });
     }
@@ -3322,32 +1937,55 @@
     function renderMilestoneList() {
       const container = document.getElementById('milestoneList');
       container.innerHTML = '';
+      const allUnique = getAllUniqueMembers();
       const todayObj = new Date(todayString);
       const oneYearAgoObj = new Date(todayObj);
       oneYearAgoObj.setFullYear(todayObj.getFullYear() - 1);
-      const achievements = [];
-      getAllUniqueMembers().forEach(m => {
-        const perfs = ALL_SCHEDULE_DATA.filter(item => (item.membersArray && item.membersArray.includes(m)) || (item.positionsArray && item.positionsArray.includes(m))).sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
+
+      let achievements = [];
+
+      allUnique.forEach(m => {
+        const perfs = ALL_SCHEDULE_DATA.filter(item => (item.membersArray && item.membersArray.includes(m)) || (item.positionsArray && item.positionsArray.includes(m)));
+        perfs.sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
+
         perfs.forEach((item, index) => {
           const perfNum = index + 1;
           if (perfNum % 100 === 0) {
             const perfDate = new Date(item.date.replace(/\//g, '-'));
             if (perfDate >= oneYearAgoObj && perfDate <= todayObj) {
-              achievements.push({ name: m, milestone: perfNum, date: item.date, stageName: item.baseStageName, theater: item.theater, id: item.id, dateObj: perfDate });
+              achievements.push({
+                name: m,
+                milestone: perfNum,
+                date: item.date,
+                stageName: item.baseStageName,
+                theater: item.theater,
+                id: item.id,
+                dateObj: perfDate
+              });
             }
           }
         });
       });
+
       achievements.sort((a, b) => b.dateObj - a.dateObj);
+
       if (achievements.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">過去1年間に節目を達成した記録はありません。</p>`;
         return;
       }
+
       achievements.forEach(ach => {
+        const stageDisplayTitle = formatStageTitle(ach.stageName);
         const div = document.createElement('div');
         div.className = "bg-white p-2 rounded border border-slate-200 cursor-pointer hover:border-pink-300 transition space-y-0.5";
         div.onclick = () => jumpToSchedule(ach.date, ach.id);
-        div.innerHTML = `<div class="font-bold text-slate-800 flex justify-between"><span class="cursor-pointer hover:text-pink-600" onclick="event.stopPropagation(); openMemberDetail('${escapeHtml(ach.name)}')">${escapeHtml(ach.name)}　${ach.milestone}回達成</span><span class="text-pink-600 text-[10px]">${ach.date}</span></div><div class="text-[10px] text-slate-500">${escapeHtml(ach.theater)} ${escapeHtml(formatStageTitle(ach.stageName))}</div>`;
+        div.innerHTML = `
+          <div class="font-bold text-slate-800 flex justify-between">
+            <span class="cursor-pointer hover:text-pink-600" onclick="event.stopPropagation(); openMemberDetail('${escapeHtml(ach.name)}')">${escapeHtml(ach.name)}　${ach.milestone}回達成</span>
+            <span class="text-pink-600 text-[10px]">${ach.date}</span>
+          </div>
+          <div class="text-[10px] text-slate-500">${escapeHtml(ach.theater)} ${escapeHtml(stageDisplayTitle)}</div>
+        `;
         container.appendChild(div);
       });
     }
@@ -3358,7 +1996,8 @@
       select.innerHTML = '';
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
         const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
-        select.appendChild(new Option(stageObj ? stageObj.name : formatStageTitle(stageKey), stageKey));
+        const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
+        select.appendChild(new Option(displayName, stageKey));
       });
       renderStatsStageRanking();
     }
@@ -3369,59 +2008,110 @@
       listEl.innerHTML = '';
       const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
       if (!stageObj) return;
+
       const counts = {};
       stageObj.schedules.forEach(item => {
-        new Set([...(item.membersArray || []), ...(item.positionsArray || [])]).forEach(m => {
+        const unique = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
+        unique.forEach(m => {
           if (m && m !== '-' && m !== '－') counts[m] = (counts[m] || 0) + 1;
         });
       });
-      const arr = Object.keys(counts).map(m => ({ name: m, count: counts[m] })).sort((a, b) => b.count !== a.count ? b.count - a.count : a.name.localeCompare(b.name, 'ja'));
-      let rank = 1;
-      arr.forEach((item, i, self) => { if (i > 0 && item.count < self[i - 1].count) rank = i + 1; item.rank = rank; });
+
+      const arr = Object.keys(counts).map(m => ({ name: m, count: counts[m] }));
+      arr.sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.name.localeCompare(b.name, 'ja');
+      });
+
+      let currentRank = 1;
+      arr.forEach((item, index, self) => {
+        if (index > 0 && item.count < self[index - 1].count) {
+          currentRank = index + 1;
+        }
+        item.rank = currentRank;
+      });
+
       if (arr.length === 0) {
         listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">出演データがありません。</p>`;
         return;
       }
-      arr.forEach(item => {
+
+      arr.forEach((item) => {
         const li = document.createElement('li');
         li.className = "flex justify-between items-center py-1.5 border-b border-slate-100 text-xs";
-        li.innerHTML = `<div class="flex items-center gap-2"><span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span><span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span></div><span class="font-bold text-pink-600 ml-auto">${item.count}回</span>`;
+        li.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span>
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
+          </div>
+          <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
+        `;
         listEl.appendChild(li);
       });
     }
 
     function onSearchInput(val) {
       const suggestBox = document.getElementById('searchSuggest');
-      if (!val || val.trim() === '') { suggestBox.innerHTML = ''; suggestBox.classList.add('hidden'); return; }
+      if (!val || val.trim() === '') {
+        suggestBox.innerHTML = '';
+        suggestBox.classList.add('hidden');
+        return;
+      }
       const query = val.trim().toLowerCase();
       const stageSet = new Set(), stageMatches = [];
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
+      
       dataSource.forEach(item => {
         if (item.baseStageName && !stageSet.has(item.baseStageName)) {
           stageSet.add(item.baseStageName);
           const fullTitle = formatStageTitle(item.baseStageName);
-          if (item.baseStageName.toLowerCase().includes(query) || fullTitle.toLowerCase().includes(query)) stageMatches.push(item.baseStageName);
+          if (item.baseStageName.toLowerCase().includes(query) || fullTitle.toLowerCase().includes(query)) {
+            stageMatches.push(item.baseStageName);
+          }
         }
       });
-      const memberMatches = getAllUniqueMembers().filter(m => m.toLowerCase().includes(query));
-      if (stageMatches.length === 0 && memberMatches.length === 0) { suggestBox.innerHTML = ''; suggestBox.classList.add('hidden'); return; }
+
+      const allMembers = getAllUniqueMembers();
+      const memberMatches = allMembers.filter(m => m.toLowerCase().includes(query));
+
+      if (stageMatches.length === 0 && memberMatches.length === 0) {
+        suggestBox.innerHTML = '';
+        suggestBox.classList.add('hidden');
+        return;
+      }
+
       suggestBox.innerHTML = '';
       stageMatches.forEach(stageKey => {
+        const displayLabel = formatStageTitle(stageKey);
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'w-full text-left px-4 py-2.5 hover:bg-pink-50 flex items-center justify-between transition border-b border-slate-100 last:border-none';
-        btn.innerHTML = `<div class="flex items-center gap-2"><i class="fa-solid fa-masks-theater text-pink-500 text-xs"></i><span class="font-bold text-slate-700">${escapeHtml(formatStageTitle(stageKey))}</span></div><span class="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded font-bold">演目</span>`;
+        btn.innerHTML = `
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-masks-theater text-pink-500 text-xs"></i>
+            <span class="font-bold text-slate-700">${escapeHtml(displayLabel)}</span>
+          </div>
+          <span class="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded font-bold">演目</span>
+        `;
         btn.onclick = () => { selectStage(stageKey); suggestBox.classList.add('hidden'); document.getElementById('searchInput').value = ''; };
         suggestBox.appendChild(btn);
       });
+
       memberMatches.forEach(memberName => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'w-full text-left px-4 py-2.5 hover:bg-pink-50 flex items-center justify-between transition border-b border-slate-100 last:border-none';
-        btn.innerHTML = `<div class="flex items-center gap-2"><i class="fa-solid fa-user text-pink-500 text-xs"></i><span class="font-bold text-slate-700">　${escapeHtml(memberName)}</span></div><span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">メンバー</span>`;
+        btn.innerHTML = `
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-user text-pink-500 text-xs"></i>
+            <span class="font-bold text-slate-700">　${escapeHtml(memberName)}</span>
+          </div>
+          <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">メンバー</span>
+        `;
         btn.onclick = () => { openMemberDetail(memberName); suggestBox.classList.add('hidden'); document.getElementById('searchInput').value = ''; };
         suggestBox.appendChild(btn);
       });
+
       suggestBox.classList.remove('hidden');
     }
 
