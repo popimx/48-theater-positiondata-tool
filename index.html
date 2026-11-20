@@ -321,7 +321,7 @@
                 <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowFormation" checked> フォーメーション</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowAvatar" checked> 顔写真バッジ</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowName" checked> 名前</label>
-                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowPos" checked> 立ち位置</label>
+                <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShowPos" checked> 立ち位置(8-0-8)</label>
                 <label class="inline-flex items-center gap-1 cursor-pointer text-slate-400"><input type="checkbox" id="optShowRawVideo"> 元映像透かし</label>
               </div>
             </div>
@@ -380,15 +380,15 @@
                 <div class="flex items-center gap-2 pt-1">
                   <label class="text-slate-600">解析サンプリング:</label>
                   <select id="analysisFpsSelect" class="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-slate-50">
-                    <option value="10">10 fps（標準）</option>
-                    <option value="15" selected>15 fps（推奨・手足なめらか）</option>
-                    <option value="24">24 fps（高精度）</option>
+                    <option value="12">12 fps（標準）</option>
+                    <option value="18" selected>18 fps（推奨・高精度）</option>
+                    <option value="24">24 fps（最高精度）</option>
                   </select>
                 </div>
               </div>
 
               <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
-                <label class="block font-bold text-slate-700">2. 骨格解析を実行（手首・指先・足先まで抽出）</label>
+                <label class="block font-bold text-slate-700">2. 高精度骨格解析を実行</label>
                 <button type="button" id="runPoseAnalysisBtn" onclick="runPoseAnalysisOnVideo()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-3 rounded-lg text-xs transition">
                   <i class="fa-solid fa-microchip mr-1"></i> 骨格解析を実行
                 </button>
@@ -887,7 +887,7 @@
     }
 
     /* =========================================================================
-       歌割りタブ：女の子ダンサー振り付け再現＆フォーメーション移動描画
+       歌割りタブ：女の子ダンサー振り付け再現＆8-0-8フォーメーション描画
        ========================================================================= */
     function getSongStorageKey(stageKey, trackName) {
       return `${stageKey || 'default'}__${trackName || 'track'}`;
@@ -897,6 +897,16 @@
       const safeChar = String(label || 'P').slice(0, 1);
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="${colorHex}"/><text x="40" y="50" font-size="34" font-family="sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">${safeChar}</text></svg>`;
       return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+    }
+
+    // 画面横座標(0.0〜1.0)から 8〜0〜8 の立ち位置ラベルを算出
+    function formatStandingPos8to0to8(normX) {
+      const clamped = Math.max(0.05, Math.min(0.95, Number(normX) || 0.5));
+      // -8 〜 +8 にマッピング
+      const raw = (clamped - 0.5) * 18;
+      const num = Math.max(-8, Math.min(8, Math.round(raw)));
+      if (num === 0) return "0";
+      return `${Math.abs(num)}`;
     }
 
     function renderSongStageDropdown() {
@@ -1301,7 +1311,7 @@
         });
     }
 
-    function getRecentJointTrails(personId, currentT, lookbackSec = 0.4) {
+    function getRecentJointTrails(personId, currentT, lookbackSec = 0.35) {
       if (!activeSongData?.frames) return [];
       const points = [];
       for (const fr of activeSongData.frames) {
@@ -1310,12 +1320,12 @@
           if (tr) {
             points.push({
               t: fr.t,
-              lw: tr.joints?.leftIndex || tr.joints?.leftWrist || { x: tr.x - 0.04, y: tr.y + 0.14 },
-              rw: tr.joints?.rightIndex || tr.joints?.rightWrist || { x: tr.x + 0.04, y: tr.y + 0.14 },
-              la: tr.joints?.leftFootIndex || tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.02, y: tr.footY ?? (tr.y + 0.35) },
-              ra: tr.joints?.rightFootIndex || tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.02, y: tr.footY ?? (tr.y + 0.35) },
+              lw: tr.joints?.leftIndex || tr.joints?.leftWrist || { x: tr.x - 0.03, y: tr.y + 0.12 },
+              rw: tr.joints?.rightIndex || tr.joints?.rightWrist || { x: tr.x + 0.03, y: tr.y + 0.12 },
+              la: tr.joints?.leftFootIndex || tr.joints?.leftAnkle || { x: (tr.footX ?? tr.x) - 0.015, y: tr.footY ?? (tr.y + 0.28) },
+              ra: tr.joints?.rightFootIndex || tr.joints?.rightAnkle || { x: (tr.footX ?? tr.x) + 0.015, y: tr.footY ?? (tr.y + 0.28) },
               footX: tr.footX ?? tr.x,
-              footY: tr.footY ?? (tr.y + 0.35)
+              footY: tr.footY ?? (tr.y + 0.28)
             });
           }
         }
@@ -1367,13 +1377,13 @@
     }
 
     /* =========================================================================
-       女の子ダンサー描画エンジン（関節座標から手・腕・スカート・脚・靴・髪を再現）
+       コンパクト女の子ダンサー描画エンジン（8〜0〜8ポジション対応）
        ========================================================================= */
     function drawTaperedLimb(ctx, p1, p2, r1, r2, fillStyle, strokeStyle = null) {
       const dx = p2.x - p1.x;
       const dy = p2.y - p1.y;
       const len = Math.hypot(dx, dy);
-      if (len < 0.5) {
+      if (len < 0.4) {
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, r1, 0, Math.PI * 2);
         ctx.fillStyle = fillStyle;
@@ -1396,7 +1406,7 @@
       ctx.fill();
       if (strokeStyle) {
         ctx.strokeStyle = strokeStyle;
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1;
         ctx.stroke();
       }
     }
@@ -1408,24 +1418,22 @@
       const dy = tipY - wrist.y;
       const dist = Math.hypot(dx, dy);
 
-      const angle = dist > 1.5 ? Math.atan2(dy, dx) : Math.PI / 2;
-      const palmLen = Math.max(handScale * 1.15, Math.min(handScale * 1.8, dist * 1.1));
+      const angle = dist > 1.2 ? Math.atan2(dy, dx) : Math.PI / 2;
+      const palmLen = Math.max(handScale * 1.1, Math.min(handScale * 1.75, dist * 1.05));
       const palmW = handScale * 0.62;
 
       ctx.save();
       ctx.translate(wrist.x, wrist.y);
       ctx.rotate(angle);
 
-      // 手のひら＋指先シルエット
       ctx.fillStyle = skinColor;
       ctx.strokeStyle = "#d99b82";
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 0.85;
       ctx.beginPath();
       ctx.roundRect(0, -palmW * 0.5, palmLen, palmW, palmW * 0.45);
       ctx.fill();
       ctx.stroke();
 
-      // 親指のニュアンス
       if (thumbTip) {
         const localThumbY = ((thumbTip.y - wrist.y) * Math.cos(angle) - (thumbTip.x - wrist.x) * Math.sin(angle)) >= 0 ? 1 : -1;
         ctx.beginPath();
@@ -1437,32 +1445,31 @@
 
     function drawGirlBoot(ctx, ankle, heel, footIndex, legRadius, dressColor) {
       const toeX = footIndex ? footIndex.x : ankle.x;
-      const toeY = footIndex ? footIndex.y : ankle.y + legRadius * 1.6;
+      const toeY = footIndex ? footIndex.y : ankle.y + legRadius * 1.5;
       const heelX = heel ? heel.x : ankle.x;
-      const heelY = heel ? heel.y : ankle.y + legRadius * 0.8;
+      const heelY = heel ? heel.y : ankle.y + legRadius * 0.7;
 
       ctx.save();
-      // ソックス上端のフリル
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.arc(ankle.x, ankle.y, legRadius * 1.05, 0, Math.PI * 2);
+      ctx.arc(ankle.x, ankle.y, legRadius * 1.02, 0, Math.PI * 2);
       ctx.fill();
 
-      // ブーツ本体（かかと〜足首〜つま先）
       ctx.fillStyle = "#f8fafc";
       ctx.strokeStyle = dressColor;
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.3;
       ctx.beginPath();
-      ctx.moveTo(ankle.x - legRadius * 0.9, ankle.y);
-      ctx.lineTo(heelX - legRadius * 0.8, heelY + legRadius * 0.5);
-      ctx.lineTo(toeX + legRadius * 0.6, toeY + legRadius * 0.35);
-      ctx.quadraticCurveTo(toeX + legRadius * 1.1, toeY - legRadius * 0.4, ankle.x + legRadius * 0.9, ankle.y);
+      ctx.moveTo(ankle.x - legRadius * 0.85, ankle.y);
+      ctx.lineTo(heelX - legRadius * 0.75, heelY + legRadius * 0.45);
+      ctx.lineTo(toeX + legRadius * 0.55, toeY + legRadius * 0.3);
+      ctx.quadraticCurveTo(toeX + legRadius * 1.0, toeY - legRadius * 0.35, ankle.x + legRadius * 0.85, ankle.y);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
       ctx.restore();
     }
 
+    // 女の子サイズをコンパクト化（8〜0〜8の多人数フォーメーションでも重なりにくい比率）
     function drawGirlDancer(ctx, tr, member, w, h, t) {
       const j = tr.joints || {};
       const dressColor = member.color || "#db2777";
@@ -1474,34 +1481,36 @@
       const hx = tr.x * w;
       const hy = tr.y * h;
       const fx = (tr.footX ?? tr.x) * w;
-      const fy = (tr.footY ?? Math.min(0.92, tr.y + 0.35)) * h;
+      const fy = (tr.footY ?? Math.min(0.92, tr.y + 0.28)) * h;
 
-      // 身長スケール（画面内の実骨格サイズに連動）
-      const bodyH = Math.max(58, Math.min(240, fy - hy));
-      const scale = bodyH / 120;
-      const headR = Math.max(8, 11.5 * scale);
-      const upperArmR = Math.max(2.6, 3.6 * scale);
-      const foreArmR = Math.max(2.1, 2.9 * scale);
-      const thighR = Math.max(3.4, 4.8 * scale);
-      const calfR = Math.max(2.4, 3.4 * scale);
+      // 画面幅に応じたコンパクトスケール（17人並んでも収まりやすいサイズ）
+      const widthScale = Math.max(0.55, Math.min(1.05, w / 960));
+      const rawBodyH = Math.max(42, Math.min(155, fy - hy));
+      const scale = (rawBodyH / 135) * (0.78 + widthScale * 0.22);
+
+      const headR = Math.max(6.2, 8.6 * scale);
+      const upperArmR = Math.max(1.9, 2.7 * scale);
+      const foreArmR = Math.max(1.5, 2.15 * scale);
+      const thighR = Math.max(2.5, 3.6 * scale);
+      const calfR = Math.max(1.8, 2.55 * scale);
 
       const pt = (joint, fallbackX, fallbackY) => ({
         x: (joint?.x ?? fallbackX) * w,
         y: (joint?.y ?? fallbackY) * h
       });
 
-      const ls = pt(j.leftShoulder, tr.x - 0.045, tr.y + 0.075);
-      const rs = pt(j.rightShoulder, tr.x + 0.045, tr.y + 0.075);
+      const ls = pt(j.leftShoulder, tr.x - 0.032, tr.y + 0.065);
+      const rs = pt(j.rightShoulder, tr.x + 0.032, tr.y + 0.065);
       const shoulderMid = { x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 };
 
-      const lh = pt(j.leftHip, tr.x - 0.032, tr.y + 0.19);
-      const rh = pt(j.rightHip, tr.x + 0.032, tr.y + 0.19);
+      const lh = pt(j.leftHip, tr.x - 0.022, tr.y + 0.155);
+      const rh = pt(j.rightHip, tr.x + 0.022, tr.y + 0.155);
       const hipMid = { x: (lh.x + rh.x) / 2, y: (lh.y + rh.y) / 2 };
 
-      const le = pt(j.leftElbow, tr.x - 0.07, tr.y + 0.14);
-      const re = pt(j.rightElbow, tr.x + 0.07, tr.y + 0.14);
-      const lw = pt(j.leftWrist, tr.x - 0.09, tr.y + 0.21);
-      const rw = pt(j.rightWrist, tr.x + 0.09, tr.y + 0.21);
+      const le = pt(j.leftElbow, tr.x - 0.05, tr.y + 0.115);
+      const re = pt(j.rightElbow, tr.x + 0.05, tr.y + 0.115);
+      const lw = pt(j.leftWrist, tr.x - 0.065, tr.y + 0.17);
+      const rw = pt(j.rightWrist, tr.x + 0.065, tr.y + 0.17);
 
       const li = j.leftIndex ? { x: j.leftIndex.x * w, y: j.leftIndex.y * h } : null;
       const ri = j.rightIndex ? { x: j.rightIndex.x * w, y: j.rightIndex.y * h } : null;
@@ -1510,10 +1519,10 @@
       const lt = j.leftThumb ? { x: j.leftThumb.x * w, y: j.leftThumb.y * h } : null;
       const rt = j.rightThumb ? { x: j.rightThumb.x * w, y: j.rightThumb.y * h } : null;
 
-      const lk = pt(j.leftKnee, tr.x - 0.03, tr.y + 0.27);
-      const rk = pt(j.rightKnee, tr.x + 0.03, tr.y + 0.27);
-      const la = pt(j.leftAnkle, tr.x - 0.03, tr.y + 0.35);
-      const ra = pt(j.rightAnkle, tr.x + 0.03, tr.y + 0.35);
+      const lk = pt(j.leftKnee, tr.x - 0.02, tr.y + 0.22);
+      const rk = pt(j.rightKnee, tr.x + 0.02, tr.y + 0.22);
+      const la = pt(j.leftAnkle, tr.x - 0.02, tr.y + 0.28);
+      const ra = pt(j.rightAnkle, tr.x + 0.02, tr.y + 0.28);
 
       const lHeel = j.leftHeel ? { x: j.leftHeel.x * w, y: j.leftHeel.y * h } : null;
       const rHeel = j.rightHeel ? { x: j.rightHeel.x * w, y: j.rightHeel.y * h } : null;
@@ -1525,48 +1534,47 @@
 
       ctx.save();
 
-      // 0. 足元のステージスポットライト影
-      ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+      // 0. 足元の影
+      ctx.fillStyle = "rgba(0, 0, 0, 0.38)";
       ctx.beginPath();
-      ctx.ellipse(fx, fy + 3 * scale, 18 * scale, 5 * scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(fx, fy + 2 * scale, 13 * scale, 3.8 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 1. 後ろ髪（頭の背面に描く）
-      const hairSway = Math.sin(t * 6 + hx * 0.03) * 3 * scale;
+      // 1. 後ろ髪
+      const hairSway = Math.sin(t * 6 + hx * 0.03) * 2.2 * scale;
       ctx.fillStyle = hairColor;
       if (hairStyle === "twintail") {
-        // 左右ツインテール
         [-1, 1].forEach(side => {
           ctx.beginPath();
-          ctx.moveTo(hx + side * headR * 0.75, hy - headR * 0.3);
+          ctx.moveTo(hx + side * headR * 0.72, hy - headR * 0.25);
           ctx.quadraticCurveTo(
-            hx + side * (headR * 1.85) + hairSway,
-            hy + headR * 0.6,
-            hx + side * (headR * 1.45) + hairSway * 1.4,
-            hy + headR * 2.3
+            hx + side * (headR * 1.7) + hairSway,
+            hy + headR * 0.55,
+            hx + side * (headR * 1.32) + hairSway * 1.3,
+            hy + headR * 2.1
           );
           ctx.quadraticCurveTo(
-            hx + side * (headR * 0.85),
-            hy + headR * 1.5,
-            hx + side * headR * 0.65,
+            hx + side * (headR * 0.8),
+            hy + headR * 1.4,
+            hx + side * headR * 0.6,
             hy + headR * 0.1
           );
           ctx.closePath();
           ctx.fill();
         });
       } else if (hairStyle === "ponytail") {
-        const sideDir = facing === "side" ? -(tr.eyeOffsetX || 0.6) : 0.7;
+        const sideDir = facing === "side" ? -(tr.eyeOffsetX || 0.6) : 0.65;
         ctx.beginPath();
-        ctx.moveTo(hx + sideDir * headR * 0.4, hy - headR * 0.5);
+        ctx.moveTo(hx + sideDir * headR * 0.4, hy - headR * 0.45);
         ctx.quadraticCurveTo(
-          hx + sideDir * headR * 1.8 + hairSway,
+          hx + sideDir * headR * 1.65 + hairSway,
           hy + headR * 0.2,
-          hx + sideDir * headR * 1.5 + hairSway * 1.3,
-          hy + headR * 2.1
+          hx + sideDir * headR * 1.35 + hairSway * 1.25,
+          hy + headR * 1.95
         );
         ctx.quadraticCurveTo(
-          hx + sideDir * headR * 0.8,
-          hy + headR * 1.1,
+          hx + sideDir * headR * 0.75,
+          hy + headR * 1.0,
           hx + sideDir * headR * 0.3,
           hy - headR * 0.1
         );
@@ -1574,65 +1582,62 @@
         ctx.fill();
       } else if (hairStyle === "long") {
         ctx.beginPath();
-        ctx.moveTo(hx - headR * 1.05, hy - headR * 0.2);
-        ctx.lineTo(hx - headR * 1.35 + hairSway, hy + headR * 2.4);
-        ctx.lineTo(hx + headR * 1.35 + hairSway, hy + headR * 2.4);
-        ctx.lineTo(hx + headR * 1.05, hy - headR * 0.2);
+        ctx.moveTo(hx - headR * 1.0, hy - headR * 0.2);
+        ctx.lineTo(hx - headR * 1.25 + hairSway, hy + headR * 2.15);
+        ctx.lineTo(hx + headR * 1.25 + hairSway, hy + headR * 2.15);
+        ctx.lineTo(hx + headR * 1.0, hy - headR * 0.2);
         ctx.closePath();
         ctx.fill();
       } else {
-        // ボブ
         ctx.beginPath();
-        ctx.arc(hx, hy + headR * 0.15, headR * 1.18, 0, Math.PI * 2);
+        ctx.arc(hx, hy + headR * 0.12, headR * 1.14, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // 2. 両脚（太もも＋すね＋ステージブーツ）
-      drawTaperedLimb(ctx, lh, lk, thighR, calfR * 1.05, skinShade);
-      drawTaperedLimb(ctx, lk, la, calfR * 1.05, calfR * 0.82, skinColor);
+      // 2. 両脚＆ブーツ
+      drawTaperedLimb(ctx, lh, lk, thighR, calfR * 1.04, skinShade);
+      drawTaperedLimb(ctx, lk, la, calfR * 1.04, calfR * 0.8, skinColor);
       drawGirlBoot(ctx, la, lHeel, lFoot, calfR, dressColor);
 
-      drawTaperedLimb(ctx, rh, rk, thighR, calfR * 1.05, skinShade);
-      drawTaperedLimb(ctx, rk, ra, calfR * 1.05, calfR * 0.82, skinColor);
+      drawTaperedLimb(ctx, rh, rk, thighR, calfR * 1.04, skinShade);
+      drawTaperedLimb(ctx, rk, ra, calfR * 1.04, calfR * 0.8, skinColor);
       drawGirlBoot(ctx, ra, rHeel, rFoot, calfR, dressColor);
 
-      // 3. 胴体（アイドル衣装トップス＋ウエストリボン）
-      const waistWidth = Math.max(9 * scale, Math.hypot(rh.x - lh.x, rh.y - lh.y) * 0.92);
-      const shoulderWidth = Math.max(12 * scale, Math.hypot(rs.x - ls.x, rs.y - ls.y) * 0.95);
+      // 3. 胴体
+      const waistWidth = Math.max(7 * scale, Math.hypot(rh.x - lh.x, rh.y - lh.y) * 0.9);
+      const shoulderWidth = Math.max(9.5 * scale, Math.hypot(rs.x - ls.x, rs.y - ls.y) * 0.92);
 
       ctx.fillStyle = dressColor;
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(shoulderMid.x - shoulderWidth * 0.5, shoulderMid.y);
       ctx.lineTo(shoulderMid.x + shoulderWidth * 0.5, shoulderMid.y);
-      ctx.lineTo(hipMid.x + waistWidth * 0.46, hipMid.y);
-      ctx.lineTo(hipMid.x - waistWidth * 0.46, hipMid.y);
+      ctx.lineTo(hipMid.x + waistWidth * 0.45, hipMid.y);
+      ctx.lineTo(hipMid.x - waistWidth * 0.45, hipMid.y);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      // 胸元の白襟・リボンアクセント
       if (facing !== "back") {
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.moveTo(shoulderMid.x - shoulderWidth * 0.25, shoulderMid.y);
-        ctx.lineTo(shoulderMid.x + shoulderWidth * 0.25, shoulderMid.y);
-        ctx.lineTo(shoulderMid.x, shoulderMid.y + 8 * scale);
+        ctx.moveTo(shoulderMid.x - shoulderWidth * 0.24, shoulderMid.y);
+        ctx.lineTo(shoulderMid.x + shoulderWidth * 0.24, shoulderMid.y);
+        ctx.lineTo(shoulderMid.x, shoulderMid.y + 6 * scale);
         ctx.closePath();
         ctx.fill();
       }
 
-      // 4. フレアスカート（腰の角度・動きに合わせて広がる）
-      const skirtLen = Math.max(14 * scale, bodyH * 0.19);
-      const skirtTopW = waistWidth * 0.52;
-      const skirtBotW = Math.max(18 * scale, waistWidth * 1.38);
+      // 4. フレアスカート
+      const skirtLen = Math.max(10.5 * scale, rawBodyH * 0.18);
+      const skirtTopW = waistWidth * 0.5;
+      const skirtBotW = Math.max(13.5 * scale, waistWidth * 1.32);
 
       ctx.save();
       ctx.translate(hipMid.x, hipMid.y);
       ctx.rotate(torsoAngle);
 
-      // 白ペチコート（下のフリル）
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
       ctx.moveTo(-skirtTopW, 0);
@@ -1642,53 +1647,38 @@
       ctx.closePath();
       ctx.fill();
 
-      // メインカラーフレアスカート
       ctx.fillStyle = dressColor;
       ctx.strokeStyle = "rgba(255,255,255,0.75)";
-      ctx.lineWidth = 1.1;
+      ctx.lineWidth = 0.9;
       ctx.beginPath();
       ctx.moveTo(-skirtTopW, 0);
       ctx.lineTo(skirtTopW, 0);
       ctx.lineTo(skirtBotW, skirtLen);
-      ctx.quadraticCurveTo(0, skirtLen + 4 * scale, -skirtBotW, skirtLen);
+      ctx.quadraticCurveTo(0, skirtLen + 3 * scale, -skirtBotW, skirtLen);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-
-      // スカートのプリーツ線
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 1;
-      [-0.45, 0, 0.45].forEach(ratio => {
-        ctx.beginPath();
-        ctx.moveTo(skirtTopW * ratio, 1);
-        ctx.lineTo(skirtBotW * ratio, skirtLen);
-        ctx.stroke();
-      });
       ctx.restore();
 
-      // 5. 両腕（パフスリーブ袖＋上腕＋前腕＋手のひら・指先）
-      // 左腕
+      // 5. 両腕＆手のひら・指先
       drawTaperedLimb(ctx, ls, le, upperArmR, foreArmR, skinColor);
       drawTaperedLimb(ctx, le, lw, foreArmR, foreArmR * 0.78, skinColor);
-      drawGirlHand(ctx, lw, li, lp, lt, foreArmR * 1.6, skinColor);
-      // 左パフスリーブ
+      drawGirlHand(ctx, lw, li, lp, lt, foreArmR * 1.55, skinColor);
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.arc(ls.x, ls.y, upperArmR * 1.35, 0, Math.PI * 2);
+      ctx.arc(ls.x, ls.y, upperArmR * 1.28, 0, Math.PI * 2);
       ctx.fill();
 
-      // 右腕
       drawTaperedLimb(ctx, rs, re, upperArmR, foreArmR, skinColor);
       drawTaperedLimb(ctx, re, rw, foreArmR, foreArmR * 0.78, skinColor);
-      drawGirlHand(ctx, rw, ri, rp, rt, foreArmR * 1.6, skinColor);
-      // 右パフスリーブ
+      drawGirlHand(ctx, rw, ri, rp, rt, foreArmR * 1.55, skinColor);
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.arc(rs.x, rs.y, upperArmR * 1.35, 0, Math.PI * 2);
+      ctx.arc(rs.x, rs.y, upperArmR * 1.28, 0, Math.PI * 2);
       ctx.fill();
 
-      // 6. 首＆頭部（前髪・表情・向き表現）
-      drawTaperedLimb(ctx, shoulderMid, { x: hx, y: hy + headR * 0.6 }, 3 * scale, 2.8 * scale, skinShade);
+      // 6. 首＆頭部
+      drawTaperedLimb(ctx, shoulderMid, { x: hx, y: hy + headR * 0.55 }, 2.2 * scale, 2 * scale, skinShade);
 
       ctx.beginPath();
       ctx.arc(hx, hy, headR, 0, Math.PI * 2);
@@ -1696,61 +1686,48 @@
       ctx.fill();
 
       if (facing === "back") {
-        // 後ろ向き：後ろ髪全体＋髪飾りリボン
         ctx.fillStyle = hairColor;
         ctx.beginPath();
-        ctx.arc(hx, hy, headR * 1.06, 0, Math.PI * 2);
+        ctx.arc(hx, hy, headR * 1.05, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = dressColor;
         ctx.beginPath();
-        ctx.arc(hx - 4 * scale, hy - headR * 0.7, 3 * scale, 0, Math.PI * 2);
-        ctx.arc(hx + 4 * scale, hy - headR * 0.7, 3 * scale, 0, Math.PI * 2);
+        ctx.arc(hx - 3 * scale, hy - headR * 0.65, 2.2 * scale, 0, Math.PI * 2);
+        ctx.arc(hx + 3 * scale, hy - headR * 0.65, 2.2 * scale, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // 前髪
         ctx.fillStyle = hairColor;
         ctx.beginPath();
-        ctx.arc(hx, hy - headR * 0.12, headR * 1.05, Math.PI * 1.02, Math.PI * 1.98);
-        ctx.lineTo(hx + headR * 0.5, hy - headR * 0.15);
-        ctx.lineTo(hx, hy - headR * 0.35);
-        ctx.lineTo(hx - headR * 0.5, hy - headR * 0.15);
+        ctx.arc(hx, hy - headR * 0.1, headR * 1.04, Math.PI * 1.02, Math.PI * 1.98);
+        ctx.lineTo(hx + headR * 0.45, hy - headR * 0.15);
+        ctx.lineTo(hx, hy - headR * 0.32);
+        ctx.lineTo(hx - headR * 0.45, hy - headR * 0.15);
         ctx.closePath();
         ctx.fill();
 
-        // 目・チーク・口（正面／横向き）
-        const eyeShift = facing === "side" ? (tr.eyeOffsetX ?? 0.5) * headR * 0.45 : 0;
+        const eyeShift = facing === "side" ? (tr.eyeOffsetX ?? 0.5) * headR * 0.42 : 0;
         ctx.fillStyle = "#1e1b18";
         if (facing === "front") {
           ctx.beginPath();
-          ctx.arc(hx - headR * 0.34, hy + headR * 0.08, 1.8 * scale, 0, Math.PI * 2);
-          ctx.arc(hx + headR * 0.34, hy + headR * 0.08, 1.8 * scale, 0, Math.PI * 2);
+          ctx.arc(hx - headR * 0.34, hy + headR * 0.08, 1.35 * scale, 0, Math.PI * 2);
+          ctx.arc(hx + headR * 0.34, hy + headR * 0.08, 1.35 * scale, 0, Math.PI * 2);
           ctx.fill();
 
-          // チーク
-          ctx.fillStyle = "rgba(244, 114, 182, 0.45)";
-          ctx.beginPath();
-          ctx.arc(hx - headR * 0.48, hy + headR * 0.26, 2.2 * scale, 0, Math.PI * 2);
-          ctx.arc(hx + headR * 0.48, hy + headR * 0.26, 2.2 * scale, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 笑顔の口
           ctx.strokeStyle = "#e11d48";
-          ctx.lineWidth = 1.2;
+          ctx.lineWidth = 0.95;
           ctx.beginPath();
-          ctx.arc(hx, hy + headR * 0.32, 2.2 * scale, 0.15 * Math.PI, 0.85 * Math.PI);
+          ctx.arc(hx, hy + headR * 0.32, 1.6 * scale, 0.15 * Math.PI, 0.85 * Math.PI);
           ctx.stroke();
         } else {
-          // 横向き
           ctx.beginPath();
-          ctx.arc(hx + eyeShift, hy + headR * 0.08, 1.9 * scale, 0, Math.PI * 2);
+          ctx.arc(hx + eyeShift, hy + headR * 0.08, 1.45 * scale, 0, Math.PI * 2);
           ctx.fill();
         }
 
-        // 髪飾りリボン
         ctx.fillStyle = dressColor;
         ctx.beginPath();
-        ctx.arc(hx + headR * 0.72, hy - headR * 0.68, 3 * scale, 0, Math.PI * 2);
+        ctx.arc(hx + headR * 0.7, hy - headR * 0.65, 2.2 * scale, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -1768,19 +1745,19 @@
       const h = rect.height;
       ctx.clearRect(0, 0, w, h);
 
-      // ステージ床パース＆グリッド
+      // ステージ床グリッド（8〜0〜8ポジション目安）
       ctx.save();
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.14)";
       ctx.lineWidth = 1;
-      for (let gx = 0.1; gx <= 0.9; gx += 0.2) {
+      for (let gx = 0.08; gx <= 0.92; gx += 0.105) {
         ctx.beginPath();
         ctx.moveTo(gx * w, 0);
-        ctx.lineTo(gx * w, h);
+        ctx.lineTo(gx * w, h * 0.9);
         ctx.stroke();
       }
       ctx.beginPath();
-      ctx.moveTo(0, h * 0.88);
-      ctx.lineTo(w, h * 0.88);
+      ctx.moveTo(0, h * 0.89);
+      ctx.lineTo(w, h * 0.89);
       ctx.strokeStyle = "rgba(244, 114, 182, 0.25)";
       ctx.stroke();
       ctx.restore();
@@ -1792,10 +1769,9 @@
         ? allTracks.filter(tr => tr.id === selectedSongPersonId)
         : allTracks;
 
-      // 奥行き順（足元Yが小さい＝奥にいるメンバーを先に描き、手前のメンバーを手前に重ねる）
       const sortedVisibleTracks = [...visibleTracks].sort((a, b) => {
-        const ay = a.footY ?? (a.y + 0.35);
-        const by = b.footY ?? (b.y + 0.35);
+        const ay = a.footY ?? (a.y + 0.28);
+        const by = b.footY ?? (b.y + 0.28);
         return ay - by;
       });
 
@@ -1806,12 +1782,10 @@
       const showName = document.getElementById('optShowName')?.checked ?? true;
       const showPos = document.getElementById('optShowPos')?.checked ?? true;
 
-      // フォーメーションの左右広がりと足元ライン描画
       if (showFormation && sortedVisibleTracks.length > 0) {
         const feet = sortedVisibleTracks.map(tr => ({
           fx: (tr.footX ?? tr.x) * w,
-          fy: (tr.footY ?? Math.min(0.92, tr.y + 0.35)) * h,
-          color: activeSongData._validMembers[tr.id]?.color || "#38bdf8"
+          fy: (tr.footY ?? Math.min(0.92, tr.y + 0.28)) * h
         }));
         feet.sort((a, b) => a.fx - b.fx);
 
@@ -1834,7 +1808,7 @@
 
           ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
           ctx.beginPath();
-          ctx.roundRect(12, 12, 175, 24, 6);
+          ctx.roundRect(12, 12, 178, 24, 6);
           ctx.fill();
           ctx.fillStyle = "#7dd3fc";
           ctx.font = "bold 11px sans-serif";
@@ -1857,24 +1831,24 @@
         const hx = tr.x * w;
         const hy = tr.y * h;
         const fx = (tr.footX ?? tr.x) * w;
-        const fy = (tr.footY ?? Math.min(0.92, tr.y + 0.35)) * h;
+        const fy = (tr.footY ?? Math.min(0.92, tr.y + 0.28)) * h;
+        const posLabel = formatStandingPos8to0to8(tr.footX ?? tr.x);
 
-        if (showPos && tr.pos) {
-          posSummary.push(`${name}:${tr.pos}`);
+        if (showPos) {
+          posSummary.push(`${name}:${posLabel}`);
         }
 
-        // 手先・足先の残像とフォーメーション移動軌跡
         if (showTrail) {
-          const historyPts = getRecentJointTrails(tr.id, t, 0.4);
+          const historyPts = getRecentJointTrails(tr.id, t, 0.35);
           historyPts.forEach((pt, idx) => {
-            const alpha = Math.max(0.08, ((idx + 1) / Math.max(1, historyPts.length)) * 0.48);
+            const alpha = Math.max(0.08, ((idx + 1) / Math.max(1, historyPts.length)) * 0.45);
             ctx.save();
             ctx.fillStyle = color;
             ctx.globalAlpha = alpha;
             [pt.lw, pt.rw, pt.la, pt.ra].forEach(jp => {
               if (!jp) return;
               ctx.beginPath();
-              ctx.arc(jp.x * w, jp.y * h, 4, 0, Math.PI * 2);
+              ctx.arc(jp.x * w, jp.y * h, 3.2, 0, Math.PI * 2);
               ctx.fill();
             });
             ctx.restore();
@@ -1883,8 +1857,8 @@
           if (showFormation && historyPts.length >= 2) {
             ctx.save();
             ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.6;
-            ctx.lineWidth = 2.2;
+            ctx.globalAlpha = 0.58;
+            ctx.lineWidth = 2;
             ctx.beginPath();
             historyPts.forEach((pt, idx) => {
               const px = pt.footX * w;
@@ -1897,15 +1871,14 @@
           }
         }
 
-        // 女の子ダンサー描画（振り付け・スカート・手先・足先）
         if (showDancer) {
           drawGirlDancer(ctx, tr, member, w, h, t);
         }
 
-        // 顔写真バッジ追従
+        // コンパクトな顔写真バッジ
         if (showAvatar) {
-          const radius = 15;
-          const avatarY = Math.max(radius + 8, hy - 34);
+          const radius = 11.5;
+          const avatarY = Math.max(radius + 6, hy - 22);
           const img = songAvatarImages[tr.id];
           ctx.save();
           ctx.beginPath();
@@ -1915,12 +1888,12 @@
           if (img && img.complete && img.naturalWidth > 0) {
             ctx.save();
             ctx.beginPath();
-            ctx.arc(hx, avatarY, radius - 2, 0, Math.PI * 2);
+            ctx.arc(hx, avatarY, radius - 1.5, 0, Math.PI * 2);
             ctx.clip();
             ctx.drawImage(img, hx - radius, avatarY - radius, radius * 2, radius * 2);
             ctx.restore();
           }
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 1.6;
           ctx.strokeStyle = color;
           ctx.beginPath();
           ctx.arc(hx, avatarY, radius, 0, Math.PI * 2);
@@ -1928,17 +1901,17 @@
           ctx.restore();
         }
 
-        // 名前バッジ
+        // コンパクトな名前バッジ
         if (showName) {
-          const nameY = showAvatar ? Math.max(22, hy - 54) : Math.max(22, hy - 26);
+          const nameY = showAvatar ? Math.max(18, hy - 38) : Math.max(18, hy - 18);
           ctx.save();
-          ctx.font = "bold 11px sans-serif";
+          ctx.font = "bold 9.5px sans-serif";
           const textW = ctx.measureText(name).width;
-          const boxW = textW + 12;
-          const boxH = 18;
+          const boxW = textW + 8;
+          const boxH = 14;
           ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
           ctx.beginPath();
-          ctx.roundRect(hx - boxW / 2, nameY - boxH / 2, boxW, boxH, 5);
+          ctx.roundRect(hx - boxW / 2, nameY - boxH / 2, boxW, boxH, 4);
           ctx.fill();
           ctx.fillStyle = "#ffffff";
           ctx.textAlign = "center";
@@ -1947,26 +1920,24 @@
           ctx.restore();
         }
 
-        // 足元の立ち位置番号
-        if (showPos && tr.pos) {
+        // 足元の立ち位置（8〜0〜8）
+        if (showPos) {
           ctx.save();
-          ctx.font = "bold 10px sans-serif";
-          const label = String(tr.pos);
-          const boxW = ctx.measureText(label).width + 10;
-          const boxH = 18;
+          ctx.font = "bold 9.5px sans-serif";
+          const boxW = Math.max(16, ctx.measureText(posLabel).width + 8);
+          const boxH = 15;
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.roundRect(fx - boxW / 2, fy + 6, boxW, boxH, 5);
+          ctx.roundRect(fx - boxW / 2, fy + 4, boxW, boxH, 4);
           ctx.fill();
           ctx.fillStyle = "#ffffff";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(label, fx, fy + 15);
+          ctx.fillText(posLabel, fx, fy + 11.5);
           ctx.restore();
         }
       });
 
-      // 右上の正面向き人数表示
       if (allTracks.length > 0) {
         ctx.save();
         ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
@@ -2101,10 +2072,10 @@
             delegate: "GPU"
           },
           runningMode: mode,
-          numPoses: 10,
-          minPoseDetectionConfidence: 0.45,
-          minPosePresenceConfidence: 0.45,
-          minTrackingConfidence: 0.45
+          numPoses: 16,
+          minPoseDetectionConfidence: 0.35,
+          minPosePresenceConfidence: 0.35,
+          minTrackingConfidence: 0.35
         });
         poseLandmarkerMode = mode;
         return poseLandmarkerInstance;
@@ -2129,7 +2100,7 @@
       const eyeSpan = Math.abs((lEye?.x ?? 0.5) - (rEye?.x ?? 0.5));
       const eyeRatio = eyeSpan / shoulderWidth;
 
-      if (eyeVis < 0.35 && earVis >= 0.4) {
+      if (eyeVis < 0.35 && earVis >= 0.35) {
         return { facing: "back", eyeOffsetX: 0 };
       }
       if (eyeRatio < 0.22) {
@@ -2143,12 +2114,12 @@
     function cropFaceAvatarFromVideo(videoEl, landmarks, colorHex, fallbackName) {
       try {
         const nose = landmarks?.[0];
-        if (!nose || (nose.visibility ?? 1) < 0.35) {
+        if (!nose || (nose.visibility ?? 1) < 0.3) {
           return makeDefaultAvatarDataUrl(fallbackName, colorHex);
         }
         const vw = videoEl.videoWidth || 640;
         const vh = videoEl.videoHeight || 360;
-        const size = Math.max(48, Math.min(vw, vh) * 0.14);
+        const size = Math.max(40, Math.min(vw, vh) * 0.12);
         const sx = Math.max(0, Math.min(vw - size, nose.x * vw - size / 2));
         const sy = Math.max(0, Math.min(vh - size, nose.y * vh - size * 0.55));
         const tempCanvas = document.createElement('canvas');
@@ -2163,7 +2134,7 @@
 
     function waitForVideoSeek(video, seekTime) {
       return new Promise(resolve => {
-        if (Math.abs((video.currentTime || 0) - seekTime) < 0.008 && video.readyState >= 2) {
+        if (Math.abs((video.currentTime || 0) - seekTime) < 0.006 && video.readyState >= 2) {
           resolve();
           return;
         }
@@ -2199,12 +2170,12 @@
         return;
       }
 
-      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 15;
+      const targetFps = parseInt(document.getElementById('analysisFpsSelect').value, 10) || 18;
       const stepSec = 1 / targetFps;
       const duration = Math.min(video.duration, 300);
       video.pause();
 
-      const palette = ["#e11d48", "#0284c7", "#7c3aed", "#059669", "#d97706", "#db2777", "#2563eb", "#0d9488", "#ea580c", "#4f46e5"];
+      const palette = ["#e11d48", "#0284c7", "#7c3aed", "#059669", "#d97706", "#db2777", "#2563eb", "#0d9488", "#ea580c", "#4f46e5", "#ec4899", "#16a34a"];
       const detectedPersons = {};
       const frames = [];
       let activeMemoryTracks = [];
@@ -2226,8 +2197,8 @@
         poseList.forEach(lm => {
           if (!Array.isArray(lm) || lm.length < 33) return;
           const keyIndices = [0, 11, 12, 23, 24];
-          const avgVis = keyIndices.reduce((acc, idx) => acc + (lm[idx]?.visibility ?? 0.8), 0) / keyIndices.length;
-          if (avgVis < 0.4) return;
+          const avgVis = keyIndices.reduce((acc, idx) => acc + (lm[idx]?.visibility ?? 0.75), 0) / keyIndices.length;
+          if (avgVis < 0.32) return;
 
           const nose = lm[0];
           const ls = lm[11];
@@ -2240,26 +2211,26 @@
           const torsoX = ((ls?.x ?? nose.x) + (rs?.x ?? nose.x) + (lh?.x ?? nose.x) + (rh?.x ?? nose.x)) / 4;
           const torsoY = ((ls?.y ?? nose.y) + (rs?.y ?? nose.y) + (lh?.y ?? nose.y) + (rh?.y ?? nose.y)) / 4;
 
-          const x = Math.max(0.05, Math.min(0.95, nose.x));
-          const y = Math.max(0.10, Math.min(0.84, nose.y));
-          const footX = Math.max(0.05, Math.min(0.95, ((la?.x ?? torsoX) + (ra?.x ?? torsoX)) / 2));
-          const footY = Math.max(0.25, Math.min(0.93, ((la?.y ?? (y + 0.35)) + (ra?.y ?? (y + 0.35))) / 2));
+          const x = Math.max(0.04, Math.min(0.96, nose.x));
+          const y = Math.max(0.08, Math.min(0.84, nose.y));
+          const footX = Math.max(0.04, Math.min(0.96, ((la?.x ?? torsoX) + (ra?.x ?? torsoX)) / 2));
+          const footY = Math.max(0.22, Math.min(0.93, ((la?.y ?? (y + 0.28)) + (ra?.y ?? (y + 0.28))) / 2));
 
-          let matchedId = null;
-          let bestScore = 0.24;
+          let matchedTrack = null;
+          let bestScore = 0.22;
           activeMemoryTracks.forEach(mt => {
             if (frameTracks.some(ft => ft.id === mt.id)) return;
             const headDist = Math.hypot(mt.x - x, mt.y - y);
             const torsoDist = Math.hypot((mt.torsoX ?? mt.x) - torsoX, (mt.torsoY ?? mt.y) - torsoY);
-            const score = headDist * 0.45 + torsoDist * 0.55;
+            const score = headDist * 0.4 + torsoDist * 0.6;
             if (score < bestScore) {
               bestScore = score;
-              matchedId = mt.id;
+              matchedTrack = mt;
             }
           });
 
-          if (!matchedId) {
-            matchedId = `person_${nextSeq++}`;
+          const matchedId = matchedTrack ? matchedTrack.id : `person_${nextSeq++}`;
+          if (!matchedTrack) {
             const idx = nextSeq - 2;
             const color = palette[idx % palette.length];
             const name = `メンバー${idx + 1}`;
@@ -2274,44 +2245,58 @@
             };
           }
 
+          // 関節座標に軽微な平滑化（EMA）を適用して手先・足先のブレを低減
+          const smoothAlpha = 0.72;
+          const prevJoints = matchedTrack?.joints || {};
+          const p = (idx, key) => {
+            const cur = lm[idx];
+            if (!cur) return prevJoints[key] || null;
+            const raw = { x: cur.x, y: cur.y };
+            const prev = prevJoints[key];
+            if (!prev) return raw;
+            return {
+              x: prev.x + (raw.x - prev.x) * smoothAlpha,
+              y: prev.y + (raw.y - prev.y) * smoothAlpha
+            };
+          };
+
           const faceInfo = estimateFaceFacingFromLandmarks(lm);
-          const posSlot = Math.max(1, Math.min(8, Math.round(footX * 7) + 1));
-          const p = (idx) => (lm[idx] ? { x: lm[idx].x, y: lm[idx].y } : null);
+          const posLabel = formatStandingPos8to0to8(footX);
 
           frameTracks.push({
             id: matchedId,
-            x,
-            y,
+            x: matchedTrack ? matchedTrack.x + (x - matchedTrack.x) * smoothAlpha : x,
+            y: matchedTrack ? matchedTrack.y + (y - matchedTrack.y) * smoothAlpha : y,
             torsoX,
             torsoY,
-            footX,
-            footY,
-            pos: `POS ${posSlot}`,
+            footX: matchedTrack ? (matchedTrack.footX ?? matchedTrack.x) + (footX - (matchedTrack.footX ?? matchedTrack.x)) * smoothAlpha : footX,
+            footY: matchedTrack ? (matchedTrack.footY ?? (matchedTrack.y + 0.28)) + (footY - (matchedTrack.footY ?? (matchedTrack.y + 0.28))) * smoothAlpha : footY,
+            pos: posLabel,
             facing: faceInfo.facing,
             eyeOffsetX: faceInfo.eyeOffsetX,
             joints: {
-              leftShoulder: p(11),
-              rightShoulder: p(12),
-              leftElbow: p(13),
-              rightElbow: p(14),
-              leftWrist: p(15),
-              rightWrist: p(16),
-              leftPinky: p(17),
-              rightPinky: p(18),
-              leftIndex: p(19),
-              rightIndex: p(20),
-              leftThumb: p(21),
-              rightThumb: p(22),
-              leftHip: p(23),
-              rightHip: p(24),
-              leftKnee: p(25),
-              rightKnee: p(26),
-              leftAnkle: p(27),
-              rightAnkle: p(28),
-              leftHeel: p(29),
-              rightHeel: p(30),
-              leftFootIndex: p(31),
-              rightFootIndex: p(32)
+              leftShoulder: p(11, "leftShoulder"),
+              rightShoulder: p(12, "rightShoulder"),
+              leftElbow: p(13, "leftElbow"),
+              rightElbow: p(14, "rightElbow"),
+              leftWrist: p(15, "leftWrist"),
+              rightWrist: p(16, "rightWrist"),
+              leftPinky: p(17, "leftPinky"),
+              rightPinky: p(18, "rightPinky"),
+              leftIndex: p(19, "leftIndex"),
+              rightIndex: p(20, "rightIndex"),
+              leftThumb: p(21, "leftThumb"),
+              rightThumb: p(22, "rightThumb"),
+              leftHip: p(23, "leftHip"),
+              rightHip: p(24, "rightHip"),
+              leftKnee: p(25, "leftKnee"),
+              rightKnee: p(26, "rightKnee"),
+              leftAnkle: p(27, "leftAnkle"),
+              rightAnkle: p(28, "rightAnkle"),
+              leftHeel: p(29, "leftHeel"),
+              rightHeel: p(30, "rightHeel"),
+              leftFootIndex: p(31, "leftFootIndex"),
+              rightFootIndex: p(32, "rightFootIndex")
             }
           });
         });
@@ -2320,7 +2305,7 @@
           frames.push({ t: seekTime, tracks: frameTracks });
           const currentIds = new Set(frameTracks.map(ft => ft.id));
           const carried = activeMemoryTracks
-            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.4);
+            .filter(mt => !currentIds.has(mt.id) && (seekTime - mt.lastSeenT) <= 0.65);
           activeMemoryTracks = [
             ...frameTracks.map(ft => ({ ...ft, lastSeenT: seekTime })),
             ...carried
@@ -2328,7 +2313,7 @@
         }
 
         const pct = Math.min(100, Math.round((seekTime / Math.max(0.1, duration)) * 100));
-        progressEl.textContent = `骨格解析中... ${pct}%（骨格判定されたperson: ${Object.keys(detectedPersons).length}名）`;
+        progressEl.textContent = `高精度骨格解析中... ${pct}%（骨格判定されたperson: ${Object.keys(detectedPersons).length}名）`;
       }
 
       btn.disabled = false;
@@ -2353,8 +2338,8 @@
 
       songMemoryStore[pkg.songId] = pkg;
       virtualTime = 0;
-      applySongTrackingData(pkg, "骨格解析完了（女の子ダンス＆フォーメーション再現データ生成済み）");
-      progressEl.textContent = `完了：骨格判定された ${personCount} 名のpersonを抽出し、${frames.length} フレームの振り付け・フォーメーションデータを生成しました。`;
+      applySongTrackingData(pkg, "高精度骨格解析完了");
+      progressEl.textContent = `完了：骨格判定された ${personCount} 名のpersonを抽出し、${frames.length} フレームの振り付け・8〜0〜8フォーメーションデータを生成しました。`;
     }
 
     function renderDetectedPersonEditor() {
@@ -2459,7 +2444,7 @@
         songId: key,
         stageKey,
         trackName,
-        fps: base.fps || 15,
+        fps: base.fps || 18,
         members: filteredMembers,
         lyrics: parseLyricsText(document.getElementById('songLyricsEditor').value),
         frames: filteredFrames
