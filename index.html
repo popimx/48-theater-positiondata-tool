@@ -144,7 +144,7 @@
         </div>
       </section>
 
-      <!-- Tab 2: 一覧表 & メンバー別ポジション経験マップ -->
+      <!-- Tab 2: 一覧表 -->
       <section id="tab-positions" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 id="posStageTitle" class="text-lg font-bold text-slate-800 mb-4">公演名</h2>
@@ -152,25 +152,6 @@
             <table class="w-full text-left text-sm border-collapse min-w-max">
               <thead><tr id="positionTableHeader" class="bg-slate-50 border-b border-slate-200"></tr></thead>
               <tbody id="positionTableBody" class="divide-y divide-slate-100"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- メンバー別ポジション経験マップ -->
-        <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1">
-            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-table-list text-pink-500"></i> メンバー別ポジション経験マップ
-            </h3>
-            <span class="text-[10px] text-slate-500">各公演で担当したポジションを表示（日付クリックでスケジュールへ移動）</span>
-          </div>
-          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
-            <table class="w-full text-left text-sm border-collapse min-w-max">
-              <thead>
-                <tr id="posExpMapNumHeader" class="bg-slate-100 border-b border-slate-200"></tr>
-                <tr id="posExpMapHeader" class="bg-slate-50 border-b border-slate-200"></tr>
-              </thead>
-              <tbody id="posExpMapBody" class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
@@ -231,7 +212,7 @@
                 <label class="block text-xs font-bold text-slate-600">出演メンバー（「、」「・」区切り入力、または下のチップから選択）</label>
                 <button type="button" onclick="clearForecastInputs()" class="text-[11px] text-slate-500 hover:text-pink-600 font-bold">リセット</button>
               </div>
-              <input type="text" id="forecastInputText" oninput="syncForecastChipsFromText()" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300">
+              <textarea id="forecastInputText" oninput="syncForecastChipsFromText()" rows="2" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
             </div>
 
             <!-- チップ選択UI -->
@@ -401,7 +382,7 @@
         </button>
       </div>
 
-      <!-- 出演統計 & 連続記録・ブランク -->
+      <!-- 出演統計 & 連続記録 -->
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
         <div class="flex items-center justify-between border-b pb-2">
           <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -410,8 +391,8 @@
           <span id="totalPerfBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-3 py-1 rounded-full">総出演回数: 0回</span>
         </div>
 
-        <!-- 連続出演記録＆ブランク期間 -->
-        <div id="memberStreakStatsArea" class="grid grid-cols-3 gap-2 text-center"></div>
+        <!-- 連続出演記録 -->
+        <div id="memberStreakStatsArea" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-center"></div>
 
         <div>
           <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
@@ -1168,7 +1149,6 @@
       document.getElementById('navStageDetail').classList.add('flex');
 
       renderPositions();
-      renderPositionExperienceMap();
       renderDailyTable();
       renderPerfTable();
       initForecastUI();
@@ -1449,7 +1429,9 @@
           if (calendarViewMode === 'grid') {
             if (targetItem) openScheduleModal(targetItem);
           } else {
-            document.querySelectorAll('.sched-card').forEach(el => el.classList.remove('bg-pink-100', 'border-pink-500', 'ring-2', 'ring-pink-500'));
+            document.querySelectorAll('.sched-card').forEach(el => {
+              el.classList.remove('border-2', 'border-pink-500', 'ring-2', 'ring-pink-500');
+            });
             let targetEl = document.getElementById(`sched-${elementId}`);
             if (!targetEl && targetItem) {
               const fallbackMatch = SCHEDULE_DATA.find(s => s.date === targetItem.date && s.baseStageName === targetItem.baseStageName);
@@ -1457,7 +1439,7 @@
             }
             if (targetEl) {
               targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              targetEl.classList.add('bg-pink-100', 'border-pink-500', 'ring-2', 'ring-pink-500');
+              targetEl.classList.add('border-2', 'border-pink-500');
             }
           }
         }, 80);
@@ -1567,86 +1549,6 @@
       });
     }
 
-    // --- メンバー別ポジション経験マップ（出演表と同じ形式） ---
-    function renderPositionExperienceMap() {
-      const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
-      const numHeaderTr = document.getElementById('posExpMapNumHeader');
-      const headerTr = document.getElementById('posExpMapHeader');
-      const tbody = document.getElementById('posExpMapBody');
-      if (!numHeaderTr || !headerTr || !tbody) return;
-      numHeaderTr.innerHTML = ''; headerTr.innerHTML = ''; tbody.innerHTML = '';
-      if (!stage) return;
-
-      const validShows = stage.schedules.filter(s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0));
-      const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
-      const memberList = getSortedStageMembers(stage);
-
-      const numThFirst = document.createElement('th');
-      numThFirst.className = "p-2.5 min-w-[120px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
-      numThFirst.innerText = "合計回数";
-      numHeaderTr.appendChild(numThFirst);
-
-      const thFirst = document.createElement('th');
-      thFirst.className = "p-2.5 min-w-[120px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-700 bg-slate-50";
-      thFirst.innerText = "日付";
-      headerTr.appendChild(thFirst);
-
-      sortedShows.forEach((show, idx) => {
-        const numTh = document.createElement('th');
-        numTh.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 text-xs font-bold text-pink-600";
-        numTh.innerText = idx + 1;
-        numHeaderTr.appendChild(numTh);
-
-        const shortDateStr = formatShortDate(show.date);
-        const th = document.createElement('th');
-        th.className = "p-2.5 min-w-[90px] text-center border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-pink-50 transition group";
-        th.onclick = () => jumpToSchedule(show.date, show.id);
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(shortDateStr)}</span>`;
-        headerTr.appendChild(th);
-      });
-
-      memberList.forEach(member => {
-        const isOshi = oshiMembers.has(member);
-        const tr = document.createElement('tr');
-        tr.className = `border-b border-slate-100 ${isOshi ? 'bg-amber-50/60 hover:bg-amber-100/50' : 'hover:bg-slate-50'}`;
-
-        let totalCount = 0;
-        sortedShows.forEach(show => {
-          const inPos = show.positionsArray && show.positionsArray.includes(member);
-          const inMem = show.membersArray && show.membersArray.includes(member);
-          if (inPos || inMem) totalCount++;
-        });
-
-        const tdMember = document.createElement('td');
-        tdMember.className = `p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 flex justify-between items-center ${isOshi ? 'bg-amber-50' : 'bg-white'}`;
-        tdMember.innerHTML = `<span class="member-link ${isOshi ? 'text-pink-700 font-bold' : ''}" onclick="openMemberDetail('${escapeHtml(member)}')">${isOshi ? '★' : ''}${escapeHtml(member)}</span><span class="text-pink-600 text-[10px] ml-2">${totalCount}回</span>`;
-        tr.appendChild(tdMember);
-
-        sortedShows.forEach(show => {
-          const td = document.createElement('td');
-          td.className = "p-2.5 text-center border-r border-slate-100 text-xs whitespace-nowrap";
-          let posLabel = "";
-          if (show.positionsArray && show.positionsArray.length > 0) {
-            const pIdx = show.positionsArray.indexOf(member);
-            if (pIdx !== -1) {
-              posLabel = (stage.fixed && stage.fixed[pIdx]) ? stage.fixed[pIdx] : member;
-            }
-          } else if (show.membersArray && show.membersArray.includes(member)) {
-            posLabel = "〇";
-          }
-
-          if (posLabel) {
-            const isMainPos = posLabel === member;
-            td.innerHTML = `<span class="font-bold ${isMainPos ? 'text-pink-600' : (posLabel === '〇' ? 'text-slate-900' : 'text-amber-700')}">${escapeHtml(posLabel)}</span>`;
-          } else {
-            td.innerHTML = `<span class="text-slate-300">－</span>`;
-          }
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-    }
-
     function formatShortDate(dateStr) {
       if (!dateStr) return "";
       const parts = dateStr.replace(/-/g, '/').split('/');
@@ -1677,12 +1579,12 @@
 
       const numThFirst = document.createElement('th');
       numThFirst.className = "p-2.5 min-w-[100px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
-      numThFirst.innerText = "ポジション";
+      numThFirst.innerText = "合計回数";
       numHeaderTr.appendChild(numThFirst);
 
       const thFirst = document.createElement('th');
       thFirst.className = "p-2.5 min-w-[100px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-700 bg-slate-50";
-      thFirst.innerText = "初日メンバー";
+      thFirst.innerText = "日付";
       headerTr.appendChild(thFirst);
 
       sortedShows.forEach((show, idx) => {
@@ -1696,7 +1598,7 @@
         th.className = "p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap cursor-pointer hover:bg-pink-50 transition group";
         th.title = "クリックしてスケジュールを表示";
         th.onclick = () => jumpToSchedule(show.date, show.id);
-        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600 underline decoration-dotted">${escapeHtml(shortDateStr)}</span>`;
+        th.innerHTML = `<span class="text-xs font-bold text-slate-600 group-hover:text-pink-600">${escapeHtml(shortDateStr)}</span>`;
         headerTr.appendChild(th);
       });
 
@@ -1752,7 +1654,6 @@
 
       const memberList = getSortedStageMembers(stage);
 
-      // 1番左上：上段「合計回数」、下段「日付」
       const numThFirst = document.createElement('th');
       numThFirst.className = "p-2.5 min-w-[120px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
       numThFirst.innerText = "合計回数";
@@ -1851,8 +1752,8 @@
     }
 
     function setForecastInputNames(names) {
-      const input = document.getElementById('forecastInputText');
-      if (input) input.value = names.join('・');
+      const textarea = document.getElementById('forecastInputText');
+      if (textarea) textarea.value = names.join('・');
       renderForecastChips();
     }
 
@@ -2410,20 +2311,6 @@
         const subTitleStr = (item.subTitle && item.subTitle.trim()) ? `  ${item.subTitle.trim()}` : "";
         const perfNumber = totalCount - index;
 
-        const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName] || STAGE_DATABASE[item.baseStageName];
-        const posLines = members.map(m => {
-          let posText = "ポジション未記録";
-          if (item.positionsArray && item.positionsArray.length > 0) {
-            const pIdx = item.positionsArray.indexOf(m);
-            if (pIdx !== -1) {
-              posText = (stageObj && stageObj.fixed && stageObj.fixed[pIdx]) ? `${stageObj.fixed[pIdx]}ポジ` : "出演";
-            } else {
-              posText = "出演";
-            }
-          }
-          return `<span class="text-slate-600"><strong class="text-slate-700">${escapeHtml(m)}</strong>: ${escapeHtml(posText)}</span>`;
-        }).join('　');
-
         const div = document.createElement('div');
         div.className = "bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1 cursor-pointer hover:border-pink-300 transition";
         div.onclick = () => jumpToSchedule(item.date, item.id);
@@ -2434,7 +2321,6 @@
             <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${escapeHtml(item.theater)}</span>
           </div>
           <div class="text-xs font-bold text-slate-800 whitespace-pre-wrap">${escapeHtml(baseTitle)}${escapeHtml(subTitleStr)}</div>
-          <div class="text-[11px] pt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">${posLines}</div>
         `;
         resultList.appendChild(div);
       });
@@ -2478,7 +2364,7 @@
       `;
     }
 
-    // --- メンバー詳細 & 連続記録（日付の連続）・ブランク計算 ---
+    // --- メンバー詳細 & 連続記録（日付の連続） ---
     function openMemberDetail(memberName, skipHash = false) {
       selectedMemberName = memberName;
       currentStageKey = null;
@@ -2529,55 +2415,109 @@
       return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
     }
 
-    function calculateMemberStreaks(memberName, memberPerfsAsc) {
-      // 出演した「暦日（YYYY/MM/DD）」のユニークな集合を昇順ソート
-      const daySet = new Set();
+    function formatDisplayDate(dateStr) {
+      if (!dateStr) return "";
+      const parts = dateStr.replace(/-/g, '/').split('/');
+      if (parts.length < 3) return dateStr;
+      return `${parts[0]}/${parts[1].padStart(2, '0')}/${parts[2].padStart(2, '0')}`;
+    }
+
+    function calculateMemberStreaks(memberPerfsAsc) {
+      if (!memberPerfsAsc || memberPerfsAsc.length === 0) {
+        return {
+          maxDays: 0,
+          maxShows: 0,
+          maxRange: "",
+          currentDays: 0,
+          currentShows: 0,
+          currentRange: ""
+        };
+      }
+
+      // 日付（YYYY/MM/DD）ごとに公演をグルーピング
+      const dayGroups = [];
       memberPerfsAsc.forEach(item => {
         const dayNum = parseCalendarDayNumber(item.date);
-        if (dayNum !== null) daySet.add(dayNum);
-      });
-      const uniqueDays = Array.from(daySet).sort((a, b) => a - b);
-
-      let maxStreak = 0;
-      let runStreak = 0;
-      for (let i = 0; i < uniqueDays.length; i++) {
-        if (i === 0) {
-          runStreak = 1;
-        } else if (uniqueDays[i] - uniqueDays[i - 1] === 1) {
-          runStreak++;
+        if (dayNum === null) return;
+        const dispDate = formatDisplayDate(item.date);
+        const lastGroup = dayGroups[dayGroups.length - 1];
+        if (lastGroup && lastGroup.dayNum === dayNum) {
+          lastGroup.showCount++;
         } else {
-          runStreak = 1;
+          dayGroups.push({ dayNum, dateStr: dispDate, showCount: 1 });
         }
-        if (runStreak > maxStreak) maxStreak = runStreak;
+      });
+
+      if (dayGroups.length === 0) {
+        return {
+          maxDays: 0,
+          maxShows: 0,
+          maxRange: "",
+          currentDays: 0,
+          currentShows: 0,
+          currentRange: ""
+        };
       }
 
-      // 現在の連続出演日数：最新出演日以降に他公演があっても「日付の連続」として扱うため、
-      // 最新の連続日ブロックの長さを算出（最新出演日が本日または直近であればその連続日数、途切れていれば直近の連続日数）
-      let currentStreak = 0;
-      if (uniqueDays.length > 0) {
-        currentStreak = 1;
-        for (let i = uniqueDays.length - 1; i > 0; i--) {
-          if (uniqueDays[i] - uniqueDays[i - 1] === 1) {
-            currentStreak++;
-          } else {
-            break;
-          }
+      // 連続する暦日ブロックを抽出
+      const blocks = [];
+      let curBlock = {
+        days: 1,
+        shows: dayGroups[0].showCount,
+        startDate: dayGroups[0].dateStr,
+        endDate: dayGroups[0].dateStr,
+        lastDayNum: dayGroups[0].dayNum
+      };
+
+      for (let i = 1; i < dayGroups.length; i++) {
+        const g = dayGroups[i];
+        if (g.dayNum - curBlock.lastDayNum === 1) {
+          curBlock.days++;
+          curBlock.shows += g.showCount;
+          curBlock.endDate = g.dateStr;
+          curBlock.lastDayNum = g.dayNum;
+        } else {
+          blocks.push(curBlock);
+          curBlock = {
+            days: 1,
+            shows: g.showCount,
+            startDate: g.dateStr,
+            endDate: g.dateStr,
+            lastDayNum: g.dayNum
+          };
         }
-        // 最新出演日と「今日」の間に1日以上空いている場合（＝連続が途切れている場合）は0とする
-        const todayDayNum = parseCalendarDayNumber(todayString);
-        if (todayDayNum !== null && todayDayNum - uniqueDays[uniqueDays.length - 1] > 1) {
-          currentStreak = 0;
+      }
+      blocks.push(curBlock);
+
+      // 最大連続出演（連続日数が最大のもの、同日数は直近/回数多い方を優先）
+      let bestBlock = blocks[0];
+      for (let i = 1; i < blocks.length; i++) {
+        if (blocks[i].days > bestBlock.days || (blocks[i].days === bestBlock.days && blocks[i].shows >= bestBlock.shows)) {
+          bestBlock = blocks[i];
         }
       }
 
-      // 最長ブランク期間（日数）
-      let maxBlankDays = 0;
-      for (let i = 1; i < uniqueDays.length; i++) {
-        const diffDays = uniqueDays[i] - uniqueDays[i - 1];
-        if (diffDays > maxBlankDays) maxBlankDays = diffDays;
-      }
+      const maxRange = bestBlock.days > 1
+        ? `(${bestBlock.startDate}〜${bestBlock.endDate})`
+        : `(${bestBlock.startDate})`;
 
-      return { maxStreak, currentStreak, maxBlankDays };
+      // 現在の連続出演（最新ブロックが今日または昨日まで続いている場合）
+      const lastBlock = blocks[blocks.length - 1];
+      const todayDayNum = parseCalendarDayNumber(todayString);
+      const isOngoing = todayDayNum !== null && (todayDayNum - lastBlock.lastDayNum) <= 1;
+
+      const currentDays = isOngoing ? lastBlock.days : 0;
+      const currentShows = isOngoing ? lastBlock.shows : 0;
+      const currentRange = isOngoing ? `(${lastBlock.startDate}〜)` : "";
+
+      return {
+        maxDays: bestBlock.days,
+        maxShows: bestBlock.shows,
+        maxRange,
+        currentDays,
+        currentShows,
+        currentRange
+      };
     }
 
     function renderMemberDetail() {
@@ -2591,21 +2531,19 @@
 
       document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberPerfs.length}回`;
 
-      const streakStats = calculateMemberStreaks(memberName, memberPerfs);
+      const streakStats = calculateMemberStreaks(memberPerfs);
       const streakArea = document.getElementById('memberStreakStatsArea');
       if (streakArea) {
         streakArea.innerHTML = `
           <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
             <span class="block text-[10px] text-slate-500 font-bold">最大連続出演</span>
-            <span class="text-base font-bold text-pink-600">${streakStats.maxStreak}<span class="text-xs font-normal text-slate-600 ml-0.5">日</span></span>
+            <span class="block text-sm font-bold text-pink-600 mt-0.5">${streakStats.maxDays}日連続${streakStats.maxShows}公演</span>
+            ${streakStats.maxRange ? `<span class="block text-[10px] text-slate-500 mt-0.5">${escapeHtml(streakStats.maxRange)}</span>` : ''}
           </div>
           <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
             <span class="block text-[10px] text-slate-500 font-bold">現在の連続出演</span>
-            <span class="text-base font-bold text-slate-800">${streakStats.currentStreak}<span class="text-xs font-normal text-slate-600 ml-0.5">日</span></span>
-          </div>
-          <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
-            <span class="block text-[10px] text-slate-500 font-bold">最長ブランク</span>
-            <span class="text-base font-bold text-slate-800">${streakStats.maxBlankDays}<span class="text-xs font-normal text-slate-600 ml-0.5">日</span></span>
+            <span class="block text-sm font-bold text-slate-800 mt-0.5">${streakStats.currentDays}日連続${streakStats.currentShows}公演</span>
+            ${streakStats.currentRange ? `<span class="block text-[10px] text-slate-500 mt-0.5">${escapeHtml(streakStats.currentRange)}</span>` : ''}
           </div>
         `;
       }
