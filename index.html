@@ -116,14 +116,14 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
             <div class="relative">
               <select id="schedStageFilter" onchange="renderCalendar()" class="w-full bg-white border border-slate-300 text-xs font-bold text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300">
-                <option value="">すべての演目（当月）</option>
+                <option value="">すべての演目</option>
               </select>
             </div>
             <div class="relative">
-              <input type="text" id="schedMemberFilter" oninput="renderCalendar()" placeholder="当月スケジュールをメンバー名で絞込" 
+              <input type="text" id="schedMemberFilter" oninput="renderCalendar()" placeholder="メンバー名で検索" 
                      class="w-full bg-white border border-slate-300 text-xs text-slate-700 rounded-lg pl-7 pr-6 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300">
               <i class="fa-solid fa-user-check absolute left-2.5 top-2 text-slate-400 text-[11px]"></i>
-              <button type="button" onclick="clearScheduleFilters()" title="絞込をリセット" class="absolute right-2 top-1.5 text-slate-400 hover:text-pink-600 text-xs">
+              <button type="button" onclick="clearScheduleFilters()" title="検索をリセット" class="absolute right-2 top-1.5 text-slate-400 hover:text-pink-600 text-xs">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
@@ -152,7 +152,6 @@
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center justify-between">
             <span class="flex items-center gap-2"><i class="fa-solid fa-table-cells text-pink-500"></i> 日別表</span>
-            <span class="text-[10px] text-slate-500 font-normal">黄色背景：初アンダー・初出演ポジ ／ 日付クリックでスケジュールへ移動</span>
           </h2>
           <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
             <table class="w-full text-left text-sm border-collapse min-w-max">
@@ -199,7 +198,7 @@
           <div class="space-y-3">
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="block text-xs font-bold text-slate-600">出演メンバー（「、」「・」区切り入力、または下のチップから選択）</label>
+                <label class="block text-xs font-bold text-slate-600">出演メンバー（「、」「・」区切り入力、または下のメンバー名から選択）</label>
                 <button type="button" onclick="clearForecastInputs()" class="text-[11px] text-slate-500 hover:text-pink-600 font-bold">リセット</button>
               </div>
               <textarea id="forecastInputText" oninput="syncForecastChipsFromText()" rows="2" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
@@ -208,7 +207,7 @@
             <!-- チップ選択UI -->
             <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1.5">
               <div class="flex justify-between items-center text-[11px] text-slate-600 font-bold">
-                <span>メンバー選択チップ（クリックで出演／解除）</span>
+                <span>メンバー選択 (クリックで出演／解除)</span>
                 <span id="forecastSelectedCountBadge" class="text-pink-600">選択中: 0名</span>
               </div>
               <div id="forecastMemberChips" class="flex flex-wrap gap-1.5"></div>
@@ -218,7 +217,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
               <!-- 固定指定 -->
               <div class="space-y-1.5">
-                <span class="block text-xs font-bold text-slate-700"><i class="fa-solid fa-thumbtack text-pink-500 mr-1"></i>ポジション固定指定</span>
+                <span class="block text-xs font-bold text-slate-700"><i class="fa-solid fa-thumbtack text-pink-500 mr-1"></i>ポジション指定</span>
                 <div class="flex gap-1.5">
                   <select id="forecastLockPosSelect" class="flex-1 bg-white border border-slate-300 rounded text-xs p-1.5 font-bold"></select>
                   <select id="forecastLockMemberSelect" class="flex-1 bg-white border border-slate-300 rounded text-xs p-1.5 font-bold"></select>
@@ -260,7 +259,7 @@
       <section id="tab-coapp" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
           <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-users text-pink-500"></i> 共演検索・共演率分析
+            <i class="fa-solid fa-users text-pink-500"></i> 共演検索
           </h2>
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
@@ -275,7 +274,7 @@
               <select id="coappYearSelect" class="bg-slate-50 border border-slate-300 text-xs font-bold rounded-lg p-2 focus:outline-none">
                 <option value="ALL">全期間</option>
               </select>
-              <span class="text-xs text-slate-500">メンバーを選択（2名以上で共演率・演目別内訳を表示）</span>
+              <span class="text-xs text-slate-500">メンバーを選択</span>
             </div>
             <button type="button" onclick="clearCoappSelection()" class="text-xs text-slate-500 hover:text-pink-600 font-bold">クリア</button>
           </div>
@@ -289,7 +288,7 @@
           <div id="coappAnalysisArea" class="hidden space-y-3 pt-2 border-t border-slate-100"></div>
 
           <div id="coappResultArea" class="space-y-2 pt-2 border-t border-slate-100">
-            <h3 class="text-xs font-bold text-slate-700">【共通公演一覧】</h3>
+            <h3 class="text-xs font-bold text-slate-700">【共演公演一覧】</h3>
             <div id="coappResultList" class="space-y-2 max-h-96 overflow-y-auto pr-1">
               <p class="text-xs text-slate-400 text-center py-4">メンバーを選択して検索してください。</p>
             </div>
