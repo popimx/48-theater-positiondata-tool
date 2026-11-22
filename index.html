@@ -60,11 +60,6 @@
       <h1 class="text-xl font-bold flex items-center gap-2 cursor-pointer" onclick="goHome()">
         <i class="fa-solid fa-masks-theater"></i> 劇場公演 データサイト
       </h1>
-      <button onclick="openOshiModal()" class="bg-pink-700 hover:bg-pink-800 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm transition border border-pink-400">
-        <i class="fa-solid fa-star text-amber-300"></i>
-        <span>推しメン</span>
-        <span id="oshiCountBadge" class="bg-white text-pink-600 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
-      </button>
     </div>
     <!-- 検索バー ＆ サジェスト -->
     <div class="max-w-4xl mx-auto mt-3 relative">
@@ -124,17 +119,12 @@
                 <option value="">すべての演目（当月）</option>
               </select>
             </div>
-            <div class="relative flex items-center gap-1.5">
-              <div class="relative flex-1">
-                <input type="text" id="schedMemberFilter" oninput="renderCalendar()" placeholder="当月スケジュールをメンバー名で絞込" 
-                       class="w-full bg-white border border-slate-300 text-xs text-slate-700 rounded-lg pl-7 pr-6 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300">
-                <i class="fa-solid fa-user-check absolute left-2.5 top-2 text-slate-400 text-[11px]"></i>
-                <button type="button" onclick="clearScheduleFilters()" title="絞込をリセット" class="absolute right-2 top-1.5 text-slate-400 hover:text-pink-600 text-xs">
-                  <i class="fa-solid fa-xmark"></i>
-                </button>
-              </div>
-              <button type="button" id="schedOshiOnlyBtn" onclick="toggleSchedOshiOnly()" class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold whitespace-nowrap transition bg-white text-slate-600 border-slate-300 hover:bg-pink-50">
-                <i class="fa-solid fa-star text-amber-400 mr-0.5"></i>推しのみ
+            <div class="relative">
+              <input type="text" id="schedMemberFilter" oninput="renderCalendar()" placeholder="当月スケジュールをメンバー名で絞込" 
+                     class="w-full bg-white border border-slate-300 text-xs text-slate-700 rounded-lg pl-7 pr-6 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300">
+              <i class="fa-solid fa-user-check absolute left-2.5 top-2 text-slate-400 text-[11px]"></i>
+              <button type="button" onclick="clearScheduleFilters()" title="絞込をリセット" class="absolute right-2 top-1.5 text-slate-400 hover:text-pink-600 text-xs">
+                <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
           </div>
@@ -335,7 +325,6 @@
           <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <div class="flex justify-between items-center">
               <h4 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-hourglass-half text-pink-500 mr-1"></i> 大台達成カウントダウン</h4>
-              <span class="text-[10px] text-slate-400">※推しメンは常時優先表示</span>
             </div>
             <div id="countdownList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
           </div>
@@ -370,9 +359,6 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 id="detailMemberName" class="text-xl font-bold text-slate-800">メンバー名</h2>
-              <button id="detailOshiToggleBtn" onclick="toggleCurrentMemberOshi()" class="text-xs px-2.5 py-1 rounded-full border font-bold transition flex items-center gap-1">
-                <i class="fa-regular fa-star"></i> <span>推し登録</span>
-              </button>
             </div>
             <p id="detailMemberSub" class="text-xs text-pink-600 font-semibold">出演データ統計</p>
           </div>
@@ -382,7 +368,7 @@
         </button>
       </div>
 
-      <!-- 出演統計 & 連続記録 -->
+      <!-- 出演統計 -->
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
         <div class="flex items-center justify-between border-b pb-2">
           <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -390,9 +376,6 @@
           </h3>
           <span id="totalPerfBadge" class="bg-pink-100 text-pink-700 text-xs font-bold px-3 py-1 rounded-full">総出演回数: 0回</span>
         </div>
-
-        <!-- 連続出演記録 -->
-        <div id="memberStreakStatsArea" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-center"></div>
 
         <div>
           <h4 class="text-xs font-bold text-slate-500 mb-2">演目ごとの出演回数</h4>
@@ -454,39 +437,6 @@
       <div class="flex gap-2 pt-2">
         <button id="modalBtnGoStage" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition text-center">演目詳細を開く</button>
         <button onclick="closeScheduleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-3 rounded-lg text-xs transition">閉じる</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 推しメン管理モーダル -->
-  <div id="oshiModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-lg w-full p-4 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-star text-amber-400"></i> 推しメン登録・管理
-        </h3>
-        <button onclick="closeOshiModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="space-y-2">
-        <div class="text-xs font-bold text-slate-600">登録済みの推しメン（クリックで詳細へ）</div>
-        <div id="oshiRegisteredChips" class="flex flex-wrap gap-1.5 p-2 bg-pink-50/60 border border-pink-200 rounded-lg min-h-[42px]"></div>
-      </div>
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-600">メンバーを追加・解除</span>
-          <select id="oshiGroupSelect" onchange="renderOshiModal()" class="bg-slate-50 border border-slate-300 text-xs font-bold rounded px-2 py-1">
-            <option value="AKB48">AKB48</option>
-            <option value="SKE48">SKE48</option>
-            <option value="NMB48">NMB48</option>
-            <option value="HKT48">HKT48</option>
-            <option value="NGT48">NGT48</option>
-            <option value="STU48">STU48</option>
-          </select>
-        </div>
-        <div id="oshiCandidateChips" class="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg"></div>
-      </div>
-      <div class="flex justify-end pt-2">
-        <button onclick="closeOshiModal()" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow">完了</button>
       </div>
     </div>
   </div>
@@ -603,93 +553,12 @@
       return (!bestGroup || bestScore === 0 || tied) ? null : bestGroup;
     }
 
-    // --- 推しメン管理 (localStorage) ---
-    const OSHI_STORAGE_KEY = 'theater_site_oshi_members_v1';
-    let oshiMembers = new Set();
-
-    function loadOshiMembers() {
-      try {
-        const saved = localStorage.getItem(OSHI_STORAGE_KEY);
-        if (saved) {
-          const arr = JSON.parse(saved);
-          if (Array.isArray(arr)) oshiMembers = new Set(arr);
-        }
-      } catch (e) { console.error(e); }
-      updateOshiBadge();
-    }
-
-    function saveOshiMembers() {
-      try {
-        localStorage.setItem(OSHI_STORAGE_KEY, JSON.stringify(Array.from(oshiMembers)));
-      } catch (e) { console.error(e); }
-      updateOshiBadge();
-    }
-
-    function updateOshiBadge() {
-      const badge = document.getElementById('oshiCountBadge');
-      if (badge) badge.innerText = oshiMembers.size;
-    }
-
-    function toggleOshiMember(name) {
-      if (!name) return;
-      if (oshiMembers.has(name)) oshiMembers.delete(name);
-      else oshiMembers.add(name);
-      saveOshiMembers();
-      if (selectedMemberName === name) updateDetailOshiButton();
-    }
-
-    function openOshiModal() {
-      document.getElementById('oshiModal').classList.remove('hidden');
-      renderOshiModal();
-    }
-
-    function closeOshiModal() {
-      document.getElementById('oshiModal').classList.add('hidden');
-      renderCalendar();
-      if (!document.getElementById('tab-perf-table').classList.contains('hidden')) renderPerfTable();
-      if (!document.getElementById('tab-stats').classList.contains('hidden')) renderStatsTab();
-    }
-
-    function renderOshiModal() {
-      const regBox = document.getElementById('oshiRegisteredChips');
-      const candBox = document.getElementById('oshiCandidateChips');
-      const group = document.getElementById('oshiGroupSelect').value;
-      regBox.innerHTML = '';
-      candBox.innerHTML = '';
-
-      if (oshiMembers.size === 0) {
-        regBox.innerHTML = '<span class="text-xs text-slate-400">まだ登録されていません</span>';
-      } else {
-        Array.from(oshiMembers).forEach(m => {
-          const chip = document.createElement('span');
-          chip.className = 'inline-flex items-center gap-1 bg-pink-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm';
-          chip.innerHTML = `<span class="cursor-pointer hover:underline" onclick="closeOshiModal(); openMemberDetail('${escapeHtml(m)}')">★ ${escapeHtml(m)}</span><button type="button" onclick="toggleOshiMember('${escapeHtml(m)}'); renderOshiModal();" class="ml-1 hover:text-amber-200"><i class="fa-solid fa-xmark"></i></button>`;
-          regBox.appendChild(chip);
-        });
-      }
-
-      const members = MASTER_MEMBER_ORDER_BY_GROUP[group] || [];
-      members.forEach(m => {
-        const isOshi = oshiMembers.has(m);
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = `px-2.5 py-1 rounded-full text-xs font-bold border transition ${isOshi ? 'bg-amber-400 text-slate-900 border-amber-500 shadow-sm' : 'bg-white text-slate-700 border-slate-300 hover:bg-pink-50'}`;
-        btn.innerText = isOshi ? `★ ${m}` : m;
-        btn.onclick = () => {
-          toggleOshiMember(m);
-          renderOshiModal();
-        };
-        candBox.appendChild(btn);
-      });
-    }
-
     let SCHEDULE_DATA = [];
     let ALL_SCHEDULE_DATA = [];
     let GLOBAL_STAGE_DATABASE = {};
     let STAGE_DATABASE = {};
     let currentStageKey = null;
     let currentScheduleFilter = "ALL";
-    let schedOshiOnly = false;
     let selectedMemberName = null;
     let currentSelectedMemberYear = 'ALL';
     let showAllAppearanceRanking = false;
@@ -734,7 +603,6 @@
     ];
 
     document.addEventListener("DOMContentLoaded", async () => {
-      loadOshiMembers();
       initYearMonthDropdowns();
       await loadAllYearsScheduleData();
       populateCoappYearDropdown();
@@ -1079,25 +947,7 @@
       const memInp = document.getElementById('schedMemberFilter');
       if (stSel) stSel.value = '';
       if (memInp) memInp.value = '';
-      schedOshiOnly = false;
-      updateSchedOshiOnlyBtn();
       renderCalendar();
-    }
-
-    function toggleSchedOshiOnly() {
-      schedOshiOnly = !schedOshiOnly;
-      updateSchedOshiOnlyBtn();
-      renderCalendar();
-    }
-
-    function updateSchedOshiOnlyBtn() {
-      const btn = document.getElementById('schedOshiOnlyBtn');
-      if (!btn) return;
-      if (schedOshiOnly) {
-        btn.className = 'px-2.5 py-1.5 rounded-lg border text-[11px] font-bold whitespace-nowrap transition bg-pink-600 text-white border-pink-600 shadow-sm';
-      } else {
-        btn.className = 'px-2.5 py-1.5 rounded-lg border text-[11px] font-bold whitespace-nowrap transition bg-white text-slate-600 border-slate-300 hover:bg-pink-50';
-      }
     }
 
     function toggleCalendarView(mode) {
@@ -1213,10 +1063,6 @@
           const hit = allShowMembers.some(m => m.toLowerCase().includes(memberFilterVal));
           if (!hit) return false;
         }
-        if (schedOshiOnly) {
-          const hasOshi = allShowMembers.some(m => oshiMembers.has(m));
-          if (!hasOshi) return false;
-        }
         return true;
       });
     }
@@ -1242,23 +1088,14 @@
       }
       finalSchedules.forEach(item => {
         const isToday = item.date === todayString;
-        const allShowMembers = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
-        const attendingOshis = Array.from(allShowMembers).filter(m => oshiMembers.has(m));
-        const hasOshi = attendingOshis.length > 0;
-
         const card = document.createElement('div');
         card.id = `sched-${item.id}`;
-        card.className = `sched-card p-3 rounded-lg border shadow-sm transition cursor-pointer ${isToday ? 'bg-pink-50 border-pink-300' : (hasOshi ? 'bg-amber-50/40 border-amber-300 hover:border-pink-300' : 'bg-white border-slate-200 hover:border-pink-300')}`;
+        card.className = `sched-card p-3 rounded-lg border shadow-sm transition cursor-pointer ${isToday ? 'bg-pink-50 border-pink-300' : 'bg-white border-slate-200 hover:border-pink-300'}`;
         card.onclick = () => openScheduleModal(item);
         const dateParts = item.date.split('/');
         const monthDay = dateParts.length >= 3 ? `${dateParts[1]}/${dateParts[2]}` : item.date;
 
-        const performersHtml = (item.membersArray || []).map(m => {
-          if (oshiMembers.has(m)) {
-            return `<span class="bg-amber-200 text-slate-900 font-bold px-1 rounded">★${escapeHtml(m)}</span>`;
-          }
-          return escapeHtml(m);
-        }).join('・');
+        const performersHtml = (item.membersArray || []).map(m => escapeHtml(m)).join('・');
 
         card.innerHTML = `
           <div class="flex flex-col gap-2">
@@ -1272,7 +1109,6 @@
                   <div class="flex flex-wrap items-center gap-1">
                     ${isToday ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-500 text-white inline-block">本日</span>' : ''}
                     <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-700">${item.theater}</span>
-                    ${hasOshi ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-300 text-slate-900 inline-block">★推し出演 (${attendingOshis.length}名)</span>` : ''}
                   </div>
                   <h4 class="font-bold text-slate-800 text-xs mt-1">${escapeHtml(item.displayTitle)}</h4>
                   ${item.subTitle ? `<div class="text-xs text-pink-600 font-bold mt-0.5">${escapeHtml(item.subTitle)}</div>` : ''}
@@ -1323,10 +1159,7 @@
         html += `<span class="text-[10px] font-bold ${isToday ? 'text-pink-600' : 'text-slate-600'}">${day}</span>`;
         html += `<div class="space-y-1 mt-1 overflow-y-auto max-h-16 flex-1">`;
         dayShows.forEach(s => {
-          const allM = new Set([...(s.membersArray || []), ...(s.positionsArray || [])]);
-          const hasOshi = Array.from(allM).some(m => oshiMembers.has(m));
-          const badgeClass = hasOshi ? 'bg-amber-300 hover:bg-amber-400 text-slate-900 font-bold' : 'bg-pink-100 hover:bg-pink-200 text-pink-800';
-          html += `<div onclick="openScheduleModalById('${s.id}')" class="${badgeClass} text-[9px] p-0.5 rounded leading-tight cursor-pointer truncate" title="${escapeHtml(s.baseStageName)}">${hasOshi ? '★' : ''}${escapeHtml(s.baseStageName)}</div>`;
+          html += `<div onclick="openScheduleModalById('${s.id}')" class="bg-pink-100 hover:bg-pink-200 text-pink-800 text-[9px] p-0.5 rounded leading-tight cursor-pointer truncate" title="${escapeHtml(s.baseStageName)}">${escapeHtml(s.baseStageName)}</div>`;
         });
         html += `</div></div>`;
       }
@@ -1360,22 +1193,20 @@
         posCountEl.innerText = `${item.positionsArray.length}人公演`;
         item.positionsArray.forEach((m, idx) => {
           const posName = (stageObj && stageObj.fixed && stageObj.fixed[idx]) ? stageObj.fixed[idx] : "";
-          const isOshi = oshiMembers.has(m);
           const div = document.createElement('div');
-          div.className = `p-1.5 rounded border flex items-center justify-between ${isOshi ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'}`;
+          div.className = "p-1.5 rounded border flex items-center justify-between bg-white border-slate-200";
           div.innerHTML = `
             <span class="text-[10px] text-slate-400 truncate">${posName ? `${escapeHtml(posName)}ポジ` : ''}</span>
-            <span class="member-link text-xs ${isOshi ? 'font-bold text-pink-700' : ''}" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${isOshi ? '★' : ''}${escapeHtml(m)}</span>
+            <span class="member-link text-xs" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${escapeHtml(m)}</span>
           `;
           listEl.appendChild(div);
         });
       } else if (item.membersArray && item.membersArray.length > 0) {
         posCountEl.innerText = `${item.membersArray.length}名出演`;
         item.membersArray.forEach(m => {
-          const isOshi = oshiMembers.has(m);
           const div = document.createElement('div');
-          div.className = `p-1.5 rounded border flex items-center justify-between ${isOshi ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'}`;
-          div.innerHTML = `<span class="member-link text-xs ${isOshi ? 'font-bold text-pink-700' : ''}" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${isOshi ? '★' : ''}${escapeHtml(m)}</span>`;
+          div.className = "p-1.5 rounded border flex items-center justify-between bg-white border-slate-200";
+          div.innerHTML = `<span class="member-link text-xs" onclick="openMemberDetail('${escapeHtml(m)}'); closeScheduleModal();">${escapeHtml(m)}</span>`;
           listEl.appendChild(div);
         });
       } else {
@@ -1391,6 +1222,13 @@
 
     function closeScheduleModal() {
       document.getElementById('scheduleModal').classList.add('hidden');
+    }
+
+    function clearScheduleHighlights() {
+      document.querySelectorAll('.sched-card').forEach(el => {
+        el.style.border = '';
+        el.classList.remove('border-2', 'border-pink-500');
+      });
     }
 
     async function jumpToSchedule(dateStr, elementId) {
@@ -1411,8 +1249,6 @@
       const memInp = document.getElementById('schedMemberFilter');
       if (stSel) stSel.value = '';
       if (memInp) memInp.value = '';
-      schedOshiOnly = false;
-      updateSchedOshiOnlyBtn();
 
       if (parts.length >= 2) {
         document.getElementById('yearSelect').value = String(parseInt(parts[0], 10));
@@ -1429,9 +1265,7 @@
           if (calendarViewMode === 'grid') {
             if (targetItem) openScheduleModal(targetItem);
           } else {
-            document.querySelectorAll('.sched-card').forEach(el => {
-              el.classList.remove('border-2', 'border-pink-500', 'ring-2', 'ring-pink-500');
-            });
+            clearScheduleHighlights();
             let targetEl = document.getElementById(`sched-${elementId}`);
             if (!targetEl && targetItem) {
               const fallbackMatch = SCHEDULE_DATA.find(s => s.date === targetItem.date && s.baseStageName === targetItem.baseStageName);
@@ -1440,6 +1274,7 @@
             if (targetEl) {
               targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
               targetEl.classList.add('border-2', 'border-pink-500');
+              targetEl.style.border = '2px solid #ec4899';
             }
           }
         }, 80);
@@ -1679,9 +1514,8 @@
       });
 
       memberList.forEach(member => {
-        const isOshi = oshiMembers.has(member);
         const tr = document.createElement('tr');
-        tr.className = `border-b border-slate-100 ${isOshi ? 'bg-amber-50/60 hover:bg-amber-100/50' : 'hover:bg-slate-50'}`;
+        tr.className = "border-b border-slate-100 hover:bg-slate-50";
 
         let totalCount = 0;
         sortedShows.forEach(show => {
@@ -1691,8 +1525,8 @@
         });
 
         const tdMember = document.createElement('td');
-        tdMember.className = `p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 flex justify-between items-center ${isOshi ? 'bg-amber-50' : 'bg-white'}`;
-        tdMember.innerHTML = `<span class="member-link ${isOshi ? 'text-pink-700 font-bold' : ''}" onclick="openMemberDetail('${escapeHtml(member)}')">${isOshi ? '★' : ''}${escapeHtml(member)}</span><span class="text-pink-600 text-[10px] ml-2">${totalCount}回</span>`;
+        tdMember.className = "p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 flex justify-between items-center bg-white";
+        tdMember.innerHTML = `<span class="member-link" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span><span class="text-pink-600 text-[10px] ml-2">${totalCount}回</span>`;
         tr.appendChild(tdMember);
 
         let runningCount = 0;
@@ -1705,7 +1539,7 @@
           const td = document.createElement('td');
           td.className = "p-2.5 text-center border-r border-slate-100 text-xs";
           if (participated) {
-            td.innerHTML = `<span class="font-bold ${isOshi ? 'text-pink-600' : 'text-slate-900'}">${perfTableMode === 'circle' ? '〇' : runningCount}</span>`;
+            td.innerHTML = `<span class="font-bold text-slate-900">${perfTableMode === 'circle' ? '〇' : runningCount}</span>`;
           } else {
             td.innerHTML = `<span class="text-slate-300">－</span>`;
           }
@@ -2364,7 +2198,7 @@
       `;
     }
 
-    // --- メンバー詳細 & 連続記録（日付の連続） ---
+    // --- メンバー詳細 ---
     function openMemberDetail(memberName, skipHash = false) {
       selectedMemberName = memberName;
       currentStageKey = null;
@@ -2376,148 +2210,12 @@
       document.getElementById('navMemberSearching').classList.add('flex');
 
       document.getElementById('detailMemberName').innerText = memberName;
-      updateDetailOshiButton();
       currentSelectedMemberYear = 'ALL';
       showAllAppearanceRanking = false;
       showAllCoappearanceRanking = false;
 
       renderMemberDetail();
       if (!skipHash) updateUrlHash();
-    }
-
-    function toggleCurrentMemberOshi() {
-      if (!selectedMemberName) return;
-      toggleOshiMember(selectedMemberName);
-      updateDetailOshiButton();
-    }
-
-    function updateDetailOshiButton() {
-      const btn = document.getElementById('detailOshiToggleBtn');
-      if (!btn || !selectedMemberName) return;
-      const isOshi = oshiMembers.has(selectedMemberName);
-      if (isOshi) {
-        btn.className = 'text-xs px-2.5 py-1 rounded-full border font-bold transition flex items-center gap-1 bg-amber-300 text-slate-900 border-amber-400 shadow-sm';
-        btn.innerHTML = '<i class="fa-solid fa-star text-pink-600"></i> <span>推しメン登録中</span>';
-      } else {
-        btn.className = 'text-xs px-2.5 py-1 rounded-full border font-bold transition flex items-center gap-1 bg-slate-100 text-slate-600 border-slate-200 hover:bg-pink-50';
-        btn.innerHTML = '<i class="fa-regular fa-star text-amber-500"></i> <span>推し登録</span>';
-      }
-    }
-
-    function parseCalendarDayNumber(dateStr) {
-      if (!dateStr) return null;
-      const parts = dateStr.replace(/-/g, '/').split('/');
-      if (parts.length < 3) return null;
-      const y = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10);
-      const d = parseInt(parts[2], 10);
-      if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
-      return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
-    }
-
-    function formatDisplayDate(dateStr) {
-      if (!dateStr) return "";
-      const parts = dateStr.replace(/-/g, '/').split('/');
-      if (parts.length < 3) return dateStr;
-      return `${parts[0]}/${parts[1].padStart(2, '0')}/${parts[2].padStart(2, '0')}`;
-    }
-
-    function calculateMemberStreaks(memberPerfsAsc) {
-      if (!memberPerfsAsc || memberPerfsAsc.length === 0) {
-        return {
-          maxDays: 0,
-          maxShows: 0,
-          maxRange: "",
-          currentDays: 0,
-          currentShows: 0,
-          currentRange: ""
-        };
-      }
-
-      // 日付（YYYY/MM/DD）ごとに公演をグルーピング
-      const dayGroups = [];
-      memberPerfsAsc.forEach(item => {
-        const dayNum = parseCalendarDayNumber(item.date);
-        if (dayNum === null) return;
-        const dispDate = formatDisplayDate(item.date);
-        const lastGroup = dayGroups[dayGroups.length - 1];
-        if (lastGroup && lastGroup.dayNum === dayNum) {
-          lastGroup.showCount++;
-        } else {
-          dayGroups.push({ dayNum, dateStr: dispDate, showCount: 1 });
-        }
-      });
-
-      if (dayGroups.length === 0) {
-        return {
-          maxDays: 0,
-          maxShows: 0,
-          maxRange: "",
-          currentDays: 0,
-          currentShows: 0,
-          currentRange: ""
-        };
-      }
-
-      // 連続する暦日ブロックを抽出
-      const blocks = [];
-      let curBlock = {
-        days: 1,
-        shows: dayGroups[0].showCount,
-        startDate: dayGroups[0].dateStr,
-        endDate: dayGroups[0].dateStr,
-        lastDayNum: dayGroups[0].dayNum
-      };
-
-      for (let i = 1; i < dayGroups.length; i++) {
-        const g = dayGroups[i];
-        if (g.dayNum - curBlock.lastDayNum === 1) {
-          curBlock.days++;
-          curBlock.shows += g.showCount;
-          curBlock.endDate = g.dateStr;
-          curBlock.lastDayNum = g.dayNum;
-        } else {
-          blocks.push(curBlock);
-          curBlock = {
-            days: 1,
-            shows: g.showCount,
-            startDate: g.dateStr,
-            endDate: g.dateStr,
-            lastDayNum: g.dayNum
-          };
-        }
-      }
-      blocks.push(curBlock);
-
-      // 最大連続出演（連続日数が最大のもの、同日数は直近/回数多い方を優先）
-      let bestBlock = blocks[0];
-      for (let i = 1; i < blocks.length; i++) {
-        if (blocks[i].days > bestBlock.days || (blocks[i].days === bestBlock.days && blocks[i].shows >= bestBlock.shows)) {
-          bestBlock = blocks[i];
-        }
-      }
-
-      const maxRange = bestBlock.days > 1
-        ? `(${bestBlock.startDate}〜${bestBlock.endDate})`
-        : `(${bestBlock.startDate})`;
-
-      // 現在の連続出演（最新ブロックが今日または昨日まで続いている場合）
-      const lastBlock = blocks[blocks.length - 1];
-      const todayDayNum = parseCalendarDayNumber(todayString);
-      const isOngoing = todayDayNum !== null && (todayDayNum - lastBlock.lastDayNum) <= 1;
-
-      const currentDays = isOngoing ? lastBlock.days : 0;
-      const currentShows = isOngoing ? lastBlock.shows : 0;
-      const currentRange = isOngoing ? `(${lastBlock.startDate}〜)` : "";
-
-      return {
-        maxDays: bestBlock.days,
-        maxShows: bestBlock.shows,
-        maxRange,
-        currentDays,
-        currentShows,
-        currentRange
-      };
     }
 
     function renderMemberDetail() {
@@ -2530,23 +2228,6 @@
       memberPerfs.forEach((item, index) => { item._perfNumber = index + 1; });
 
       document.getElementById('totalPerfBadge').innerText = `総出演回数: ${memberPerfs.length}回`;
-
-      const streakStats = calculateMemberStreaks(memberPerfs);
-      const streakArea = document.getElementById('memberStreakStatsArea');
-      if (streakArea) {
-        streakArea.innerHTML = `
-          <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
-            <span class="block text-[10px] text-slate-500 font-bold">最大連続出演</span>
-            <span class="block text-sm font-bold text-pink-600 mt-0.5">${streakStats.maxDays}日連続${streakStats.maxShows}公演</span>
-            ${streakStats.maxRange ? `<span class="block text-[10px] text-slate-500 mt-0.5">${escapeHtml(streakStats.maxRange)}</span>` : ''}
-          </div>
-          <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
-            <span class="block text-[10px] text-slate-500 font-bold">現在の連続出演</span>
-            <span class="block text-sm font-bold text-slate-800 mt-0.5">${streakStats.currentDays}日連続${streakStats.currentShows}公演</span>
-            ${streakStats.currentRange ? `<span class="block text-[10px] text-slate-500 mt-0.5">${escapeHtml(streakStats.currentRange)}</span>` : ''}
-          </div>
-        `;
-      }
 
       const yearCounts = {};
       memberPerfs.forEach(item => {
@@ -2804,16 +2485,12 @@
         const total = perfs.length;
         const nextMilestone = Math.ceil((total + 1) / 100) * 100;
         const diff = nextMilestone - total;
-        const isOshi = oshiMembers.has(m);
-        if ((diff <= 10 && diff > 0) || (isOshi && total > 0)) {
-          countItems.push({ name: m, total, nextMilestone, diff, isOshi });
+        if (diff <= 10 && diff > 0) {
+          countItems.push({ name: m, total, nextMilestone, diff });
         }
       });
 
-      countItems.sort((a, b) => {
-        if (a.isOshi !== b.isOshi) return a.isOshi ? -1 : 1;
-        return a.diff - b.diff;
-      });
+      countItems.sort((a, b) => a.diff - b.diff);
 
       if (countItems.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-2">現在、100回の大台まであと10回以内のメンバーはいません。</p>`;
@@ -2822,9 +2499,9 @@
 
       countItems.forEach(item => {
         const div = document.createElement('div');
-        div.className = `p-2 rounded border flex justify-between items-center ${item.isOshi ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'}`;
+        div.className = "bg-white p-2 rounded border border-slate-200 flex justify-between items-center";
         div.innerHTML = `
-          <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${item.isOshi ? '★' : ''}${escapeHtml(item.name)}</span>
+          <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
           <span class="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.nextMilestone}回まであと${item.diff}回</span>
         `;
         container.appendChild(div);
