@@ -198,19 +198,10 @@
           <div class="space-y-3">
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="block text-xs font-bold text-slate-600">出演メンバー（「、」「・」区切り入力、またはメンバー名から選択）</label>
+                <label class="block text-xs font-bold text-slate-600">出演メンバー（「、」「・」区切り入力）</label>
                 <button type="button" onclick="clearForecastInputs()" class="text-[11px] text-slate-500 hover:text-pink-600 font-bold">リセット</button>
               </div>
-              <textarea id="forecastInputText" oninput="syncForecastChipsFromText()" rows="2" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
-            </div>
-
-            <!-- チップ選択UI -->
-            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1.5">
-              <div class="flex justify-between items-center text-[11px] text-slate-600 font-bold">
-                <span>メンバー選択 (クリックで出演/解除)</span>
-                <span id="forecastSelectedCountBadge" class="text-pink-600">選択中: 0名</span>
-              </div>
-              <div id="forecastMemberChips" class="flex flex-wrap gap-1.5"></div>
+              <textarea id="forecastInputText" oninput="autoResizeForecastTextarea()" rows="2" placeholder="例: 小栗有以・倉野尾成美・佐藤綺星・下尾みう..." class="w-full p-2 border border-slate-300 rounded-lg text-sm overflow-hidden resize-none focus:outline-none focus:ring-2 focus:ring-pink-300"></textarea>
             </div>
 
             <!-- 固定メンバー指定・除外UI -->
@@ -242,10 +233,6 @@
             </button>
           </div>
           <div id="forecastResultArea" class="hidden space-y-4 pt-2 border-t border-slate-100">
-            <div>
-              <h3 class="text-xs font-bold text-slate-500 mb-2">【全メンバーの一覧】</h3>
-              <div id="forecastAllMembersGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
-            </div>
             <div id="forecastExpListArea"></div>
             <div>
               <h3 class="text-xs font-bold text-slate-500 mb-2">【ポジション予想】</h3>
@@ -605,6 +592,7 @@
       initYearMonthDropdowns();
       await loadAllYearsScheduleData();
       populateCoappYearDropdown();
+      autoResizeForecastTextarea();
       
       if (window.location.hash && window.location.hash.length > 1) {
         await applyHashState();
@@ -1021,6 +1009,7 @@
           activeBtn.classList.add('border-t-[3px]', 'border-pink-500');
         }
       }
+      if (tabName === 'forecast') autoResizeForecastTextarea();
       if (tabName === 'coapp') renderCoappMemberChips();
       if (tabName === 'stats') renderStatsTab();
       if (!skipHash) updateUrlHash();
@@ -1549,6 +1538,13 @@
     }
 
     // --- ポジション予想 UI & 計算ロジック ---
+    function autoResizeForecastTextarea() {
+      const textarea = document.getElementById('forecastInputText');
+      if (!textarea) return;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+
     function initForecastUI() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       if (!stage) return;
@@ -1573,7 +1569,7 @@
         exclMemSel.appendChild(new Option(m, m));
       });
 
-      renderForecastChips();
+      autoResizeForecastTextarea();
       renderForecastConstraints();
     }
 
@@ -1586,48 +1582,10 @@
 
     function setForecastInputNames(names) {
       const textarea = document.getElementById('forecastInputText');
-      if (textarea) textarea.value = names.join('・');
-      renderForecastChips();
-    }
-
-    function syncForecastChipsFromText() {
-      renderForecastChips();
-    }
-
-    function renderForecastChips() {
-      const chipBox = document.getElementById('forecastMemberChips');
-      const countBadge = document.getElementById('forecastSelectedCountBadge');
-      if (!chipBox) return;
-      const currentNames = getForecastInputNames();
-      const currentSet = new Set(currentNames);
-      if (countBadge) countBadge.innerText = `選択中: ${currentNames.length}名`;
-
-      chipBox.innerHTML = '';
-      MASTER_MEMBER_ORDER.forEach(m => {
-        const isSelected = currentSet.has(m);
-        const isExcluded = forecastExcludedMembers.has(m);
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        if (isExcluded) {
-          btn.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-400 line-through border border-slate-300';
-        } else if (isSelected) {
-          btn.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-pink-600 text-white border border-pink-600 shadow-sm';
-        } else {
-          btn.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-pink-50';
-        }
-        btn.innerText = m;
-        btn.onclick = () => {
-          if (forecastExcludedMembers.has(m)) {
-            forecastExcludedMembers.delete(m);
-            renderForecastConstraints();
-          }
-          const nextSet = new Set(getForecastInputNames());
-          if (nextSet.has(m)) nextSet.delete(m);
-          else nextSet.add(m);
-          setForecastInputNames(Array.from(nextSet));
-        };
-        chipBox.appendChild(btn);
-      });
+      if (textarea) {
+        textarea.value = names.join('・');
+        autoResizeForecastTextarea();
+      }
     }
 
     function addForecastLock() {
@@ -1648,7 +1606,6 @@
         setForecastInputNames(Array.from(current));
       }
       renderForecastConstraints();
-      renderForecastChips();
     }
 
     function removeForecastLock(pIdx) {
@@ -1666,13 +1623,11 @@
       const current = getForecastInputNames().filter(m => m !== memVal);
       setForecastInputNames(current);
       renderForecastConstraints();
-      renderForecastChips();
     }
 
     function removeForecastExclude(memVal) {
       forecastExcludedMembers.delete(memVal);
       renderForecastConstraints();
-      renderForecastChips();
     }
 
     function renderForecastConstraints() {
@@ -1701,11 +1656,14 @@
     }
 
     function clearForecastInputs() {
-      document.getElementById('forecastInputText').value = '';
+      const textarea = document.getElementById('forecastInputText');
+      if (textarea) {
+        textarea.value = '';
+        autoResizeForecastTextarea();
+      }
       forecastLockedPositions = {};
       forecastExcludedMembers.clear();
       renderForecastConstraints();
-      renderForecastChips();
       document.getElementById('forecastResultArea').classList.add('hidden');
     }
 
@@ -1727,12 +1685,11 @@
       const inputSet = new Set(inputNames);
       const inputMemberList = [...inputNames];
       const resultArea = document.getElementById('forecastResultArea');
-      const allMembersGrid = document.getElementById('forecastAllMembersGrid');
       const expListArea = document.getElementById('forecastExpListArea');
       const positionsList = document.getElementById('forecastPositionsList');
 
       resultArea.classList.remove('hidden');
-      allMembersGrid.innerHTML = ''; positionsList.innerHTML = '';
+      positionsList.innerHTML = '';
       if (expListArea) expListArea.innerHTML = '';
 
       const validShows = (stage.schedules || []).filter(s => s.positionsArray && s.positionsArray.length > 0);
@@ -1740,16 +1697,6 @@
       const historyShows = validShows.filter(show => {
         const time = new Date(show.date).getTime();
         return Number.isFinite(time) && time <= historyNow;
-      });
-
-      MASTER_MEMBER_ORDER.forEach(name => {
-        if (name === "-" || name === "－") return;
-        const isAttending = inputSet.has(name);
-        const isExcluded = forecastExcludedMembers.has(name);
-        const div = document.createElement('div');
-        div.className = `p-2 rounded border flex items-center justify-between ${isAttending ? 'bg-pink-50 border-pink-300 font-bold text-pink-700' : (isExcluded ? 'bg-slate-100 border-slate-200 text-slate-400 line-through' : 'bg-white border-slate-200 text-slate-600')}`;
-        div.innerHTML = `<span>${escapeHtml(name)}</span><span class="text-[10px] px-1.5 py-0.5 rounded ${isAttending ? 'bg-pink-600 text-white' : 'bg-slate-100 text-slate-400'}">${isAttending ? '出演' : (isExcluded ? '除外' : '不在')}</span>`;
-        allMembersGrid.appendChild(div);
       });
 
       const initialAttendingExpMap = {}, appearanceCountMap = {}, lastAppearedDateMap = {};
