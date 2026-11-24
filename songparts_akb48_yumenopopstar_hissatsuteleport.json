@@ -7,46 +7,19 @@
       "partTitle": "イントロ ①",
       "singers": [],
       "lyrics": "",
-      "formation": [
-        { "pos": 3, "x": -3, "y": 2 },
-        { "pos": 5, "x": -1, "y": 2 },
-        { "pos": 8, "x": 1, "y": 2 },
-        { "pos": 6, "x": 3, "y": 2 },
-        { "pos": 1, "x": -3, "y": 1 },
-        { "pos": 4, "x": -1, "y": 1 },
-        { "pos": 2, "x": 1, "y": 1 },
-        { "pos": 7, "x": 3, "y": 1 }
-      ]
+      "formation": null
     },
     {
       "partTitle": "イントロ ②",
       "singers": [1, 4, 2, 7],
       "lyrics": "恋の引力に逆らえ! Jump! Jump! Jump!",
-      "formation": [
-        { "pos": 3, "x": -3.5, "y": 2 },
-        { "pos": 5, "x": -1.5, "y": 2 },
-        { "pos": 8, "x": 0.5, "y": 2 },
-        { "pos": 6, "x": 2.5, "y": 2 },
-        { "pos": 1, "x": -2.5, "y": 1 },
-        { "pos": 4, "x": -0.5, "y": 1 },
-        { "pos": 2, "x": 1.5, "y": 1 },
-        { "pos": 7, "x": 3.5, "y": 1 }
-      ]
+      "formation": null
     },
     {
       "partTitle": "イントロ ③",
       "singers": [3, 5, 8, 6],
       "lyrics": "ハート ちょっとだけ 浮いちゃえ! Jump!Jump!Jump!",
-      "formation": [
-        { "pos": 1, "x": -2.5, "y": 2 },
-        { "pos": 4, "x": -0.5, "y": 2 },
-        { "pos": 2, "x": 1.5, "y": 2 },
-        { "pos": 7, "x": 3.5, "y": 2 },
-        { "pos": 3, "x": -3.5, "y": 1 },
-        { "pos": 5, "x": -1.5, "y": 1 },
-        { "pos": 8, "x": 0.5, "y": 1 },
-        { "pos": 6, "x": 2.5, "y": 1 }
-      ]
+      "formation": null
     },
     {
       "partTitle": "イントロ ④",
