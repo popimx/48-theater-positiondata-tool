@@ -2735,11 +2735,13 @@
 
       const xs = formation.map(p => p.x);
       const ys = formation.map(p => p.y);
-      const maxAbsX = Math.max(5.5, ...xs.map(x => Math.abs(x))) + 1.1;
+      // 両端のラベルがはみ出さないよう左右の最大幅に余裕を持たせる
+      const maxAbsX = Math.max(5.5, ...xs.map(x => Math.abs(x))) + 1.3;
       const minY = Math.min(1, ...ys);
       const maxY = Math.max(1, ...ys);
       const rowCount = maxY - minY + 1;
-      const boxHeight = Math.max(88, rowCount * 44 + 28);
+      // アイコン＋名前ラベルの縦幅を考慮した高さ
+      const boxHeight = Math.max(100, rowCount * 54 + 28);
 
       let dotsHtml = '';
       formation.forEach(pt => {
@@ -2747,19 +2749,30 @@
         const memberName = currentSongPosAssignment[posIdx] || `Pos${pt.pos}`;
         const isHighlighted = highlightedSongPosSet.has(pt.pos);
 
-        const leftPct = 50 + (pt.x / maxAbsX) * 46;
+        const leftPct = 50 + (pt.x / maxAbsX) * 44;
         const bottomPct = rowCount === 1
-          ? 45
-          : 18 + ((pt.y - minY) / (maxY - minY)) * 62;
+          ? 50
+          : 22 + ((pt.y - minY) / (maxY - minY)) * 56;
 
-        const badgeClass = isHighlighted
-          ? 'bg-amber-400 text-slate-900 border-amber-600 ring-2 ring-amber-300 scale-110 z-20 font-extrabold shadow-md'
-          : 'bg-white text-slate-800 border-pink-300 z-10 font-bold shadow-sm';
+        const circleClass = isHighlighted
+          ? 'bg-amber-400 text-slate-900 border-amber-600 ring-2 ring-amber-300 font-extrabold shadow-md'
+          : 'bg-pink-600 text-white border-white font-bold shadow-sm';
+
+        const nameClass = isHighlighted
+          ? 'bg-amber-100 text-slate-900 border-amber-400 font-extrabold shadow-sm'
+          : 'bg-white/95 text-slate-700 border-slate-200 font-bold';
+
+        const wrapperZ = isHighlighted ? 'z-20 scale-105' : 'z-10';
 
         dotsHtml += `
           <div style="left: ${leftPct.toFixed(1)}%; bottom: ${bottomPct.toFixed(1)}%; transform: translate(-50%, 50%);"
-               class="absolute px-2 py-0.5 rounded-full border text-[11px] whitespace-nowrap transition-all ${badgeClass}">
-            ${escapeHtml(memberName)}
+               class="absolute flex flex-col items-center pointer-events-none transition-all ${wrapperZ}">
+            <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] leading-none ${circleClass}">
+              ${pt.pos}
+            </div>
+            <span class="mt-0.5 px-1 py-px rounded border text-[9px] leading-tight whitespace-nowrap ${nameClass}">
+              ${escapeHtml(memberName)}
+            </span>
           </div>
         `;
       });
