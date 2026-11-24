@@ -5,30 +5,24 @@
   "sections": [
     {
       "partTitle": "イントロ ①",
-      "singers": [],
-      "lyrics": "",
-      "formation": null
-    },
-    {
-      "partTitle": "イントロ ②",
       "singers": [1, 4, 2, 7],
       "lyrics": "恋の引力に逆らえ! Jump! Jump! Jump!",
       "formation": null
     },
     {
-      "partTitle": "イントロ ③",
+      "partTitle": "イントロ ②",
       "singers": [3, 5, 8, 6],
       "lyrics": "ハート ちょっとだけ 浮いちゃえ! Jump!Jump!Jump!",
       "formation": null
     },
     {
-      "partTitle": "イントロ ④",
+      "partTitle": "イントロ ③",
       "singers": [1, 4, 2, 7],
       "lyrics": "飛んでけ!",
       "formation": null
     },
     {
-      "partTitle": "イントロ ⑤",
+      "partTitle": "イントロ ④",
       "singers": [3, 1, 5, 4, 8, 2, 6, 7],
       "lyrics": "大好きな人",
       "formation": null
