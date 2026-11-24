@@ -135,7 +135,7 @@
           <div id="calendarList" class="space-y-3"></div>
           <div id="calendarGrid" class="hidden"></div>
 
-          <!-- 月間出演表コンテナ -->
+          <!-- 月間出演表コンテナ（スケジュール内の出演表タブ） -->
           <div id="calendarPerfTable" class="hidden space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div class="text-xs font-bold text-slate-600" id="monthlyPerfSummary">月間出演回数</div>
@@ -154,8 +154,8 @@
               </table>
             </div>
 
-            <!-- 出演表の下：月ごとの出演回数ランキング（演目選択で都度切替） -->
-            <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <!-- スケジュール出演表の下：月ごとの出演回数ランキング（メンバー名検索時は非表示） -->
+            <div id="schedMonthlyRankingContainer" class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2">
                 <h3 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <i class="fa-solid fa-trophy text-pink-500"></i> 月間出演回数ランキング
@@ -213,7 +213,7 @@
         </div>
       </section>
 
-      <!-- Tab 4: 出演表 -->
+      <!-- Tab 4: 出演表（演目詳細内：ランキングなし） -->
       <section id="tab-perf-table" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -429,7 +429,6 @@
             <h3 id="rankingSectionTitle" class="text-sm font-bold text-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-trophy text-pink-500"></i> 出演回数ランキング
             </h3>
-            <span id="rankingGroupBadge" class="text-xs font-bold bg-pink-50 text-pink-600 border border-pink-200 px-2 py-0.5 rounded">グループ限定</span>
           </div>
           <ol id="memberRankingList" class="space-y-1 text-xs divide-y divide-slate-100"></ol>
         </div>
@@ -839,12 +838,15 @@
 
         let membersArr = Array.isArray(item.members) ? item.members.filter(m => m && m !== "-" && m !== "－") : [];
         let posArr = Array.isArray(item.positions) ? item.positions : [];
+        const hasValidPositions = posArr.some(p => p && String(p).trim() !== "" && p !== "-" && p !== "－");
+
         return {
           id: item.id || "",
           date: datePart, time: timePart,
           theater: item.theater || "AKB48劇場",
           displayTitle: mainTitle, subTitle: subTitle, baseStageName: baseStage,
-          performersText: membersArr.join("・"), membersArray: membersArr, positionsArray: posArr
+          performersText: membersArr.join("・"), membersArray: membersArr, positionsArray: posArr,
+          hasValidPositions: hasValidPositions
         };
       });
     }
@@ -900,7 +902,7 @@
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(key => {
         const stage = GLOBAL_STAGE_DATABASE[key];
         stage.schedules.sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
-        const firstShow = stage.schedules.find(s => s.positionsArray && s.positionsArray.length > 0);
+        const firstShow = stage.schedules.find(s => s.hasValidPositions);
         if (firstShow) stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
       });
     }
@@ -930,7 +932,7 @@
         if (GLOBAL_STAGE_DATABASE[key] && GLOBAL_STAGE_DATABASE[key].fixed.length > 0) {
           stage.fixed = GLOBAL_STAGE_DATABASE[key].fixed;
         } else {
-          const firstShow = stage.schedules.find(s => s.positionsArray && s.positionsArray.length > 0);
+          const firstShow = stage.schedules.find(s => s.hasValidPositions);
           if (firstShow) stage.fixed = firstShow.positionsArray.map(m => (m === "-" || m === "－") ? "" : m);
         }
       });
@@ -990,12 +992,15 @@
       SCHEDULE_DATA.forEach(item => {
         if (item.date && item.date.startsWith(datePrefix)) {
           if (currentScheduleFilter === 'ALL' || (item.theater && item.theater.includes(currentScheduleFilter))) {
-            if (item.baseStageName) stagesInMonth.add(item.baseStageName);
+            // ポジション名が記載されている公演のみ選択肢に追加
+            if (item.baseStageName && item.hasValidPositions) {
+              stagesInMonth.add(item.baseStageName);
+            }
           }
         }
       });
 
-      select.innerHTML = '<option value="">すべての演目（当月）</option>';
+      select.innerHTML = '<option value="">すべての演目</option>';
       Array.from(stagesInMonth).forEach(st => {
         select.appendChild(new Option(formatStageTitle(st), st));
       });
@@ -1383,12 +1388,20 @@
       renderScheduleMonthlyRanking();
     }
 
-    // スケジュール出演表の下：月ごとの出演回数ランキング（演目選択で都度切替）
+    // スケジュール出演表の下：月ごとの出演回数ランキング（メンバー名検索時は非表示）
     function renderScheduleMonthlyRanking() {
+      const containerEl = document.getElementById('schedMonthlyRankingContainer');
       const listEl = document.getElementById('schedMonthlyRankingList');
       const labelEl = document.getElementById('schedMonthlyRankingLabel');
       const stageLabelEl = document.getElementById('schedMonthlyRankingStageLabel');
-      if (!listEl) return;
+      if (!containerEl || !listEl) return;
+
+      const memberFilterVal = (document.getElementById("schedMemberFilter")?.value || "").trim();
+      if (memberFilterVal) {
+        containerEl.classList.add('hidden');
+        return;
+      }
+      containerEl.classList.remove('hidden');
       listEl.innerHTML = '';
 
       const year = document.getElementById("yearSelect")?.value || String(new Date().getFullYear());
@@ -1842,6 +1855,7 @@
       renderPerfTable();
     }
 
+    // 演目詳細内の「出演表」タブ（ランキングは表示しない）
     function renderPerfTable() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       const numHeaderTr = document.getElementById('perfTableNumHeader');
@@ -2688,8 +2702,6 @@
     function renderMemberRankings() {
       const targetYear = currentSelectedMemberYear;
       const memberGroup = getMemberGroup(selectedMemberName);
-      
-      document.getElementById('rankingGroupBadge').innerText = `${memberGroup}限定 (${targetYear === 'ALL' ? '通算' : targetYear + '年'})`;
 
       const groupMembers = MASTER_MEMBER_ORDER_BY_GROUP[memberGroup] || [];
       const yearPerfs = targetYear === 'ALL' ? ALL_SCHEDULE_DATA : ALL_SCHEDULE_DATA.filter(item => item.date.startsWith(targetYear));
@@ -2967,6 +2979,9 @@
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
       
       dataSource.forEach(item => {
+        // ポジション名が記載されていない公演は検索サジェストに出さない
+        if (!item.hasValidPositions) return;
+
         if (item.baseStageName && !stageSet.has(item.baseStageName)) {
           stageSet.add(item.baseStageName);
           const fullTitle = formatStageTitle(item.baseStageName);
