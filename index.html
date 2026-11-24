@@ -91,6 +91,9 @@
                 <button id="viewGridBtn" onclick="toggleCalendarView('grid')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
                   <i class="fa-solid fa-table-cells mr-1"></i> 月間
                 </button>
+                <button id="viewPerfBtn" onclick="toggleCalendarView('perf')" class="px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600">
+                  <i class="fa-solid fa-clipboard-user mr-1"></i> 出演表
+                </button>
               </div>
               <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
                 <button onclick="changeMonth(-1)" class="p-1.5 text-slate-400 hover:text-pink-600 rounded hover:bg-slate-200"><i class="fa-solid fa-chevron-left"></i></button>
@@ -131,6 +134,26 @@
           
           <div id="calendarList" class="space-y-3"></div>
           <div id="calendarGrid" class="hidden"></div>
+
+          <!-- 月間出演表コンテナ -->
+          <div id="calendarPerfTable" class="hidden space-y-3">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div class="text-xs font-bold text-slate-600" id="monthlyPerfSummary">月間出演回数</div>
+              <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg text-xs font-bold">
+                <button onclick="setMonthlyPerfMode('circle')" id="monthlyModeCircleBtn" class="px-3 py-1 rounded bg-white text-pink-600 shadow-sm transition">〇印表示</button>
+                <button onclick="setMonthlyPerfMode('count')" id="monthlyModeCountBtn" class="px-3 py-1 rounded text-slate-600 transition">回数表示</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+              <table class="w-full text-left text-sm border-collapse min-w-max">
+                <thead>
+                  <tr id="monthlyPerfNumHeader" class="bg-slate-100 border-b border-slate-200"></tr>
+                  <tr id="monthlyPerfHeader" class="bg-slate-50 border-b border-slate-200"></tr>
+                </thead>
+                <tbody id="monthlyPerfBody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -550,7 +573,8 @@
     let showAllAppearanceRanking = false;
     let showAllCoappearanceRanking = false;
     let todayString = "";
-    let calendarViewMode = 'list';
+    let calendarViewMode = 'list'; // 'list' | 'grid' | 'perf'
+    let monthlyPerfMode = 'circle'; // 'circle' | 'count'
     let perfTableMode = 'circle';
     let selectedCoappMembers = new Set();
     let isRestoringHash = false;
@@ -941,20 +965,31 @@
       calendarViewMode = mode;
       const listBtn = document.getElementById('viewListBtn');
       const gridBtn = document.getElementById('viewGridBtn');
+      const perfBtn = document.getElementById('viewPerfBtn');
+
       const listContainer = document.getElementById('calendarList');
       const gridContainer = document.getElementById('calendarGrid');
-      if (mode === 'list') {
-        listBtn.className = "px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm";
-        gridBtn.className = "px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600";
-        listContainer.classList.remove('hidden');
-        gridContainer.classList.add('hidden');
-      } else {
-        gridBtn.className = "px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm";
-        listBtn.className = "px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600";
-        gridContainer.classList.remove('hidden');
-        listContainer.classList.add('hidden');
-      }
+      const perfContainer = document.getElementById('calendarPerfTable');
+
+      const activeClass = "px-2.5 py-1 rounded-md font-bold transition bg-white text-pink-600 shadow-sm";
+      const inactiveClass = "px-2.5 py-1 rounded-md font-bold transition text-slate-600 hover:text-pink-600";
+
+      listBtn.className = mode === 'list' ? activeClass : inactiveClass;
+      gridBtn.className = mode === 'grid' ? activeClass : inactiveClass;
+      perfBtn.className = mode === 'perf' ? activeClass : inactiveClass;
+
+      listContainer.classList.toggle('hidden', mode !== 'list');
+      gridContainer.classList.toggle('hidden', mode !== 'grid');
+      perfContainer.classList.toggle('hidden', mode !== 'perf');
+
       renderCalendar();
+    }
+
+    function setMonthlyPerfMode(mode) {
+      monthlyPerfMode = mode;
+      document.getElementById('monthlyModeCircleBtn').className = `px-3 py-1 rounded transition ${mode === 'circle' ? 'bg-white text-pink-600 shadow-sm' : 'text-slate-600'}`;
+      document.getElementById('monthlyModeCountBtn').className = `px-3 py-1 rounded transition ${mode === 'count' ? 'bg-white text-pink-600 shadow-sm' : 'text-slate-600'}`;
+      renderMonthlyPerfTable();
     }
 
     function goHome(skipHash = false) {
@@ -1057,6 +1092,7 @@
 
     function renderCalendar() {
       if (calendarViewMode === 'grid') renderCalendarGrid();
+      else if (calendarViewMode === 'perf') renderMonthlyPerfTable();
       else renderCalendarList();
     }
 
@@ -1158,6 +1194,137 @@
       gridContainer.innerHTML = html;
     }
 
+    function renderMonthlyPerfTable() {
+      const numHeaderTr = document.getElementById('monthlyPerfNumHeader');
+      const headerTr = document.getElementById('monthlyPerfHeader');
+      const tbody = document.getElementById('monthlyPerfBody');
+      const summaryEl = document.getElementById('monthlyPerfSummary');
+      numHeaderTr.innerHTML = ''; headerTr.innerHTML = ''; tbody.innerHTML = '';
+
+      const filtered = getFilteredSchedules();
+      const validShows = filtered.filter(s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0));
+      const sortedShows = [...validShows].sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
+
+      const year = document.getElementById("yearSelect").value;
+      const month = parseInt(document.getElementById("monthSelect").value, 10);
+      if (summaryEl) {
+        summaryEl.innerText = `${year}年${month}月 出演表（全${sortedShows.length}公演）`;
+      }
+
+      if (sortedShows.length === 0) {
+        tbody.innerHTML = `<tr><td class="p-6 text-center text-xs text-slate-400">該当する公演データがありません。</td></tr>`;
+        return;
+      }
+
+      // 該当月に登場するメンバー一覧を抽出＆グループ公式順＋初登場順でソート
+      const memberSet = new Set();
+      const appearanceOrder = [];
+      sortedShows.forEach(show => {
+        const arr = [...(show.membersArray || []), ...(show.positionsArray || [])];
+        arr.forEach(m => {
+          if (m && m !== '-' && m !== '－') {
+            if (!memberSet.has(m)) {
+              memberSet.add(m);
+              appearanceOrder.push(m);
+            }
+          }
+        });
+      });
+
+      const memberFilterVal = (document.getElementById("schedMemberFilter")?.value || "").trim().toLowerCase();
+      let candidateMembers = Array.from(memberSet);
+      if (memberFilterVal) {
+        candidateMembers = candidateMembers.filter(m => m.toLowerCase().includes(memberFilterVal));
+      }
+
+      const priorityOrder = currentScheduleFilter !== 'ALL' && MASTER_MEMBER_ORDER_BY_GROUP[currentScheduleFilter]
+        ? MASTER_MEMBER_ORDER_BY_GROUP[currentScheduleFilter]
+        : ALL_MASTER_MEMBERS_LIST;
+
+      const sortedMembers = [];
+      priorityOrder.forEach(m => {
+        if (candidateMembers.includes(m) && !sortedMembers.includes(m)) {
+          sortedMembers.push(m);
+        }
+      });
+      appearanceOrder.forEach(m => {
+        if (candidateMembers.includes(m) && !sortedMembers.includes(m)) {
+          sortedMembers.push(m);
+        }
+      });
+
+      // ヘッダー作成（1行目: 通し番号 / 2行目: 日付＋演目略称）
+      const numThFirst = document.createElement('th');
+      numThFirst.className = "p-2.5 min-w-[130px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
+      numThFirst.innerText = "月間合計";
+      numHeaderTr.appendChild(numThFirst);
+
+      const thFirst = document.createElement('th');
+      thFirst.className = "p-2.5 min-w-[130px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-700 bg-slate-50";
+      thFirst.innerText = "メンバー / 日付";
+      headerTr.appendChild(thFirst);
+
+      sortedShows.forEach((show, idx) => {
+        const numTh = document.createElement('th');
+        numTh.className = "p-2 min-w-[82px] text-center border-r border-slate-200 text-xs font-bold text-pink-600";
+        numTh.innerText = idx + 1;
+        numHeaderTr.appendChild(numTh);
+
+        const dateParts = (show.date || '').split('/');
+        const mdStr = dateParts.length >= 3 ? `${parseInt(dateParts[1], 10)}/${parseInt(dateParts[2], 10)}` : show.date;
+        const shortStage = (show.baseStageName || '').replace(/[「」『』]/g, '').replace(/公演.*$/, '');
+
+        const th = document.createElement('th');
+        th.className = "p-1.5 min-w-[82px] max-w-[96px] text-center border-r border-slate-200 cursor-pointer hover:bg-pink-50 transition group";
+        th.title = `${show.date} ${show.time || ''} ${show.displayTitle}`;
+        th.onclick = () => openScheduleModal(show);
+        th.innerHTML = `
+          <span class="block text-xs font-bold text-slate-700 group-hover:text-pink-600">${escapeHtml(mdStr)}</span>
+          <span class="block text-[9px] text-slate-400 truncate font-normal">${escapeHtml(shortStage)}</span>
+        `;
+        headerTr.appendChild(th);
+      });
+
+      // 各メンバー行の描画
+      sortedMembers.forEach(member => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-100 hover:bg-slate-50";
+
+        let totalCount = 0;
+        sortedShows.forEach(show => {
+          const inPos = show.positionsArray && show.positionsArray.includes(member);
+          const inMem = show.membersArray && show.membersArray.includes(member);
+          if (inPos || inMem) totalCount++;
+        });
+
+        const tdMember = document.createElement('td');
+        tdMember.className = "p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 flex justify-between items-center bg-white";
+        tdMember.innerHTML = `
+          <span class="member-link" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>
+          <span class="text-pink-600 font-bold text-[11px] ml-2 whitespace-nowrap">${totalCount}回</span>
+        `;
+        tr.appendChild(tdMember);
+
+        let runningCount = 0;
+        sortedShows.forEach(show => {
+          const inPos = show.positionsArray && show.positionsArray.includes(member);
+          const inMem = show.membersArray && show.membersArray.includes(member);
+          const participated = inPos || inMem;
+          if (participated) runningCount++;
+
+          const td = document.createElement('td');
+          td.className = "p-2 text-center border-r border-slate-100 text-xs";
+          if (participated) {
+            td.innerHTML = `<span class="font-bold text-slate-900">${monthlyPerfMode === 'circle' ? '〇' : runningCount}</span>`;
+          } else {
+            td.innerHTML = `<span class="text-slate-300">－</span>`;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
     function openScheduleModalById(id) {
       const item = SCHEDULE_DATA.find(s => s.id === id) || ALL_SCHEDULE_DATA.find(s => s.id === id);
       if (item) openScheduleModal(item);
@@ -1250,7 +1417,7 @@
       requestAnimationFrame(() => {
         setTimeout(() => {
           const targetItem = SCHEDULE_DATA.find(s => s.id === elementId) || ALL_SCHEDULE_DATA.find(s => s.id === elementId);
-          if (calendarViewMode === 'grid') {
+          if (calendarViewMode === 'grid' || calendarViewMode === 'perf') {
             if (targetItem) openScheduleModal(targetItem);
           } else {
             clearScheduleHighlights();
