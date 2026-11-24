@@ -324,16 +324,47 @@
       <section id="tab-songparts" class="tab-content hidden space-y-4">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
           <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-music text-pink-500"></i> 歌割りを確認できるページ
+            <i class="fa-solid fa-music text-pink-500"></i> 歌割り・フォーメーション
           </h2>
-          <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-600">演目と楽曲を選択</label>
-            <div class="flex gap-2">
-              <select id="songStageSelect" onchange="onSongStageChange()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
-              <select id="songTrackSelect" onchange="renderSongParts()" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
+
+          <!-- 1. 演目・楽曲選択 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 mb-1">演目</label>
+              <select id="songStageSelect" onchange="onSongStageChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 mb-1">楽曲</label>
+              <select id="songTrackSelect" onchange="onSongTrackChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50"></select>
             </div>
           </div>
-          <div id="songPartsResult" class="space-y-3 pt-2 border-t border-slate-100"></div>
+
+          <!-- 2. メンバー割り当て（公演日から読込 or Pos1〜Pos16 個別選択） -->
+          <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span class="text-xs font-bold text-slate-700">
+                <i class="fa-solid fa-users-viewfinder text-pink-500 mr-1"></i> メンバー割り当て（Pos1〜Pos16）
+              </span>
+              <select id="songSchedulePresetSelect" onchange="applySongSchedulePreset()" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-300">
+                <option value="DEFAULT">初日メンバー（デフォルト）</option>
+              </select>
+            </div>
+            <div id="songPosSelectorsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1"></div>
+          </div>
+
+          <!-- 3. 強調表示するメンバー選択 -->
+          <div class="bg-pink-50/60 p-3 rounded-lg border border-pink-200 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700">
+                <i class="fa-solid fa-highlighter text-pink-600 mr-1"></i> 強調表示するメンバー（タップで切替）
+              </span>
+              <button type="button" onclick="clearSongHighlight()" class="text-[11px] font-bold text-pink-600 hover:underline">解除</button>
+            </div>
+            <div id="songHighlightChips" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <!-- 4. 歌割り ＋ フォーメーション描画エリア -->
+          <div id="songPartsResult" class="space-y-4 pt-2 border-t border-slate-100"></div>
         </div>
       </section>
 
@@ -596,6 +627,13 @@
     let forecastLockedPositions = {}; // { posIdx: memberName }
     let forecastExcludedMembers = new Set();
 
+    // 歌割り・フォーメーション状態
+    let SONG_PARTS_INDEX = {};       // songparts_index.json の中身
+    const SONG_DETAIL_CACHE = {};    // 読み込み済みの個別曲JSONキャッシュ
+    let currentActiveSongData = null;
+    let currentSongPosAssignment = []; // index 0 = Pos1 ... index 15 = Pos16
+    let highlightedSongPosSet = new Set(); // 強調表示中の Pos番号 (1〜16)
+
     const FALLBACK_SCHEDULE_2026 = [
       {
         id: "akb_260807",
@@ -627,7 +665,10 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       initYearMonthDropdowns();
-      await loadAllYearsScheduleData();
+      await Promise.all([
+        loadAllYearsScheduleData(),
+        loadSongPartsIndex()
+      ]);
       populateCoappYearDropdown();
       autoResizeForecastTextarea();
       updateScheduleFilterUI();
@@ -714,7 +755,7 @@
           const st = params.get('stage');
           const tab = params.get('tab') || 'positions';
           if (SCHEDULE_DATA.length === 0) await onDateChange(true);
-          selectStage(st, true);
+          await selectStage(st, true);
           if (tab !== 'positions') switchTab(tab, true);
         } else {
           const y = params.get('y');
@@ -850,8 +891,6 @@
     }
 
     // 月間カレンダー用の短縮演目名整形
-    // ・AKB48 / SKE48 / NMB48 / HKT48 / NGT48 / STU48 はカット
-    // ・チーム名（チームS、チームH、チームKIIなど）がある場合は「チーム名 演目名」と半角1つ空ける
     function formatMonthlyShortStageName(rawStageName) {
       if (!rawStageName) return "";
       let s = String(rawStageName).trim();
@@ -979,7 +1018,6 @@
       SCHEDULE_DATA.forEach(item => {
         if (item.date && item.date.startsWith(datePrefix)) {
           if (currentScheduleFilter === 'ALL' || (item.theater && item.theater.includes(currentScheduleFilter))) {
-            // 演目全体で1回もポジション名が入っていない公演は除外
             const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName];
             const stageHasPositions = item.hasValidPositions || (stageObj && stageObj.schedules && stageObj.schedules.some(s => s.hasValidPositions));
             if (item.baseStageName && stageHasPositions) {
@@ -1003,12 +1041,10 @@
       const memberInput = document.getElementById('schedMemberFilter');
       const hasMemberQuery = Boolean(memberInput && memberInput.value.trim().length > 0);
 
-      // メンバー名で検索に文字が入っているときは、スケジュールの「出演表」タブを非表示にする
       if (perfBtn) {
         perfBtn.classList.toggle('hidden', hasMemberQuery);
       }
 
-      // 「出演表」タブが押されたら「メンバー名で検索」欄を非表示にする
       if (memberFilterWrapper && filterGrid) {
         if (calendarViewMode === 'perf') {
           memberFilterWrapper.classList.add('hidden');
@@ -1097,7 +1133,7 @@
       switchTab('calendar', skipHash);
     }
 
-    function selectStage(stageKey, skipHash = false) {
+    async function selectStage(stageKey, skipHash = false) {
       currentStageKey = stageKey;
       selectedMemberName = null;
       const stage = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
@@ -1118,7 +1154,7 @@
       renderDailyTable();
       renderPerfTable();
       initForecastUI();
-      renderSongStageDropdown();
+      await renderSongStageDropdown();
       switchTab('positions', skipHash);
     }
 
@@ -1413,7 +1449,6 @@
       renderScheduleMonthlyRanking();
     }
 
-    // スケジュール出演表の下：月ごとの出演回数ランキング
     function renderScheduleMonthlyRanking() {
       const containerEl = document.getElementById('schedMonthlyRankingContainer');
       const listEl = document.getElementById('schedMonthlyRankingList');
@@ -1714,7 +1749,6 @@
       return dateStr;
     }
 
-    // 演目詳細内の「日別表」タブ（月間出演数ランキングは表示しない）
     function renderDailyTable() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       const numHeaderTr = document.getElementById('dailyTableNumHeader');
@@ -1802,7 +1836,6 @@
       renderPerfTable();
     }
 
-    // 演目詳細内の「出演表」タブ（ランキングは表示しない）
     function renderPerfTable() {
       const stage = GLOBAL_STAGE_DATABASE[currentStageKey] || STAGE_DATABASE[currentStageKey];
       const numHeaderTr = document.getElementById('perfTableNumHeader');
@@ -2054,7 +2087,6 @@
           const cleanFixed = (fixedMember && fixedMember !== '-' && fixedMember !== '－') ? fixedMember.trim() : '';
           const attendingExperienced = orderedMembers.filter(member => member && member !== '-' && member !== '－' && inputSet.has(member));
 
-          // 予想計算用の経験者マップ登録
           const allExpForCalc = [];
           if (cleanFixed) allExpForCalc.push(cleanFixed);
           attendingExperienced.forEach(m => {
@@ -2073,7 +2105,6 @@
             } else { lastAppearedDateMap[pIdx][member] = 0; }
           });
 
-          // 表示用：「初日」列は cleanFixed、「1人目」以降（subsequentMembers）は出演メンバーに含まれる経験者全員（初日メンバー本人も含む）
           const firstColMember = cleanFixed || '';
           const hasFirstMemberInInput = Boolean(cleanFixed && inputSet.has(cleanFixed));
 
@@ -2086,7 +2117,6 @@
             });
           }
 
-          // 1人目以降の行でメンバー名が記載されていない行はカット
           if (subsequentMembers.length === 0) return;
 
           preparedRows.push({
@@ -2486,42 +2516,339 @@
       });
     }
 
-    function renderSongStageDropdown() {
+    // ==========================================
+    // 歌割り ＆ フォーメーション JSON読み込み・描画ロジック
+    // ==========================================
+    async function loadSongPartsIndex() {
+      if (Object.keys(SONG_PARTS_INDEX).length > 0) return SONG_PARTS_INDEX;
+      try {
+        const res = await fetch("songparts_index.json");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        SONG_PARTS_INDEX = await res.json();
+      } catch (err) {
+        console.warn("songparts_index.json の読み込みに失敗しました:", err);
+        SONG_PARTS_INDEX = {};
+      }
+      return SONG_PARTS_INDEX;
+    }
+
+    async function renderSongStageDropdown() {
+      await loadSongPartsIndex();
       const stageSelect = document.getElementById('songStageSelect');
+      if (!stageSelect) return;
       stageSelect.innerHTML = '';
-      Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
+
+      const allStageKeys = new Set([
+        ...Object.keys(GLOBAL_STAGE_DATABASE),
+        ...Object.keys(SONG_PARTS_INDEX)
+      ]);
+
+      allStageKeys.forEach(stageKey => {
         const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
         const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
         stageSelect.appendChild(new Option(displayName, stageKey));
       });
-      if (currentStageKey && GLOBAL_STAGE_DATABASE[currentStageKey]) {
+
+      if (currentStageKey && allStageKeys.has(currentStageKey)) {
         stageSelect.value = currentStageKey;
       }
-      onSongStageChange();
+      await onSongStageChange();
     }
 
-    function onSongStageChange() {
+    async function onSongStageChange() {
       const stageKey = document.getElementById('songStageSelect').value;
       const trackSelect = document.getElementById('songTrackSelect');
+      const presetSelect = document.getElementById('songSchedulePresetSelect');
       trackSelect.innerHTML = '';
-      const dummyTracks = ["M1. overture", "M2. ピース!", "M3. 女の子の第六感", "M4. 青春のフラッグ", "M5. ユニットメドレー"];
-      dummyTracks.forEach(t => trackSelect.appendChild(new Option(t, t)));
+
+      const trackList = SONG_PARTS_INDEX[stageKey] || [];
+      if (trackList.length > 0) {
+        trackList.forEach(item => {
+          trackSelect.appendChild(new Option(item.title, item.file));
+        });
+      } else {
+        trackSelect.appendChild(new Option("（歌割りデータ未登録）", ""));
+      }
+
+      presetSelect.innerHTML = '<option value="DEFAULT">初日メンバー（デフォルト）</option>';
+      const stageObj = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
+      if (stageObj && Array.isArray(stageObj.schedules)) {
+        stageObj.schedules
+          .filter(s => s.hasValidPositions && s.positionsArray && s.positionsArray.length > 0)
+          .sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`))
+          .forEach(show => {
+            const label = `${show.date} ${show.time || ""} ${show.subTitle || ""}`.trim();
+            presetSelect.appendChild(new Option(label, show.id));
+          });
+      }
+
+      highlightedSongPosSet.clear();
+      await onSongTrackChange();
+    }
+
+    async function onSongTrackChange() {
+      const fileName = document.getElementById('songTrackSelect').value;
+      if (!fileName) {
+        currentActiveSongData = null;
+        applySongSchedulePreset();
+        return;
+      }
+
+      if (SONG_DETAIL_CACHE[fileName]) {
+        currentActiveSongData = SONG_DETAIL_CACHE[fileName];
+      } else {
+        try {
+          const res = await fetch(fileName);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          SONG_DETAIL_CACHE[fileName] = json;
+          currentActiveSongData = json;
+        } catch (err) {
+          console.error(`歌割りJSON(${fileName})の読み込みエラー:`, err);
+          currentActiveSongData = null;
+        }
+      }
+
+      applySongSchedulePreset();
+    }
+
+    function applySongSchedulePreset() {
+      const stageKey = document.getElementById('songStageSelect').value;
+      const presetId = document.getElementById('songSchedulePresetSelect').value;
+      const stageObj = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
+
+      let basePositions = [];
+      if (presetId !== 'DEFAULT' && stageObj && stageObj.schedules) {
+        const found = stageObj.schedules.find(s => s.id === presetId);
+        if (found && found.positionsArray) basePositions = [...found.positionsArray];
+      }
+      if (basePositions.length === 0 && stageObj && stageObj.fixed) {
+        basePositions = [...stageObj.fixed];
+      }
+
+      currentSongPosAssignment = [];
+      for (let i = 0; i < 16; i++) {
+        const m = (basePositions[i] && basePositions[i] !== '-' && basePositions[i] !== '－')
+          ? basePositions[i].trim()
+          : `Pos${i + 1}`;
+        currentSongPosAssignment.push(m);
+      }
+
+      renderSongPosSelectors();
       renderSongParts();
+    }
+
+    function renderSongPosSelectors() {
+      const stageKey = document.getElementById('songStageSelect').value;
+      const stageObj = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
+      const track = currentActiveSongData;
+
+      const activeCount = Math.min(16, Math.max(
+        track?.posCount || 0,
+        stageObj?.fixed?.length || 8
+      ));
+
+      const group = normalizeGroupName(stageObj?.group) || currentMemberOrderGroup || "AKB48";
+      const candidateMembers = Array.from(new Set([
+        ...(MASTER_MEMBER_ORDER_BY_GROUP[group] || []),
+        ...(stageObj ? Array.from(stageObj.allMembers) : [])
+      ]));
+
+      const grid = document.getElementById('songPosSelectorsGrid');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < activeCount; i++) {
+        const posNum = i + 1;
+        const currentVal = currentSongPosAssignment[i] || `Pos${posNum}`;
+
+        const cell = document.createElement('div');
+        cell.className = "flex items-center gap-1 bg-white border border-slate-200 rounded px-1.5 py-1";
+
+        const label = document.createElement('span');
+        label.className = "text-[10px] font-bold text-pink-600 w-8 shrink-0";
+        label.innerText = `Pos${posNum}`;
+
+        const sel = document.createElement('select');
+        sel.className = "w-full text-xs font-bold text-slate-700 bg-transparent focus:outline-none truncate";
+        sel.onchange = (e) => {
+          currentSongPosAssignment[i] = e.target.value;
+          renderSongHighlightChips(activeCount);
+          renderSongParts();
+        };
+
+        sel.appendChild(new Option(`Pos${posNum}`, `Pos${posNum}`));
+        const optionSet = new Set([`Pos${posNum}`, ...candidateMembers]);
+        if (currentVal && !optionSet.has(currentVal)) {
+          sel.appendChild(new Option(currentVal, currentVal));
+        }
+        candidateMembers.forEach(m => sel.appendChild(new Option(m, m)));
+        sel.value = currentVal;
+
+        cell.appendChild(label);
+        cell.appendChild(sel);
+        grid.appendChild(cell);
+      }
+
+      renderSongHighlightChips(activeCount);
+    }
+
+    function renderSongHighlightChips(forcedCount) {
+      const stageKey = document.getElementById('songStageSelect').value;
+      const stageObj = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
+      const track = currentActiveSongData;
+      const activeCount = forcedCount || Math.min(16, Math.max(track?.posCount || 0, stageObj?.fixed?.length || 8));
+
+      const chipContainer = document.getElementById('songHighlightChips');
+      chipContainer.innerHTML = '';
+
+      for (let i = 0; i < activeCount; i++) {
+        const posNum = i + 1;
+        const name = currentSongPosAssignment[i] || `Pos${posNum}`;
+        const isHighlighted = highlightedSongPosSet.has(posNum);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `px-2.5 py-1 rounded-full text-xs font-bold transition border ${
+          isHighlighted
+            ? 'bg-amber-400 text-slate-900 border-amber-500 shadow-sm ring-2 ring-amber-200'
+            : 'bg-white text-slate-700 border-slate-300 hover:bg-pink-50'
+        }`;
+        btn.innerHTML = `<span class="text-[10px] opacity-75 mr-1">P${posNum}</span>${escapeHtml(name)}`;
+        btn.onclick = () => {
+          if (highlightedSongPosSet.has(posNum)) highlightedSongPosSet.delete(posNum);
+          else highlightedSongPosSet.add(posNum);
+          renderSongHighlightChips(activeCount);
+          renderSongParts();
+        };
+        chipContainer.appendChild(btn);
+      }
+    }
+
+    function clearSongHighlight() {
+      highlightedSongPosSet.clear();
+      renderSongHighlightChips();
+      renderSongParts();
+    }
+
+    function buildFormationDiagramHtml(formation) {
+      if (!Array.isArray(formation) || formation.length === 0) return '';
+
+      const xs = formation.map(p => p.x);
+      const ys = formation.map(p => p.y);
+      const maxAbsX = Math.max(5.5, ...xs.map(x => Math.abs(x))) + 1.1;
+      const minY = Math.min(1, ...ys);
+      const maxY = Math.max(1, ...ys);
+      const rowCount = maxY - minY + 1;
+      const boxHeight = Math.max(88, rowCount * 44 + 28);
+
+      let dotsHtml = '';
+      formation.forEach(pt => {
+        const posIdx = pt.pos - 1;
+        const memberName = currentSongPosAssignment[posIdx] || `Pos${pt.pos}`;
+        const isHighlighted = highlightedSongPosSet.has(pt.pos);
+
+        const leftPct = 50 + (pt.x / maxAbsX) * 46;
+        const bottomPct = rowCount === 1
+          ? 45
+          : 18 + ((pt.y - minY) / (maxY - minY)) * 62;
+
+        const badgeClass = isHighlighted
+          ? 'bg-amber-400 text-slate-900 border-amber-600 ring-2 ring-amber-300 scale-110 z-20 font-extrabold shadow-md'
+          : 'bg-white text-slate-800 border-pink-300 z-10 font-bold shadow-sm';
+
+        dotsHtml += `
+          <div style="left: ${leftPct.toFixed(1)}%; bottom: ${bottomPct.toFixed(1)}%; transform: translate(-50%, 50%);"
+               class="absolute px-2 py-0.5 rounded-full border text-[11px] whitespace-nowrap transition-all ${badgeClass}">
+            ${escapeHtml(memberName)}
+          </div>
+        `;
+      });
+
+      return `
+        <div class="mt-2.5 pt-2 border-t border-slate-200/80">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 font-bold mb-1">
+            <span><i class="fa-solid fa-people-arrows text-pink-400 mr-1"></i>フォーメーション</span>
+            <span>▲ ステージ奥</span>
+          </div>
+          <div style="height: ${boxHeight}px;" class="relative w-full bg-slate-100/80 rounded-lg border border-slate-200 overflow-hidden">
+            <div class="absolute inset-y-0 left-1/2 border-l border-dashed border-slate-300 pointer-events-none"></div>
+            ${dotsHtml}
+          </div>
+          <div class="text-center text-[10px] font-bold text-pink-600 tracking-widest mt-1">
+            ▼ 客席側（FRONT）
+          </div>
+        </div>
+      `;
     }
 
     function renderSongParts() {
       const resultArea = document.getElementById('songPartsResult');
-      resultArea.innerHTML = `
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 text-xs">
-          <div class="font-bold text-slate-700">【歌割り・ポジション構成】</div>
-          <div class="grid grid-cols-2 gap-2">
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">センター</span>小栗有以・山内瑞葵</div>
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">フロント</span>佐藤綺星・千葉恵里</div>
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">ユニット</span>秋山由奈・八木愛月</div>
-            <div class="bg-white p-2 rounded border"><span class="font-bold text-pink-600 block">コーラス / 全員</span>出演メンバー全員</div>
+      const track = currentActiveSongData;
+
+      if (!track || !Array.isArray(track.sections)) {
+        resultArea.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">歌割りデータが見つからないか、未登録です。</p>`;
+        return;
+      }
+
+      let html = '';
+
+      if (Array.isArray(track.memo) && track.memo.length > 0) {
+        html += `
+          <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] text-slate-600 space-y-0.5">
+            <div class="font-bold text-slate-700 mb-1"><i class="fa-regular fa-note-sticky text-pink-500 mr-1"></i>メモ</div>
+            ${track.memo.map(line => `<div>・${escapeHtml(line)}</div>`).join('')}
           </div>
-        </div>
-      `;
+        `;
+      }
+
+      track.sections.forEach(sec => {
+        const singers = Array.isArray(sec.singers) ? sec.singers : [];
+        const hasHighlight = highlightedSongPosSet.size > 0;
+        const isSectionHighlighted = singers.some(posNum => highlightedSongPosSet.has(posNum));
+
+        let singersHtml = '';
+        if (singers.length === 0) {
+          singersHtml = `<span class="text-[11px] font-bold text-slate-400">（間奏・ダンスパート）</span>`;
+        } else {
+          singersHtml = singers.map(posNum => {
+            const name = currentSongPosAssignment[posNum - 1] || `Pos${posNum}`;
+            const isHit = highlightedSongPosSet.has(posNum);
+            const chipClass = isHit
+              ? 'bg-amber-400 text-slate-900 border-amber-500 font-extrabold shadow-sm'
+              : 'bg-pink-50 text-pink-700 border-pink-200 font-bold';
+            return `<span class="inline-block px-2 py-0.5 rounded border text-xs ${chipClass}">${escapeHtml(name)}</span>`;
+          }).join('');
+        }
+
+        const cardClass = hasHighlight
+          ? (isSectionHighlighted
+              ? 'bg-amber-50/40 border-amber-400 ring-1 ring-amber-300 shadow-sm'
+              : 'bg-white border-slate-200 opacity-60')
+          : 'bg-white border-slate-200 shadow-sm';
+
+        html += `
+          <div class="rounded-xl border p-3.5 transition ${cardClass}">
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-white">${escapeHtml(sec.partTitle || '')}</span>
+              ${isSectionHighlighted ? '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">歌唱パート</span>' : ''}
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              ${singersHtml}
+            </div>
+
+            ${sec.lyrics ? `
+              <div class="text-xs leading-relaxed text-slate-800 whitespace-pre-line font-medium pl-2 border-l-2 ${isSectionHighlighted ? 'border-amber-400' : 'border-pink-300'}">
+                ${escapeHtml(sec.lyrics)}
+              </div>
+            ` : ''}
+
+            ${buildFormationDiagramHtml(sec.formation)}
+          </div>
+        `;
+      });
+
+      resultArea.innerHTML = html;
     }
 
     // --- メンバー詳細 ---
@@ -2893,7 +3220,6 @@
       select.innerHTML = '';
       Object.keys(GLOBAL_STAGE_DATABASE).forEach(stageKey => {
         const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
-        // 1回もポジション名が入っていない演目は選択肢に出さない
         const hasAnyPositionRecord = stageObj && stageObj.schedules && stageObj.schedules.some(s => s.hasValidPositions);
         if (!hasAnyPositionRecord) return;
 
@@ -2919,7 +3245,6 @@
       const counts = {};
       const firstDateMap = {};
 
-      // ポジション名が入っていない特別編成日も含めて全開催日で集計
       stageObj.schedules.forEach(item => {
         const unique = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
         const dateKey = `${item.date || '9999/99/99'} ${item.time || ''}`;
@@ -2972,7 +3297,6 @@
       const dataSource = ALL_SCHEDULE_DATA.length > 0 ? ALL_SCHEDULE_DATA : SCHEDULE_DATA;
       
       dataSource.forEach(item => {
-        // ポジション名が記載されていない公演は検索サジェストに出さない
         const stageObj = GLOBAL_STAGE_DATABASE[item.baseStageName];
         const stageHasPositions = item.hasValidPositions || (stageObj && stageObj.schedules && stageObj.schedules.some(s => s.hasValidPositions));
         if (!stageHasPositions) return;
