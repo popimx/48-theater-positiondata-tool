@@ -118,7 +118,7 @@
           <!-- スケジュール内 公演別・メンバー別検索 -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
             <div class="relative">
-              <select id="schedStageFilter" onchange="renderCalendar()" class="w-full bg-white border border-slate-300 text-xs font-bold text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300">
+              <select id="schedStageFilter" onchange="onScheduleStageFilterChange()" class="w-full bg-white border border-slate-300 text-xs font-bold text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300">
                 <option value="">すべての演目</option>
               </select>
             </div>
@@ -136,7 +136,7 @@
           <div id="calendarGrid" class="hidden"></div>
 
           <!-- 月間出演表コンテナ -->
-          <div id="calendarPerfTable" class="hidden space-y-3">
+          <div id="calendarPerfTable" class="hidden space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div class="text-xs font-bold text-slate-600" id="monthlyPerfSummary">月間出演回数</div>
               <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg text-xs font-bold">
@@ -152,6 +152,20 @@
                 </thead>
                 <tbody id="monthlyPerfBody" class="divide-y divide-slate-100"></tbody>
               </table>
+            </div>
+
+            <!-- 出演表の下：月ごとの出演回数ランキング（演目選択で都度切替） -->
+            <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2">
+                <h3 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <i class="fa-solid fa-trophy text-pink-500"></i> 月間出演回数ランキング
+                </h3>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span id="schedMonthlyRankingStageLabel" class="text-[11px] font-bold bg-white text-slate-700 border border-slate-200 px-2.5 py-0.5 rounded-full"></span>
+                  <span id="schedMonthlyRankingLabel" class="text-[11px] font-bold bg-pink-100 text-pink-700 px-2.5 py-0.5 rounded-full"></span>
+                </div>
+              </div>
+              <ol id="schedMonthlyRankingList" class="space-y-1 text-xs max-h-72 overflow-y-auto pr-1 divide-y divide-slate-100"></ol>
             </div>
           </div>
         </div>
@@ -843,17 +857,15 @@
       return baseName.includes("「") ? `${baseName}公演` : `「${baseName}」公演`;
     }
 
-    // スケジュールの出演表・月間カレンダー用の演目名整形
+    // 月間カレンダー用の短縮演目名整形
     // ・AKB48 / SKE48 / NMB48 / HKT48 / NGT48 / STU48 はカット
     // ・チーム名（チームS、チームH、チームKIIなど）がある場合は「チーム名 演目名」と半角1つ空ける
     function formatMonthlyShortStageName(rawStageName) {
       if (!rawStageName) return "";
       let s = String(rawStageName).trim();
 
-      // グループ名（AKB48, SKE48, NMB48, HKT48, NGT48, STU48）をカット
       s = s.replace(/(?:AKB48|SKE48|NMB48|HKT48|NGT48|STU48)\s*/gi, "");
 
-      // 「チーム〇〇」の後に演目名が続く場合、チーム名と演目名を分離して半角1つ空ける
       const teamMatch = s.match(/^(チーム[^\s「『（(]+)\s*(.+)$/);
       if (teamMatch) {
         const teamName = teamMatch[1].trim();
@@ -862,7 +874,6 @@
         return showTitle ? `${teamName} ${showTitle}` : teamName;
       }
 
-      // グループ名のみ・チーム名なしの場合
       s = s.replace(/[「」『』]/g, "").replace(/公演.*$/, "").trim();
       return s;
     }
@@ -989,6 +1000,13 @@
         select.appendChild(new Option(formatStageTitle(st), st));
       });
       if (stagesInMonth.has(prevVal)) select.value = prevVal;
+    }
+
+    function onScheduleStageFilterChange() {
+      renderCalendar();
+      if (calendarViewMode === 'perf') {
+        renderScheduleMonthlyRanking();
+      }
     }
 
     function clearScheduleFilters() {
@@ -1253,6 +1271,7 @@
 
       if (sortedShows.length === 0) {
         tbody.innerHTML = `<tr><td class="p-6 text-center text-xs text-slate-400">該当する公演データがありません。</td></tr>`;
+        renderScheduleMonthlyRanking();
         return;
       }
 
@@ -1293,20 +1312,20 @@
         }
       });
 
-      // ヘッダー作成（1行目: 通し番号 / 2行目: 日付＋整形済み演目名）
+      // ヘッダー作成（1行目: 通し番号 / 2行目: 日付のみ、幅を統一）
       const numThFirst = document.createElement('th');
-      numThFirst.className = "p-2.5 min-w-[130px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100";
+      numThFirst.className = "p-2 w-[136px] min-w-[136px] max-w-[136px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-500 bg-slate-100 whitespace-nowrap";
       numThFirst.innerText = "月間合計";
       numHeaderTr.appendChild(numThFirst);
 
       const thFirst = document.createElement('th');
-      thFirst.className = "p-2.5 min-w-[130px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-700 bg-slate-50";
+      thFirst.className = "p-2 w-[136px] min-w-[136px] max-w-[136px] text-center border-r border-slate-200 sticky-col-1 font-bold text-xs text-slate-700 bg-slate-50 whitespace-nowrap";
       thFirst.innerText = "メンバー / 日付";
       headerTr.appendChild(thFirst);
 
       sortedShows.forEach((show, idx) => {
         const numTh = document.createElement('th');
-        numTh.className = "p-2 min-w-[90px] text-center border-r border-slate-200 text-xs font-bold text-pink-600";
+        numTh.className = "p-2 w-[76px] min-w-[76px] max-w-[76px] text-center border-r border-slate-200 text-xs font-bold text-pink-600 whitespace-nowrap";
         numTh.innerText = idx + 1;
         numHeaderTr.appendChild(numTh);
 
@@ -1315,13 +1334,10 @@
         const shortStage = formatMonthlyShortStageName(show.baseStageName);
 
         const th = document.createElement('th');
-        th.className = "p-1.5 min-w-[90px] max-w-[125px] text-center border-r border-slate-200 cursor-pointer hover:bg-pink-50 transition group";
+        th.className = "p-2 w-[76px] min-w-[76px] max-w-[76px] text-center border-r border-slate-200 cursor-pointer hover:bg-pink-50 transition group whitespace-nowrap";
         th.title = `${show.date} ${show.time || ''} ${shortStage}`;
         th.onclick = () => openScheduleModal(show);
-        th.innerHTML = `
-          <span class="block text-xs font-bold text-slate-700 group-hover:text-pink-600">${escapeHtml(mdStr)}</span>
-          <span class="block text-[9px] text-slate-500 truncate font-medium">${escapeHtml(shortStage)}</span>
-        `;
+        th.innerHTML = `<span class="text-xs font-bold text-slate-700 group-hover:text-pink-600">${escapeHtml(mdStr)}</span>`;
         headerTr.appendChild(th);
       });
 
@@ -1338,9 +1354,9 @@
         });
 
         const tdMember = document.createElement('td');
-        tdMember.className = "p-2.5 text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 flex justify-between items-center bg-white";
+        tdMember.className = "p-2 w-[136px] min-w-[136px] max-w-[136px] text-left pl-3 border-r border-slate-100 sticky-col-1 text-xs font-bold text-slate-800 flex justify-between items-center bg-white whitespace-nowrap";
         tdMember.innerHTML = `
-          <span class="member-link" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>
+          <span class="member-link truncate" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span>
           <span class="text-pink-600 font-bold text-[11px] ml-2 whitespace-nowrap">${totalCount}回</span>
         `;
         tr.appendChild(tdMember);
@@ -1353,7 +1369,7 @@
           if (participated) runningCount++;
 
           const td = document.createElement('td');
-          td.className = "p-2 text-center border-r border-slate-100 text-xs";
+          td.className = "p-2 w-[76px] min-w-[76px] max-w-[76px] text-center border-r border-slate-100 text-xs whitespace-nowrap";
           if (participated) {
             td.innerHTML = `<span class="font-bold text-slate-900">${monthlyPerfMode === 'circle' ? '〇' : runningCount}</span>`;
           } else {
@@ -1362,6 +1378,84 @@
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
+      });
+
+      renderScheduleMonthlyRanking();
+    }
+
+    // スケジュール出演表の下：月ごとの出演回数ランキング（演目選択で都度切替）
+    function renderScheduleMonthlyRanking() {
+      const listEl = document.getElementById('schedMonthlyRankingList');
+      const labelEl = document.getElementById('schedMonthlyRankingLabel');
+      const stageLabelEl = document.getElementById('schedMonthlyRankingStageLabel');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+
+      const year = document.getElementById("yearSelect")?.value || String(new Date().getFullYear());
+      const month = document.getElementById("monthSelect")?.value || String(new Date().getMonth() + 1).padStart(2, '0');
+      const monthInt = parseInt(month, 10);
+      const stageFilterVal = document.getElementById("schedStageFilter")?.value || "";
+
+      const targetShows = getFilteredSchedules().filter(
+        s => (s.positionsArray && s.positionsArray.length > 0) || (s.membersArray && s.membersArray.length > 0)
+      );
+
+      if (stageLabelEl) {
+        stageLabelEl.innerText = stageFilterVal ? formatStageTitle(stageFilterVal) : "すべての演目";
+      }
+      if (labelEl) {
+        labelEl.innerText = `${year}年${monthInt}月（全${targetShows.length}公演）`;
+      }
+
+      if (targetShows.length === 0) {
+        listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">該当する公演データがありません。</p>`;
+        return;
+      }
+
+      const priorityOrderList = currentScheduleFilter !== 'ALL' && MASTER_MEMBER_ORDER_BY_GROUP[currentScheduleFilter]
+        ? [...MASTER_MEMBER_ORDER_BY_GROUP[currentScheduleFilter], ...ALL_MASTER_MEMBERS_LIST]
+        : ALL_MASTER_MEMBERS_LIST;
+
+      const counts = {};
+      const firstDateMap = {};
+
+      targetShows.forEach(item => {
+        const unique = new Set([...(item.membersArray || []), ...(item.positionsArray || [])]);
+        const dateKey = `${item.date || '9999/99/99'} ${item.time || ''}`;
+        unique.forEach(m => {
+          if (m && m !== '-' && m !== '－') {
+            counts[m] = (counts[m] || 0) + 1;
+            if (!firstDateMap[m] || dateKey < firstDateMap[m]) {
+              firstDateMap[m] = dateKey;
+            }
+          }
+        });
+      });
+
+      const arr = Object.keys(counts).map(m => ({
+        name: m,
+        count: counts[m],
+        firstDate: firstDateMap[m]
+      }));
+
+      sortMemberRankingsWithFirstDate(arr, priorityOrderList);
+
+      if (arr.length === 0) {
+        listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">出演メンバーデータがありません。</p>`;
+        return;
+      }
+
+      arr.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = "flex justify-between items-center py-1.5 border-b border-slate-100 text-xs";
+        li.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-10 text-right font-bold text-slate-400 whitespace-nowrap">${item.rank}位</span>
+            <span class="font-bold text-slate-700 cursor-pointer hover:text-pink-600" onclick="openMemberDetail('${escapeHtml(item.name)}')">${escapeHtml(item.name)}</span>
+          </div>
+          <span class="font-bold text-pink-600 ml-auto">${item.count}回</span>
+        `;
+        listEl.appendChild(li);
       });
     }
 
