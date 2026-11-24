@@ -1,0 +1,130 @@
+{
+  "stage": "AKB48「夢のポップスター」公演",
+  "title": "偶然の十字路",
+  "posCount": 8,
+  "sections": [
+    {
+      "partTitle": "1番Aメロ ①",
+      "singers": [8, 5],
+      "lyrics": "川の水面に 春の陽射しが\n鏡のように 反射してるよ",
+      "formation": null
+    },
+    {
+      "partTitle": "1番Aメロ ②",
+      "singers": [7, 6],
+      "lyrics": "自転車を漕いで 橋を渡って 君を迎えに行く",
+      "formation": null
+    },
+    {
+      "partTitle": "1番Bメロ ①",
+      "singers": [3, 1],
+      "lyrics": "まだ学校へは そう早すぎる時間",
+      "formation": null
+    },
+    {
+      "partTitle": "1番Bメロ ②",
+      "singers": [2, 4],
+      "lyrics": "通学路 僕が先回りをして 待ってよう",
+      "formation": null
+    },
+    {
+      "partTitle": "1番サビ",
+      "singers": [2, 3, 7, 8, 5, 6, 1, 4],
+      "lyrics": "偶然の十字路で 出会えるように作戦中\n偶然の十字路で 合流して\n君が微笑んでくれたら それだけでLucky",
+      "formation": null
+    },
+    {
+      "partTitle": "2番Aメロ ①",
+      "singers": [3, 1],
+      "lyrics": "学校の中に 一歩 入ると\n話すだけでも 噂になるよ",
+      "formation": null
+    },
+    {
+      "partTitle": "2番Aメロ ②",
+      "singers": [2, 4],
+      "lyrics": "自転車通学 行きと帰りが 僕のチャンスなんだ",
+      "formation": null
+    },
+    {
+      "partTitle": "2番Bメロ ①",
+      "singers": [8, 5],
+      "lyrics": "なぜ 人は誰も 恋 隠すのだろう?",
+      "formation": null
+    },
+    {
+      "partTitle": "2番Bメロ ②",
+      "singers": [7, 6],
+      "lyrics": "君だって 最近 よく会うねって 不思議そう",
+      "formation": null
+    },
+    {
+      "partTitle": "2番サビ ①",
+      "singers": [7, 3, 8, 2, 4, 5, 1, 6],
+      "lyrics": "さりげなく片思い 気づかなくていい 恋愛中",
+      "formation": [
+        { "pos": 3, "x": -4, "y": 2 },
+        { "pos": 2, "x": -1, "y": 2 },
+        { "pos": 4, "x": 1, "y": 2 },
+        { "pos": 1, "x": 4, "y": 2 },
+        { "pos": 7, "x": -5.5, "y": 1 },
+        { "pos": 8, "x": -2.5, "y": 1 },
+        { "pos": 5, "x": 2.5, "y": 1 },
+        { "pos": 6, "x": 5.5, "y": 1 }
+      ]
+    },
+    {
+      "partTitle": "2番サビ ②",
+      "singers": [7, 8, 3, 2, 4, 1, 5, 6],
+      "lyrics": "さりげなく片思い 声を掛けて\nもしも振られたとしたって",
+      "formation": null
+    },
+    {
+      "partTitle": "2番サビ ③",
+      "singers": [8, 2, 7, 3, 1, 6, 4, 5],
+      "lyrics": "走ってくだけさ",
+      "formation": null
+    },
+    {
+      "partTitle": "Cメロ ①",
+      "singers": [8, 5],
+      "lyrics": "愛しさの ペダルを踏み",
+      "formation": null
+    },
+    {
+      "partTitle": "Cメロ ②",
+      "singers": [7, 6],
+      "lyrics": "僕の自転車は走る",
+      "formation": null
+    },
+    {
+      "partTitle": "Cメロ ③",
+      "singers": [3, 1],
+      "lyrics": "君の自転車は走る",
+      "formation": null
+    },
+    {
+      "partTitle": "Cメロ ④",
+      "singers": [2, 4],
+      "lyrics": "僕と君は風になろう",
+      "formation": null
+    },
+    {
+      "partTitle": "ラストサビ ①",
+      "singers": [7, 8, 5, 6],
+      "lyrics": "偶然の十字路で",
+      "formation": null
+    },
+    {
+      "partTitle": "ラストサビ ②",
+      "singers": [2, 3, 1, 4],
+      "lyrics": "出会えるように 作戦中",
+      "formation": null
+    },
+    {
+      "partTitle": "ラストサビ ③",
+      "singers": [2, 3, 7, 8, 5, 6, 1, 4],
+      "lyrics": "偶然の十字路で 合流して\n君が微笑んでくれたら それだけでLucky",
+      "formation": null
+    }
+  ]
+}
