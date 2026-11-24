@@ -2054,7 +2054,7 @@
           const cleanFixed = (fixedMember && fixedMember !== '-' && fixedMember !== '－') ? fixedMember.trim() : '';
           const attendingExperienced = orderedMembers.filter(member => member && member !== '-' && member !== '－' && inputSet.has(member));
 
-          // 1人目（初日）の経験者リスト（予想計算用）
+          // 予想計算用の経験者マップ登録
           const allExpForCalc = [];
           if (cleanFixed) allExpForCalc.push(cleanFixed);
           attendingExperienced.forEach(m => {
@@ -2073,13 +2073,13 @@
             } else { lastAppearedDateMap[pIdx][member] = 0; }
           });
 
-          // 表示用：1人目（初日）は cleanFixed（または存在しない場合は空欄）、2人目以降（インデックス1以降）は入力された出演メンバー順
+          // 表示用：「初日」列は cleanFixed、「1人目」以降（subsequentMembers）は出演メンバーに含まれる経験者全員（初日メンバー本人も含む）
           const firstColMember = cleanFixed || '';
           const hasFirstMemberInInput = Boolean(cleanFixed && inputSet.has(cleanFixed));
 
-          let subsequentMembers = attendingExperienced.filter(m => m !== cleanFixed);
+          let subsequentMembers = [...attendingExperienced];
           if (hasFirstMemberInInput) {
-            subsequentMembers = [...subsequentMembers].sort((a, b) => {
+            subsequentMembers.sort((a, b) => {
               const idxA = inputOrderIndexMap.has(a) ? inputOrderIndexMap.get(a) : Number.MAX_SAFE_INTEGER;
               const idxB = inputOrderIndexMap.has(b) ? inputOrderIndexMap.get(b) : Number.MAX_SAFE_INTEGER;
               return idxA - idxB;
@@ -2121,7 +2121,7 @@
           `;
 
           for (let i = 1; i <= maxSubsequentCols; i++) {
-            expTableHtml += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">${i + 1}人目</th>`;
+            expTableHtml += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">${i}人目</th>`;
           }
 
           expTableHtml += `
