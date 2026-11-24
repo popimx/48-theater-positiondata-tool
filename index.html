@@ -2022,6 +2022,7 @@
       setMasterMemberOrder(forecastGroup);
 
       const inputSet = new Set(inputNames);
+      const inputOrderIndexMap = new Map(inputNames.map((name, idx) => [name, idx]));
       const inputMemberList = [...inputNames];
       const resultArea = document.getElementById('forecastResultArea');
       const expListArea = document.getElementById('forecastExpListArea');
@@ -2047,72 +2048,112 @@
 
       if (expListArea) {
         const rowDataList = getPositionRowDataList(stage);
-        let maxCols = 0;
-        rowDataList.forEach(item => {
-          if (item.orderedMembers.length > maxCols) maxCols = item.orderedMembers.length;
+        const preparedRows = [];
+
+        rowDataList.forEach(({ fixedMember, orderedMembers }, pIdx) => {
+          const cleanFixed = (fixedMember && fixedMember !== '-' && fixedMember !== '－') ? fixedMember.trim() : '';
+          const attendingExperienced = orderedMembers.filter(member => member && member !== '-' && member !== '－' && inputSet.has(member));
+
+          // 1人目（初日）の経験者リスト（予想計算用）
+          const allExpForCalc = [];
+          if (cleanFixed) allExpForCalc.push(cleanFixed);
+          attendingExperienced.forEach(m => {
+            if (!allExpForCalc.includes(m)) allExpForCalc.push(m);
+          });
+
+          allExpForCalc.forEach(member => {
+            if (!initialAttendingExpMap[pIdx].includes(member)) {
+              initialAttendingExpMap[pIdx].push(member);
+            }
+            const showsWithMember = historyShows.filter(show => show.positionsArray && show.positionsArray[pIdx] === member);
+            appearanceCountMap[pIdx][member] = showsWithMember.length;
+            if (showsWithMember.length > 0) {
+              const sortedDates = showsWithMember.map(show => new Date(show.date).getTime()).filter(t => Number.isFinite(t)).sort((a,b) => b-a);
+              lastAppearedDateMap[pIdx][member] = sortedDates[0] || 0;
+            } else { lastAppearedDateMap[pIdx][member] = 0; }
+          });
+
+          // 表示用：1人目（初日）は cleanFixed（または存在しない場合は空欄）、2人目以降（インデックス1以降）は入力された出演メンバー順
+          const firstColMember = cleanFixed || '';
+          const hasFirstMemberInInput = Boolean(cleanFixed && inputSet.has(cleanFixed));
+
+          let subsequentMembers = attendingExperienced.filter(m => m !== cleanFixed);
+          if (hasFirstMemberInInput) {
+            subsequentMembers = [...subsequentMembers].sort((a, b) => {
+              const idxA = inputOrderIndexMap.has(a) ? inputOrderIndexMap.get(a) : Number.MAX_SAFE_INTEGER;
+              const idxB = inputOrderIndexMap.has(b) ? inputOrderIndexMap.get(b) : Number.MAX_SAFE_INTEGER;
+              return idxA - idxB;
+            });
+          }
+
+          // 1人目以降の行でメンバー名が記載されていない行はカット
+          if (subsequentMembers.length === 0) return;
+
+          preparedRows.push({
+            firstColMember,
+            subsequentMembers
+          });
+        });
+
+        let maxSubsequentCols = 0;
+        preparedRows.forEach(r => {
+          if (r.subsequentMembers.length > maxSubsequentCols) {
+            maxSubsequentCols = r.subsequentMembers.length;
+          }
         });
 
         const expListContainer = document.createElement('div');
         expListContainer.className = "bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3 mb-4";
-        
-        let expTableHtml = `
-          <div class="font-bold text-slate-800 text-xs mb-1">【ポジション経験者一覧】</div>
-          <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
-            <table class="w-full text-left text-sm border-collapse min-w-max">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200">
-        `;
 
-        for (let i = 0; i <= maxCols; i++) {
-          expTableHtml += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">${i === 0 ? '初日' : `${i}人目`}</th>`;
-        }
+        if (preparedRows.length === 0) {
+          expListContainer.innerHTML = `
+            <div class="font-bold text-slate-800 text-xs mb-1">【ポジション経験者一覧】</div>
+            <p class="text-xs text-slate-400 py-2">該当する経験者行はありません。</p>
+          `;
+        } else {
+          let expTableHtml = `
+            <div class="font-bold text-slate-800 text-xs mb-1">【ポジション経験者一覧】</div>
+            <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-inner">
+              <table class="w-full text-left text-sm border-collapse min-w-max">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200">
+                    <th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">初日</th>
+          `;
 
-        expTableHtml += `
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-        `;
-
-        rowDataList.forEach(({ fixedMember, orderedMembers }, pIdx) => {
-          const attendingExperienced = orderedMembers.filter(member => member && member !== '-' && member !== '－' && inputSet.has(member));
-
-          const rowMembers = [];
-          if (fixedMember && fixedMember !== '-' && fixedMember !== '－') {
-            rowMembers.push(fixedMember);
+          for (let i = 1; i <= maxSubsequentCols; i++) {
+            expTableHtml += `<th class="p-2.5 min-w-[100px] text-center border-r border-slate-200 whitespace-nowrap text-xs font-bold text-slate-600">${i + 1}人目</th>`;
           }
-          attendingExperienced.forEach(m => {
-            rowMembers.push(m);
-          });
 
-          if (rowMembers.length === 0) return;
+          expTableHtml += `
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+          `;
 
-          expTableHtml += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
-          
-          for (let i = 0; i <= maxCols; i++) {
-            const member = rowMembers[i];
-            if (member) {
-              if (!initialAttendingExpMap[pIdx].includes(member)) {
-                initialAttendingExpMap[pIdx].push(member);
-              }
+          preparedRows.forEach(({ firstColMember, subsequentMembers }) => {
+            expTableHtml += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition">`;
 
-              const showsWithMember = historyShows.filter(show => show.positionsArray && show.positionsArray[pIdx] === member);
-              appearanceCountMap[pIdx][member] = showsWithMember.length;
-              if (showsWithMember.length > 0) {
-                const sortedDates = showsWithMember.map(show => new Date(show.date).getTime()).filter(t => Number.isFinite(t)).sort((a,b) => b-a);
-                lastAppearedDateMap[pIdx][member] = sortedDates[0] || 0;
-              } else { lastAppearedDateMap[pIdx][member] = 0; }
-
-              const cellBg = i === 0 ? "" : "bg-pink-50/50";
-              expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap ${cellBg}"><span class="member-link text-xs font-bold" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span></td>`;
+            if (firstColMember) {
+              expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap"><span class="member-link text-xs font-bold" onclick="openMemberDetail('${escapeHtml(firstColMember)}')">${escapeHtml(firstColMember)}</span></td>`;
             } else {
               expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap"></td>`;
             }
-          }
-          expTableHtml += `</tr>`;
-        });
 
-        expTableHtml += `</tbody></table></div>`;
-        expListContainer.innerHTML = expTableHtml;
+            for (let c = 0; c < maxSubsequentCols; c++) {
+              const member = subsequentMembers[c];
+              if (member) {
+                expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap bg-pink-50/50"><span class="member-link text-xs font-bold" onclick="openMemberDetail('${escapeHtml(member)}')">${escapeHtml(member)}</span></td>`;
+              } else {
+                expTableHtml += `<td class="p-2.5 min-w-[100px] text-center border-r border-slate-100 whitespace-nowrap"></td>`;
+              }
+            }
+
+            expTableHtml += `</tr>`;
+          });
+
+          expTableHtml += `</tbody></table></div>`;
+          expListContainer.innerHTML = expTableHtml;
+        }
         expListArea.appendChild(expListContainer);
       }
 
