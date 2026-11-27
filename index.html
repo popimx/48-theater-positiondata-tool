@@ -882,18 +882,31 @@
       });
     }
 
+    function isNoSuffixStage(name) {
+      const normalized = String(name || "").trim().replace(/\s*公演$/, "").replace(/~/g, "〜");
+      return normalized === "NMB48 NAMBATTLE 〜舞〜";
+    }
+
     function formatStageTitle(baseName) {
       if (!baseName) return "";
-      if (baseName.includes("公演")) {
-        return baseName;
+      const trimmed = String(baseName).trim();
+      if (isNoSuffixStage(trimmed)) {
+        return trimmed.replace(/\s*公演$/, "");
       }
-      return baseName.includes("「") ? `${baseName}公演` : `「${baseName}」公演`;
+      if (trimmed.includes("公演")) {
+        return trimmed;
+      }
+      return trimmed.includes("「") ? `${trimmed}公演` : `「${trimmed}」公演`;
     }
 
     // 月間カレンダー用の短縮演目名整形
     function formatMonthlyShortStageName(rawStageName) {
       if (!rawStageName) return "";
       let s = String(rawStageName).trim();
+
+      if (isNoSuffixStage(s)) {
+        return s.replace(/\s*公演$/, "");
+      }
 
       s = s.replace(/(?:AKB48|SKE48|NMB48|HKT48|NGT48|STU48)\s*/gi, "");
 
@@ -2532,6 +2545,12 @@
       return SONG_PARTS_INDEX;
     }
 
+    function hasAnyPositionDataForStage(stageKey) {
+      const stageObj = GLOBAL_STAGE_DATABASE[stageKey] || STAGE_DATABASE[stageKey];
+      if (!stageObj || !Array.isArray(stageObj.schedules)) return false;
+      return stageObj.schedules.some(s => s && s.hasValidPositions);
+    }
+
     async function renderSongStageDropdown() {
       await loadSongPartsIndex();
       const stageSelect = document.getElementById('songStageSelect');
@@ -2543,13 +2562,15 @@
         ...Object.keys(SONG_PARTS_INDEX)
       ]);
 
-      allStageKeys.forEach(stageKey => {
+      const validStageKeys = Array.from(allStageKeys).filter(stageKey => hasAnyPositionDataForStage(stageKey));
+
+      validStageKeys.forEach(stageKey => {
         const stageObj = GLOBAL_STAGE_DATABASE[stageKey];
         const displayName = stageObj ? stageObj.name : formatStageTitle(stageKey);
         stageSelect.appendChild(new Option(displayName, stageKey));
       });
 
-      if (currentStageKey && allStageKeys.has(currentStageKey)) {
+      if (currentStageKey && validStageKeys.includes(currentStageKey)) {
         stageSelect.value = currentStageKey;
       }
       await onSongStageChange();
@@ -2735,12 +2756,10 @@
 
       const xs = formation.map(p => p.x);
       const ys = formation.map(p => p.y);
-      // 両端のラベルがはみ出さないよう左右の最大幅に余裕を持たせる
       const maxAbsX = Math.max(5.5, ...xs.map(x => Math.abs(x))) + 1.3;
       const minY = Math.min(1, ...ys);
       const maxY = Math.max(1, ...ys);
       const rowCount = maxY - minY + 1;
-      // アイコン＋名前ラベルの縦幅を考慮した高さ
       const boxHeight = Math.max(100, rowCount * 54 + 28);
 
       let dotsHtml = '';
